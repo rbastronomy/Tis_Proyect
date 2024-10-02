@@ -1,0 +1,113 @@
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+}
+
+.App {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background-color: #f1f1f1;
+}
+
+.App-header {
+  width: 100%;
+  background-color: #333;
+  color: white;
+  display: flex;
+  justify-content: center; /* Alinea los elementos dentro del header */
+  align-items: center;
+  padding: 10px 20px;
+}
+
+.App-header .logo {
+  font-size: 24px;
+  font-weight: bold;
+  margin-left: 100px; /* Ajuste para mover el logo a la derecha */
+}
+
+.nav-links {
+  display: flex;
+  justify-content: center;
+  flex-grow: 1; /* Permite que los enlaces crezcan para centrar el contenido */
+}
+
+.nav-links a {
+  color: white;
+  text-decoration: none;
+  margin: 0 20px; /* Espacio entre los enlaces */
+  font-size: 18px;
+}
+
+.nav-links a:hover {
+  color: #f9c74f; /* Amarillo estilo taxi */
+}
+
+
+.container {
+  display: flex;
+  width: 90%;
+  height: 70vh;
+  background-color: white;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-top: 20px;
+}
+
+.search-section {
+  flex: 1;
+  padding: 20px;
+  background-color: #f9c74f; /* Color de taxis */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.search-section h1 {
+  margin: 0 0 10px 0;
+  font-size: 32px;
+  color: #333;
+}
+
+.search-section p {
+  font-size: 16px;
+  margin-bottom: 20px;
+  color: #555;
+}
+
+.search-bar {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 20px;
+  border-radius: 5px;
+  border: 1px solid #ddd;
+  font-size: 16px;
+}
+
+.search-button {
+  padding: 10px 20px;
+  background-color: #4caf50; /* Color verde para el botón */
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.search-button:hover {
+  background-color: #45a049;
+}
+
+.map-section {
+  flex: 2;
+  position: relative;
+}
+
+.map-section iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
