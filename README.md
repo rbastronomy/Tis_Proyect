@@ -1,7 +1,21 @@
 # Tis_Proyect
+# Indice:
+- [Introducción](#Introducción)
+- [Como instalar Node.js y React](#Como-instalar-Node.js-y-React)
+  - [Instalar Node.js](##Instalar-Node.js)
+  - [Configurar un nuevo proyecto](##Configurar-un-nuevo-proyecto)
+  - [Instalar dependencias necesarias](##Instalar-dependencias-necesarias)
+- [Verifica si npm está correctamente instalado](#Verifica-si-npm-está-correctamente-instalado)
+  - [Recrea la carpeta npm](##Recrea-la-carpeta-npm)
+  - [Limpiar la caché de npm](##Limpiar-la-caché-de-npm)
+  - [Reinstalar npm globalmente](##Reinstalar-npm-globalmente)
+  - [Ejecuta npm con permisos de administrador](##Verifica-permisos-del-directorio-npm)
+  - [Verifica permisos del directorio npm](##Verifica-permisos-del-directorio-npm)
+- [Comentarios](#Comentarios)
 # Introducción
 Este repositorio tiene como funcion demostrar avances de nuestro proyecto de Taller de Ingenieria de Software, consistira en una aplicación similar a Uber basado en el contexto de una empresa de Taxis del Aeropuerto Internacional General Diego Aracena Aguilar.
 - - - -
+
 
 # Como instalar Node.js y React
   ## Instalar Node.js
