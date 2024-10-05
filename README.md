@@ -70,5 +70,14 @@ Este repositorio tiene como funcion demostrar avances de nuestro proyecto de Tal
 - Asegúrate de que tienes los permisos adecuados para acceder a la carpeta C:\Users\Renat\AppData\Roaming\npm. Si no tienes permisos, debes ajustarlos o intentar instalar globalmente con:
   npm config set prefix "C:\Users\"Nombre del usuario"\AppData\Local\npm"
 - Prueba estas soluciones y verifica si alguna de ellas resuelve el error. Si el problema persiste, por favor comparte el contenido del archivo de registro que mencionas para obtener más detalles (C:\Users\Renat\AppData\Local\npm-cache\_logs\...).
-    
+
+## Ejecuta ambos servidores (Desarrollo)
+- Para facilitar el desarrollo, querrás ejecutar tanto el backend (Node.js) como el frontend (React) al mismo tiempo:
+- En una terminal, navega a la carpeta server y ejecuta:
+  node index.js
+
+- En otra terminal, navega a la carpeta cliente y ejecuta:
+  npm start
+- Esto ejecutará ambos servidores, y React estará disponible en http://localhost:3000, mientras que tu backend estará en http://localhost:5000.
+- 
 ## Comentarios
