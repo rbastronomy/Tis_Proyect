@@ -11,6 +11,7 @@
   - [Reinstalar npm globalmente](#Reinstalar-npm-globalmente)
   - [Ejecuta npm con permisos de administrador](#Verifica-permisos-del-directorio-npm)
   - [Verifica permisos del directorio npm](#Verifica-permisos-del-directorio-npm)
+  - [Ejecuta ambos servidores](#Ejecuta-ambos-servidores)
 - [Comentarios](#Comentarios)
 # Introducción
 Este repositorio tiene como funcion demostrar avances de nuestro proyecto de Taller de Ingenieria de Software, consistira en una aplicación similar a Uber basado en el contexto de una empresa de Taxis del Aeropuerto Internacional General Diego Aracena Aguilar.
@@ -71,7 +72,7 @@ Este repositorio tiene como funcion demostrar avances de nuestro proyecto de Tal
   npm config set prefix "C:\Users\"Nombre del usuario"\AppData\Local\npm"
 - Prueba estas soluciones y verifica si alguna de ellas resuelve el error. Si el problema persiste, por favor comparte el contenido del archivo de registro que mencionas para obtener más detalles (C:\Users\Renat\AppData\Local\npm-cache\_logs\...).
 
-## Ejecuta ambos servidores (Desarrollo)
+## Ejecuta ambos servidores
 - Para facilitar el desarrollo, querrás ejecutar tanto el backend (Node.js) como el frontend (React) al mismo tiempo:
 - En una terminal, navega a la carpeta server y ejecuta:
 
@@ -80,5 +81,5 @@ Este repositorio tiene como funcion demostrar avances de nuestro proyecto de Tal
 
   npm start
 - Esto ejecutará ambos servidores, y React estará disponible en http://localhost:3000, mientras que tu backend estará en http://localhost:5000.
-- 
+
 ## Comentarios
