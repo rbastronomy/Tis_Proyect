@@ -1,15 +1,34 @@
 {
   "name": "tis",
   "version": "1.0.0",
-  "main": "index.js",
+  "main":  "src/index.js",
   "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "lint": "eslint .",
+    "format": "prettier --write .",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
+  "description":  "Backend for the taxi project",
+  "devDependencies": {
+    "@eslint/js": "^9.11.1",
+    "eslint": "^9.11.1",
+    "eslint-plugin-react": "^7.37.0",
+    "globals": "^15.9.0",
+    "nodemon": "^3.1.7",
+    "prettier": "^3.3.3"
+  },
   "dependencies": {
-    "express": "^4.21.0"
-  }
+    "@lucia-auth/adapter-postgresql": "^3.1.2",
+    "dotenv": "^16.4.5",
+    "fastify": "^5.0.0",
+    "fastify-plugin": "^5.0.1",
+    "knex": "^3.1.0",
+    "lucia": "^3.2.0",
+    "pg": "^8.13.0"
+  },
+  "type": "module"
 }
