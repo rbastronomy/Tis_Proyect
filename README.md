@@ -68,9 +68,9 @@ Este repositorio tiene como funcion demostrar avances de nuestro proyecto de Tal
   npx create-react-app client
 
 ## Verifica permisos del directorio npm
-- Asegúrate de que tienes los permisos adecuados para acceder a la carpeta C:\Users\Renat\AppData\Roaming\npm. Si no tienes permisos, debes ajustarlos o intentar instalar globalmente con:
+- Asegúrate de que tienes los permisos adecuados para acceder a la carpeta C:\Users\"Nombre del usuario"\AppData\Roaming\npm. Si no tienes permisos, debes ajustarlos o intentar instalar globalmente con:
   npm config set prefix "C:\Users\"Nombre del usuario"\AppData\Local\npm"
-- Prueba estas soluciones y verifica si alguna de ellas resuelve el error. Si el problema persiste, por favor comparte el contenido del archivo de registro que mencionas para obtener más detalles (C:\Users\Renat\AppData\Local\npm-cache\_logs\...).
+- Prueba estas soluciones y verifica si alguna de ellas resuelve el error. Si el problema persiste, por favor comparte el contenido del archivo de registro que mencionas para obtener más detalles (C:\Users\"Nombre del usuario"\AppData\Local\npm-cache\_logs\...).
 
 ## Ejecuta ambos servidores
 - Para facilitar el desarrollo, querrás ejecutar tanto el backend (Node.js) como el frontend (React) al mismo tiempo:
