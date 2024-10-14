@@ -32,12 +32,9 @@ const startServer = async () => {
       throw new Error('User not found');
     }
 
-    // Example: Generating a token (or pass an actual token)
-    const token = 'random-generated-session-token'; // Replace this with a proper token generator if needed
-    console.log('token:', token);
 
     try{
-      const testSession = await lucia.createSession(user.id, {})
+      const testSession = await lucia.createSession(user.id)
       console.log(testSession);
     } catch (err) {
       console.error('Error creating session:', err);
