@@ -5,7 +5,7 @@ import { connectDB, db } from './db/database.js'; // Corrected import
 import { authPlugin } from './auth/index.js'; // Corrected import path
 import dotenv from 'dotenv';
 import process from 'process'; // Add this line to make process available
-import { lucia } from './auth/index.js';
+import auth from './auth/auth.js';
 
 dotenv.config();
 
@@ -34,7 +34,8 @@ const startServer = async () => {
 
 
     try{
-      const testSession = await lucia.createSession(user.id)
+      const testSession = await auth.createSession(user.id)
+      //await auth.invalidateAllSessions(user.id) // Invalida todas las sesiones del usuario de la base de datos
       console.log(testSession);
     } catch (err) {
       console.error('Error creating session:', err);

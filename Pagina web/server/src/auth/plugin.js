@@ -1,11 +1,11 @@
 import fp from 'fastify-plugin';
-import { lucia } from './lucia.js';
+import auth from './auth.js';
 
-async function authPlugin(fastify, options) {
-  fastify.decorate('auth', lucia);
+async function authPlugin(fastify) {
+  fastify.decorate('auth', auth);
   
   fastify.addHook('onRequest', async (request, reply) => {
-    request.auth = lucia.handleRequest(request, reply);
+    request.auth = auth.handleRequest(request, reply);
   });
 }
 
