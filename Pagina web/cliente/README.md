@@ -1,8 +1,43 @@
-# React + Vite
+# Frontend - Aplicación Web de Gestión de Taxis
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Este es el frontend de una aplicación web para la gestión de taxis en tiempo real. El frontend está construido con React, Vite y TanStack Router. Proporciona una interfaz fácil de usar para visualizar la geolocalización de los taxis y las rutas recomendadas.
 
-Currently, two official plugins are available:
+## Estructura del Proyecto
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **React**: Para construir los componentes de la interfaz de usuario.
+- **Vite**: Para un desarrollo rápido con construcción eficiente.
+- **TanStack Router**: Para manejar el enrutamiento del lado del cliente.
+
+## Instalación
+
+Para configurar y ejecutar el frontend localmente, sigue estos pasos:
+
+### Requisitos Previos
+
+Asegúrate de tener instalados:
+
+- [Node.js](https://nodejs.org/) (se recomienda la versión 18.x.x o superior)
+- npm (viene con Node.js)
+
+### Pasos
+
+1. Clona el repositorio y navega al directorio `client`:
+   ```bash
+   git clone <url-del-repositorio>
+   cd cliente
+
+2. Instala las dependencias:
+   ```bash
+   npm install
+   ```
+3. Inicia el servidor de desarrollo:
+   ```bash
+   npm run dev
+   ```
+4. Abre la aplicación en tu navegador en http://localhost:3000.
+
+## Comandos Disponibles
+
+- `npm run dev`: Inicia el servidor de desarrollo.
+- `npm run build`: Construye la aplicación para producción.
+- `npm run preview`: Previsualiza la aplicación construida.

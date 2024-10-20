@@ -14,29 +14,88 @@
   - [Ejecuta ambos servidores](#Ejecuta-ambos-servidores)
 - [Comentarios](#Comentarios)
 # Introducción
-Este repositorio tiene como funcion demostrar avances de nuestro proyecto de Taller de Ingenieria de Software, consistira en una aplicación similar a Uber basado en el contexto de una empresa de Taxis del Aeropuerto Internacional General Diego Aracena Aguilar.
+Este repositorio tiene como funcion demostrar avances de nuestro proyecto de Taller de Ingenieria de Software para la empresa de Taxis del Aeropuerto Internacional General Diego Aracena Aguilar. Este es un proyecto web completo para la gestión de taxis en tiempo real, que incluye tanto el frontend como el backend. El proyecto está dividido en dos carpetas principales: una para el frontend y otra para el backend, ambas dentro de la carpeta `Pagina web`.
 - - - -
 
+## Estructura del proyecto
+### 1. **Frontend** (`client/`)
 
-# Como instalar Nodejs y React
-  ## Instalar Nodejs
+El frontend está construido con **React**, **Vite** y **TanStack Router**. Proporciona una interfaz de usuario para interactuar con el sistema de gestión de taxis, mostrando la geolocalización y recomendación de rutas en tiempo real.
+
+Para más detalles sobre cómo configurar y ejecutar el frontend, consulta el [README de client](./client/README.md).
+
+### 2. **Backend** (`server/`)
+
+El backend está desarrollado utilizando **Node.js**, **Fastify** para manejar las consultas HTTP, **Knex** para las migraciones y consultas de base de datos, y **Lucia Auth** para la autenticación de usuarios. Provee la API que alimenta al frontend con datos en tiempo real sobre taxis y rutas.
+
+Para más información sobre la configuración del backend, revisa el [README de server](./server/README.md).
+
+
+## Como instalar Nodejs y React
+Sigue los pasos a continuación para instalar y ejecutar el proyecto completo en tu entorno local.
+
+  ### Instalar Nodejs
   - Descarga Node.js: Ve al sitio oficial de Node.js y descarga la versión recomendada (LTS).
   - Verifica la instalación: Después de la instalación, abre una terminal (cmd o PowerShell en Windows) y ejecuta:
+    ```bash
     node -v
     npm -v
-  ## Configurar un nuevo proyecto
+    ```
+  ## 1. Configuracion del proyecto
+  ### Configurar un nuevo proyecto
   - Crea una carpeta para tu proyecto donde quieras guardarlo.
   - Abre la carpeta en VS Code.
   - Abre una terminal en VS Code y corre el siguiente comando para inicializar un nuevo proyecto de Node.js:
+    ```bash
     npm init -y
+    ```
   - Esto generará un archivo package.json con la configuración básica del proyecto.
-  ## Instalar dependencias necesarias
+
+  ### Clonar el repositorio
+  - O puedes clonar el repositorio en tu máquina local:
+    ```bash
+    git clone <url-del-repositorio>
+    cd Pagina web
+    ```
+
+  ## 2. Instalar dependencias necesarias
   - Para un proyecto con Node.js (para el backend) y React (para el frontend), vamos a instalar algunas dependencias.
-  - Primero, instala Express (un framework para crear el servidor con Node.js) en tu terminal:
-    npm install express
-  - Para instalar React y configurar la parte del frontend, puedes usar Create React App, una herramienta que facilita la creación de proyectos de React
-    npx create-react-app client
-  - Esto creará una carpeta client con todo el código necesario de React.
+
+  ### Configuración del Frontend:
+  - Navega a la carpeta client e instala las dependencias del frontend:
+    ```bash
+    cd client
+    npm install
+    ```
+  - Inicia el servidor de desarrollo para el frontend:
+    ```bash
+    npm run dev
+    ```
+El frontend estará disponible en http://localhost:3000.
+
+### Configuración del Backend:
+  - Navega a la carpeta server e instala las dependencias del backend:
+    ```bash
+    cd server
+    npm install
+    ```
+    Configura las variables de entorno necesarias en el archivo .env dentro de la carpeta server, por ejemplo:
+    ```bash
+    DB_HOST=your_db_host
+    DB_USER=your_db_user
+    DB_PASSWORD=your_db_password
+    DB_NAME=your_db_name
+    ```
+    Realiza las migraciones de base de datos con Knex:
+    ```bash
+    npx knex migrate:latest
+    ```
+    Inicia el servidor de desarrollo para el backend:
+    ```bash
+    npm run dev
+    ```
+El backend estará disponible en http://localhost:4000.
+
 
 # Verifica si npm está correctamente instalado
 - Abre una terminal o consola en VS Code y verifica la instalación de npm y node ejecutando estos comandos:
@@ -73,13 +132,9 @@ Este repositorio tiene como funcion demostrar avances de nuestro proyecto de Tal
 - Prueba estas soluciones y verifica si alguna de ellas resuelve el error. Si el problema persiste, por favor comparte el contenido del archivo de registro que mencionas para obtener más detalles (C:\Users\"Nombre del usuario"\AppData\Local\npm-cache\_logs\...).
 
 ## Ejecuta ambos servidores
-- Para facilitar el desarrollo, querrás ejecutar tanto el backend (Node.js) como el frontend (React) al mismo tiempo:
-- En una terminal, navega a la carpeta server y ejecuta:
+- Con ambos servidores corriendo, el frontend y el backend estarán conectados, permitiendo que la aplicación funcione correctamente en desarrollo.
+- Estará disponible en http://localhost:3000, mientras que tu backend estará en http://localhost:4000.
 
-  node index.js
-- En otra terminal, navega a la carpeta cliente y ejecuta:
+## Licencia
+Este proyecto está licenciado bajo la Licencia MIT. Consulta el archivo LICENSE para más detalles.
 
-  npm start
-- Esto ejecutará ambos servidores, y React estará disponible en http://localhost:3000, mientras que tu backend estará en http://localhost:5000.
-
-## Comentarios
