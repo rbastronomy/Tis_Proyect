@@ -8,8 +8,7 @@ function Layout() {
       <Navbar isBordered>
         <NavbarBrand>
           <Link to="/" className="text-xl font-bold text-gray-800">
-            My App
-          </Link>
+          Taxi aeropuerto Tarapacá          </Link>
         </NavbarBrand>
         <NavbarContent className="hidden sm:flex gap-4" justify="center">
           <NavbarItem>
