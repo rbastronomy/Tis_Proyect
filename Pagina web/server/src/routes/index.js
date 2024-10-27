@@ -1,5 +1,6 @@
 import { BaseController } from '../core/BaseController.js';
 import { handleRequest } from "../auth/lucia.js";
+import { AuthController } from '../controllers/AuthController.js';
 
 class TestController extends BaseController {
   constructor() {
@@ -27,10 +28,17 @@ class TestController extends BaseController {
 
 export function setupRoutes(fastify) {
   const testController = new TestController();
+  const authController = new AuthController();
 
   // Public routes
   fastify.get('/', testController.getHello);
   fastify.post('/example', testController.postExample);
+
+  // Auth routes
+  fastify.post('/login', authController.login.bind(authController));
+  fastify.post('/logout', authController.logout.bind(authController));
+  fastify.get('/validate-session', authController.validateSession.bind(authController));
+  fastify.post('/register', authController.register.bind(authController)); // New registration route
 
   // Protected route
   fastify.get('/protected', testController.getProtected);
