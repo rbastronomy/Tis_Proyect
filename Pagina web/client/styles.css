@@ -1,77 +1,158 @@
-/* Estilos generales para el fondo y el color de texto */
+/* Estilos generales */
 body {
-    background-color: #f7c600; /* Amarillo taxi */
-    color: #333; /* Texto en color oscuro */
-    font-family: Arial, sans-serif;
-  }
-  
-  /* Estilo de cabecera */
-  header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background-color: #000; /* Fondo negro */
-    color: #f7c600; /* Texto amarillo */
-    padding: 10px 20px;
-  }
-  
-  /* Estilo del logo */
-  #logo {
-    font-size: 1.5em;
-    font-weight: bold;
-  }
-  
-  /* Botones de la cabecera */
-  button, .header-button {
-    background-color: #000;
-    color: #f7c600;
-    border: 2px solid #f7c600;
-    padding: 10px 20px;
-    cursor: pointer;
-    font-size: 1em;
-  }
-  
-  button:hover, .header-button:hover {
-    background-color: #f7c600;
-    color: #000;
-  }
-  
-  /* Estilo del buscador */
-  #search-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin: 10px 0;
-  }
-  
-  #search-input {
-    padding: 10px;
-    font-size: 1em;
-    width: 300px;
-    border: 2px solid #000;
-    border-radius: 4px 0 0 4px;
-  }
-  
-  #search-button {
-    padding: 10px 20px;
-    font-size: 1em;
-    background-color: #000;
-    color: #f7c600;
-    border: 2px solid #000;
-    border-left: none;
-    border-radius: 0 4px 4px 0;
-    cursor: pointer;
-  }
-  
-  #search-button:hover {
-    background-color: #f7c600;
-    color: #000;
-  }
-  
-  /* Estilo del contenedor de Leaflet */
-  #map {
-    border: 5px solid #f7c600; /* Borde amarillo */
-    border-radius: 8px;
-    margin-top: 10px;
-  }
-  
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: #f4f4f4;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 20px;
+  background-color: #000;
+  color: #f7c600;
+}
+
+#logo {
+  font-size: 1.5em;
+  font-weight: bold;
+}
+
+/* Barra de navegación */
+nav {
+  display: flex;
+  gap: 10px;
+}
+
+.header-button {
+  color: #f7c600;
+  text-decoration: none;
+  padding: 8px 16px;
+  border: 1px solid #f7c600;
+  border-radius: 4px;
+  background-color: transparent;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+.header-button:hover {
+  background-color: #f7c600;
+  color: #000;
+}
+
+/* Contenedor principal */
+main {
+  padding: 20px;
+}
+
+/* Título de la página principal */
+h1 {
+  color: #000;
+  text-align: center;
+  font-size: 2em;
+  margin-bottom: 20px;
+}
+
+/* Estilos del mapa */
+#map {
+  width: 100%;
+  height: 500px;
+  margin: 20px 0;
+  border: 2px solid #f7c600;
+  border-radius: 8px;
+}
+
+/* Contenedor del buscador */
+#search-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+#search-input {
+  width: 300px;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px 0 0 4px;
+}
+
+#search-button {
+  padding: 10px 20px;
+  border: none;
+  background-color: #000;
+  color: #f7c600;
+  border-radius: 0 4px 4px 0;
+  cursor: pointer;
+}
+
+#search-button:hover {
+  background-color: #f7c600;
+  color: #000;
+}
+
+/* Estilos para el formulario de ayuda */
+#help-form {
+  max-width: 500px;
+  margin: 20px auto;
+  padding: 20px;
+  border: 2px solid #f7c600; /* Borde amarillo */
+  border-radius: 8px;
+  background-color: #fff;
+}
+
+#help-form label {
+  display: block;
+  font-weight: bold;
+  margin-top: 10px;
+}
+
+#help-form input[type="text"],
+#help-form input[type="tel"],
+#help-form input[type="email"],
+#help-form textarea {
+  width: 100%;
+  padding: 10px;
+  margin-top: 5px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+#help-form textarea {
+  resize: vertical;
+}
+
+#help-form button {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  margin-top: 20px;
+  background-color: #000;
+  color: #f7c600;
+  border: none;
+  border-radius: 4px;
+  font-size: 1em;
+  cursor: pointer;
+}
+
+#help-form button:hover {
+  background-color: #f7c600;
+  color: #000;
+}
+/* Contenedor del logo */
+#logo-container {
+  display: flex;
+  align-items: center;
+}
+
+#logo-image {
+  width: 50px;
+  height: 50px;
+  margin-right: 10px;
+}
+
+#logo-text {
+  font-size: 1.5em;
+  color: #f7c600;
+  font-weight: bold;
+}

@@ -3,73 +3,51 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bienvenido! Busca un transporte para tu hogar - Mapa con Buscador</title>
-  <!-- Estilos de Leaflet -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
-  <!-- Estilos de Leaflet Control Geocoder -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+  <title>Taxi Aeropuerto Tarapacá</title>
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
 </head>
 <body>
+  <!-- Encabezado de la página -->
   <header>
-    <div id="logo">Aeropuerto Iquique Tarapacá</div>
+    <div id="logo-container">
+      <img src="logo.png" alt="Logo de Taxi Aeropuerto Tarapacá" id="logo-image">
+      <div id="logo-text">Aeropuerto Iquique Tarapacá</div>
+    </div>
     <nav>
-      <button class="header-button">Contacto</button>
-      <button class="header-button">Sobre Nosotros</button>
-      <button class="header-button">Ayuda</button>
-      <button class="header-button">Iniciar Sesión</button>
+      <a href="index.html" class="header-button">Inicio</a>
+      <a href="contacto.html" class="header-button">Contacto</a>
+      <a href="sobre.html" class="header-button">Sobre Nosotros</a>
+      <a href="ayuda.html" class="header-button">Ayuda</a>
+      <a href="login.html" class="header-button">Iniciar Sesion</a>
     </nav>
   </header>
 
+  <!-- Contenido principal -->
   <main>
-    <h1>Bienvenido! Busca un transporte para tu hogar</h1>
-
-    <!-- Formulario de búsqueda -->
-    <div id="search-container">
-      <input type="text" id="search-input" placeholder="Buscar calle en Iquique..." />
-      <button id="search-button">Buscar</button>
+    <h1>Bienvenido a Taxi Aeropuerto Tarapacá</h1>
+    <div class="search-bar">
+      <input type="text" placeholder="Buscar calle en Iquique...">
+      <button>Buscar</button>
     </div>
 
     <!-- Contenedor del mapa -->
-    <div id="map" style="height: 500px; width: 100%;"></div>
+    <div id="map-container">
+      <div id="map"></div>
+    </div>
   </main>
 
-  <!-- Script de Leaflet -->
-  <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
-  <!-- Script de Leaflet Control Geocoder -->
-  <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
-  
+  <!-- Scripts -->
+  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
   <script>
-    // Inicializar el mapa y establecer la ubicación
-    const map = L.map('map').setView([-20.2307, -70.1357], 13); // Coordenadas de Iquique
+    document.addEventListener("DOMContentLoaded", function() {
+      var map = L.map('map').setView([-20.2133, -70.1503], 13); // Coordenadas de Iquique
 
-    // Agregar el mapa de OpenStreetMap
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-    }).addTo(map);
-
-    // Agregar un marcador en el mapa
-    L.marker([-20.2307, -70.1357]).addTo(map)
-      .bindPopup('Aeropuerto Iquique Tarapacá')
-      .openPopup();
-
-    // Función de búsqueda con Leaflet Control Geocoder
-    const geocoder = L.Control.Geocoder.nominatim();
-
-    // Manejo de búsqueda cuando se hace clic en el botón
-    document.getElementById('search-button').addEventListener('click', function() {
-      const query = document.getElementById('search-input').value;
-      geocoder.geocode(query, function(results) {
-        if (results && results.length > 0) {
-          const result = results[0];
-          map.setView(result.center, 15); // Centrar el mapa en el resultado
-          L.marker(result.center).addTo(map) // Añadir un marcador en el resultado
-            .bindPopup(result.name)
-            .openPopup();
-        } else {
-          alert('No se encontró la ubicación especificada.');
-        }
-      });
+      // Cargar el mapa desde OpenStreetMap
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap'
+      }).addTo(map);
     });
   </script>
 </body>
