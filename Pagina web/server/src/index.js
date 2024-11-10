@@ -9,8 +9,10 @@ import auth from './auth/auth.js';
 import userRoutes from './routes/userRoutes.js';
 import roleRoutes from './routes/roleRoutes.js';
 import permissionRoutes from './routes/permissionRoutes.js';
+import cors from '@fastify/cors';
+import mapsRoutes from './routes/maps.routes.js';
 
-dotenv.config();
+dotenv.config()
 
 const startServer = async () => {
   try {
@@ -21,6 +23,11 @@ const startServer = async () => {
       logger: true
     });
 
+    // Register CORS
+    await fastify.register(cors, {
+      origin: true // or specify your frontend URL
+    });
+
     // Register auth plugin if needed
     // await fastify.register(authPlugin);
 
@@ -28,27 +35,12 @@ const startServer = async () => {
     await fastify.register(userRoutes, { prefix: '/api' });
     await fastify.register(roleRoutes, { prefix: '/api' });
     await fastify.register(permissionRoutes, { prefix: '/api' });
+    await fastify.register(mapsRoutes);
 
     // Start listening
     await fastify.listen({ port: 3000, host: '0.0.0.0' });
     fastify.log.info('Server is running on port 3000');
 
-    // Example usage after server starts
-    const userId = 1; // This could come from a request or other source
-    const user = await db('users').where({ id: userId }).first();
-    fastify.log.info('User fetched:', user); // Log the result of the query
-
-    if (!user) {
-      throw new Error('User not found');
-    }
-
-    try {
-      const testSession = await auth.createSession(user.id);
-      // await auth.invalidateAllSessions(user.id); // Invalidate all user sessions
-      fastify.log.info(testSession);
-    } catch (err) {
-      fastify.log.error('Error creating session:', err);
-    }
   } catch (error) {
     console.error('Error starting server:', error);
     process.exit(1);

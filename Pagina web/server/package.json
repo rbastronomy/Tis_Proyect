@@ -1,7 +1,7 @@
 {
   "name": "tis",
   "version": "1.0.0",
-  "main":  "src/index.js",
+  "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
@@ -12,7 +12,7 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description":  "Backend for the taxi project",
+  "description": "Backend for the taxi project",
   "devDependencies": {
     "@eslint/js": "^9.11.1",
     "eslint": "^9.11.1",
@@ -22,6 +22,7 @@
     "prettier": "^3.3.3"
   },
   "dependencies": {
+    "@fastify/cors": "^10.0.1",
     "@lucia-auth/adapter-postgresql": "^3.1.2",
     "dotenv": "^16.4.5",
     "fastify": "^5.0.0",

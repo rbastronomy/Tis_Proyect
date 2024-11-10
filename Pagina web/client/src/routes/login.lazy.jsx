@@ -1,11 +1,10 @@
-import React from 'react';
 import { createLazyFileRoute } from '@tanstack/react-router';
 import { Card, CardHeader, CardBody, Input, Button } from "@nextui-org/react";
 import { useForm, Controller } from "react-hook-form";
 
 export const Route = createLazyFileRoute('/login')({
   component: Login,
-})
+});
 
 function Login() {
   const { control, handleSubmit, formState: { errors } } = useForm({
@@ -16,73 +15,74 @@ function Login() {
   });
 
   const onSubmit = (data) => {
-    // Add your login logic here
     console.log('Login submitted');
     console.log('Email:', data.email);
     console.log('Password:', data.password);
   };
 
-  console.log(errors);
-
   return (
-    <div className="flex justify-center items-center h-full">
-      <Card className="w-full max-w-md">
-        <CardHeader className="flex gap-3">
-          <div className="flex flex-col">
-            <p className="text-md">Login</p>
-            <p className="text-small text-default-500">Enter your credentials</p>
-          </div>
-        </CardHeader>
-        <CardBody>
-          <form className="flex flex-col gap-4" onSubmit={handleSubmit(onSubmit)}>
-            <Controller
-              name="email"
-              control={control}
-              rules={{ 
-                required: "Email is required", 
-                pattern: {
-                  value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                  message: "Invalid email address"
-                }
-              }}
-              render={({ field }) => (
-                <Input
-                  {...field}
-                  label="Email"
-                  type="email"
-                  placeholder="Enter your email"
-                  isInvalid={!!errors.email}
-                  errorMessage={errors.email?.message}
-                />
-              )}
-            />
-            <Controller
-              name="password"
-              control={control}
-              rules={{ 
-                required: "Password is required",
-                minLength: {
-                  value: 6,
-                  message: "Password must be at least 6 characters"
-                }
-              }}
-              render={({ field }) => (
-                <Input
-                  {...field}
-                  label="Password"
-                  type="password"
-                  placeholder="Enter your password"
-                  isInvalid={!!errors.password}
-                  errorMessage={errors.password?.message}
-                />
-              )}
-            />
-            <Button color="primary" type="submit">
-              Sign In
-            </Button>
-          </form>
-        </CardBody>
-      </Card>
+    <div className="flex flex-col min-h-screen bg-gray-100">
+      <div className="flex justify-center items-center flex-grow">
+        <Card className="w-full max-w-md bg-white shadow-md rounded">
+          <CardHeader className="flex gap-3 p-4 bg-gray-800 text-white">
+            <div className="flex flex-col">
+              <p className="text-md">Iniciar Sesión</p>
+              <p className="text-small text-gray-400">Introduce tus credenciales</p>
+            </div>
+          </CardHeader>
+          <CardBody className="p-6">
+            <form className="flex flex-col gap-4" onSubmit={handleSubmit(onSubmit)}>
+              <Controller
+                name="email"
+                control={control}
+                rules={{ 
+                  required: "El correo electrónico es obligatorio", 
+                  pattern: {
+                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                    message: "Dirección de correo electrónico no válida"
+                  }
+                }}
+                render={({ field }) => (
+                  <Input
+                    {...field}
+                    label="Correo Electrónico"
+                    type="email"
+                    placeholder="Introduce tu correo electrónico"
+                    isInvalid={!!errors.email}
+                    errorMessage={errors.email?.message}
+                    className="border-gray-300 rounded-md shadow-sm"
+                  />
+                )}
+              />
+              <Controller
+                name="password"
+                control={control}
+                rules={{ 
+                  required: "La contraseña es obligatoria",
+                  minLength: {
+                    value: 6,
+                    message: "La contraseña debe tener al menos 6 caracteres"
+                  }
+                }}
+                render={({ field }) => (
+                  <Input
+                    {...field}
+                    label="Contraseña"
+                    type="password"
+                    placeholder="Introduce tu contraseña"
+                    isInvalid={!!errors.password}
+                    errorMessage={errors.password?.message}
+                    className="border-gray-300 rounded-md shadow-sm"
+                  />
+                )}
+              />
+              <Button color="primary" type="submit" className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                Iniciar Sesión
+              </Button>
+            </form>
+          </CardBody>
+        </Card>
+      </div>
     </div>
   );
 }

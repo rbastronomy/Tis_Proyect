@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { Autocomplete, AutocompleteItem } from '@nextui-org/react';
 
@@ -22,47 +22,20 @@ function AddressAutocomplete({ onSelect }) {
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedValue, setSelectedValue] = useState('');
   const debouncedQuery = useDebounce(query, 1000);
+  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
-  const fetchSuggestions = async (input) => {
+  const fetchSuggestions = useCallback(async (input) => {
     if (!input) return;
     try {
       setIsLoading(true);
-      
-      // Split input into street name and number
-      const parts = input.split(/\s+/);
-      const hasNumber = /\d/.test(input);
-      let streetName, streetNumber;
-      
-      if (hasNumber) {
-        // Find where the number starts
-        const numberIndex = parts.findIndex(part => /\d/.test(part));
-        streetName = parts.slice(0, numberIndex).join(' ');
-        streetNumber = parts.slice(numberIndex).join(' ');
-      } else {
-        streetName = input;
-      }
-
-      // First, get the street coordinates
-      const params = new URLSearchParams({
-        format: 'json',
-        q: `${streetName}, Iquique, Chile`,
-        countrycodes: 'cl',
-        addressdetails: 1,
-        limit: 5,
-        bounded: 1,
-        viewbox: '-70.3,-20.1,-70.0,-20.3',
-        dedupe: 1,
-        'accept-language': 'es'
-      });
 
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?${params}`,
-        {
-          headers: {
-            'User-Agent': 'TaxiAeropuertoTarapaca/1.0'
-          }
-        }
+        `https://maps.googleapis.com/maps/api/geocode/json?` +
+        `address=${encodeURIComponent(input)}` +
+        `&components=country:CL|administrative_area:Tarapacá|locality:Iquique|locality:Alto Hospicio` +
+        `&key=${apiKey}`
       );
 
       if (!response.ok) {
@@ -72,50 +45,42 @@ function AddressAutocomplete({ onSelect }) {
       const data = await response.json();
       console.log('Fetched data:', data);
 
-      // Filter and process the results
-      const filteredData = data.filter(item => {
-        const inIquique = item.display_name.toLowerCase().includes('iquique');
-        const inAltoHospicio = item.display_name.toLowerCase().includes('alto hospicio');
-        return (inIquique || inAltoHospicio);
-      });
+      if (data.status === 'OK') {
+        const filteredResults = data.results.filter(item => {
+          const isInTargetCity = item.address_components.some(component => {
+            const name = component.long_name.toLowerCase();
+            return (name === 'iquique' || name === 'alto hospicio') &&
+                   (component.types.includes('locality') || 
+                    component.types.includes('administrative_area_level_3'));
+          });
 
-      // If we have a street number, interpolate the position
-      if (hasNumber && filteredData.length > 0) {
-        const street = filteredData[0];
-        const bbox = street.boundingbox;
-        
-        // Calculate approximate position based on street number
-        // Assuming street numbers increase linearly along the street
-        const startLat = parseFloat(bbox[0]);
-        const endLat = parseFloat(bbox[1]);
-        const startLon = parseFloat(bbox[2]);
-        const endLon = parseFloat(bbox[3]);
-        
-        // Simple linear interpolation - can be improved with actual street number ranges
-        const numberPercent = parseInt(streetNumber) / 2000; // Assuming max number is 2000
-        const interpolatedLat = startLat + (endLat - startLat) * numberPercent;
-        const interpolatedLon = startLon + (endLon - startLon) * numberPercent;
+          const isInTarapaca = item.address_components.some(component => 
+            component.long_name.toLowerCase().includes('tarapacá') &&
+            component.types.includes('administrative_area_level_1')
+          );
 
-        setSuggestions([{
-          label: `${streetName} ${streetNumber}`,
-          fullAddress: `${streetName} ${streetNumber}, ${street.address.city}`,
-          value: { 
-            lat: interpolatedLat,
-            lon: interpolatedLon
-          },
-          id: `${street.place_id}-${streetNumber}`
-        }]);
+          return isInTargetCity && isInTarapaca;
+        });
+
+        const formattedSuggestions = filteredResults.map(item => {
+          const street = item.address_components.find(comp => comp.types.includes('route'))?.long_name || '';
+          const number = item.address_components.find(comp => comp.types.includes('street_number'))?.long_name || '';
+          const mainAddress = street && number ? `${street} ${number}` : item.formatted_address;
+
+          return {
+            label: mainAddress,
+            fullAddress: item.formatted_address,
+            value: {
+              lat: item.geometry.location.lat,
+              lon: item.geometry.location.lng
+            },
+            id: item.place_id,
+          };
+        });
+
+        setSuggestions(formattedSuggestions);
       } else {
-        // No street number, return the streets
-        setSuggestions(filteredData.map(item => ({
-          label: item.address.road || item.name,
-          fullAddress: item.display_name,
-          value: { 
-            lat: parseFloat(item.lat), 
-            lon: parseFloat(item.lon) 
-          },
-          id: item.place_id,
-        })));
+        setSuggestions([]);
       }
 
     } catch (error) {
@@ -124,7 +89,7 @@ function AddressAutocomplete({ onSelect }) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [apiKey]);
 
   useEffect(() => {
     if (debouncedQuery.length > 2) {
@@ -132,12 +97,13 @@ function AddressAutocomplete({ onSelect }) {
     } else {
       setSuggestions([]);
     }
-  }, [debouncedQuery]);
+  }, [debouncedQuery, fetchSuggestions]);
 
   const handleSelectionChange = (key) => {
-    const selected = suggestions.find(item => item.id.toString() === key);
+    const selected = suggestions.find(item => item.id === key);
     if (selected) {
       setQuery(selected.label);
+      setSelectedValue(selected.label);
       onSelect(selected.value);
       console.log('Selected address:', selected.label);
     }
@@ -148,20 +114,26 @@ function AddressAutocomplete({ onSelect }) {
       label="Dirección"
       placeholder="Buscar calle en Iquique o Alto Hospicio..."
       className="max-w-xs"
-      defaultItems={suggestions}
+      items={suggestions}
       inputValue={query}
       isLoading={isLoading}
       onInputChange={setQuery}
       onSelectionChange={handleSelectionChange}
+      onBlur={() => {
+        if (selectedValue) {
+          setQuery(selectedValue);
+        }
+      }}
     >
       {(item) => (
         <AutocompleteItem 
-          key={item.id.toString()} 
-          textValue={item.label}
-          title={item.label}
-          description={item.fullAddress}
+          key={item.id} 
+          value={item.id}
         >
-          {item.label}
+          <div className="flex flex-col">
+            <span className="text-sm">{item.label}</span>
+            <span className="text-xs text-gray-500">{item.fullAddress}</span>
+          </div>
         </AutocompleteItem>
       )}
     </Autocomplete>
