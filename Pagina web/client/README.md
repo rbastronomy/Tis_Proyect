@@ -30,6 +30,13 @@ Asegúrate de tener instalados:
    ```bash
    npm install
    ```
+
+3. Crear el archivo `.env` y agregar las variables de entorno de PostgreSQL como se muestra a continuación:
+
+```bash
+VITE_GOOGLE_MAPS_API_KEY=api de google maps
+```
+
 3. Inicia el servidor de desarrollo:
    ```bash
    npm run dev

@@ -4,7 +4,7 @@ function Navbar() {
   return (
     <header className="bg-black text-white flex justify-between items-center p-4">
       <div id="logo-container" className="flex items-center">
-        <img src="logo.png" alt="Logo de Taxi Aeropuerto Tarapacá" id="logo-image" className="h-10 mr-2" />
+        <img src="/logo.png" alt="Logo de Taxi Aeropuerto Tarapacá" id="logo-image" className="h-10 mr-2" />
         <div id="logo-text" className="text-lg font-bold">Aeropuerto Iquique Tarapacá</div>
       </div>
       <nav className="hidden md:flex space-x-4">
