@@ -1,54 +1,13 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Taxi Aeropuerto Tarapacá</title>
-  <link rel="stylesheet" href="styles.css">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
-</head>
-<body>
-  <!-- Encabezado de la página -->
-  <header>
-    <div id="logo-container">
-      <img src="logo.png" alt="Logo de Taxi Aeropuerto Tarapacá" id="logo-image">
-      <div id="logo-text">Aeropuerto Iquique Tarapacá</div>
-    </div>
-    <nav>
-      <a href="index.html" class="header-button">Inicio</a>
-      <a href="contacto.html" class="header-button">Contacto</a>
-      <a href="sobre.html" class="header-button">Sobre Nosotros</a>
-      <a href="ayuda.html" class="header-button">Ayuda</a>
-      <a href="login.html" class="header-button">Iniciar Sesion</a>
-    </nav>
-  </header>
-
-  <!-- Contenido principal -->
-  <main>
-    <h1>Bienvenido a Taxi Aeropuerto Tarapacá</h1>
-    <div class="search-bar">
-      <input type="text" placeholder="Buscar calle en Iquique...">
-      <button>Buscar</button>
-    </div>
-
-    <!-- Contenedor del mapa -->
-    <div id="map-container">
-      <div id="map"></div>
-    </div>
-  </main>
-
-  <!-- Scripts -->
-  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-  <script>
-    document.addEventListener("DOMContentLoaded", function() {
-      var map = L.map('map').setView([-20.2133, -70.1503], 13); // Coordenadas de Iquique
-
-      // Cargar el mapa desde OpenStreetMap
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '© OpenStreetMap'
-      }).addTo(map);
-    });
-  </script>
-</body>
+<!doctype html>
+<html lang="en" class="h-full w-full">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vite + React</title>
+  </head>
+  <body class="h-full w-full">
+    <div id="root" class="h-full w-full"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
 </html>
