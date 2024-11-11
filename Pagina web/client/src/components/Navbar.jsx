@@ -18,6 +18,42 @@ function Navbar() {
         >
           Inicio
         </Button>
+        <Dropdown>
+          <DropdownTrigger>
+            <Button
+              auto
+              bordered
+              color="warning"
+              className="hover:bg-yellow-500 hover:text-black"
+            >
+              Taxi
+            </Button>
+          </DropdownTrigger>
+          <DropdownMenu
+            aria-label="Taxi Options"
+            className="bg-black border border-yellow-500 dark:border-yellow-500"
+            itemClasses={{
+              base: "data-[hover=true]:bg-yellow-500 data-[hover=true]:text-black",
+            }}
+          >
+            <DropdownItem
+              key="taxi"
+              as="a"
+              href="/taxi"
+              className="text-yellow-500 hover:bg-yellow-500 hover:text-black"
+            >
+              Capturar posición
+            </DropdownItem>
+            <DropdownItem
+              key="ruta"
+              as="a"
+              href="/taxi/ruta"
+              className="text-yellow-500 hover:bg-yellow-500 hover:text-black"
+            >
+              Ver Ruta
+            </DropdownItem>
+          </DropdownMenu>
+        </Dropdown>
         <Button
           auto
           bordered
@@ -68,38 +104,40 @@ function Navbar() {
           </DropdownTrigger>
           <DropdownMenu
             aria-label="Navigation"
-            css={{
-              backgroundColor: 'black',
-              border: 'none',
+            className="bg-black border border-yellow-500 dark:border-yellow-500"
+            itemClasses={{
+              base: "data-[hover=true]:bg-yellow-500 data-[hover=true]:text-black",
             }}
           >
             <DropdownItem
               key="inicio"
               as="a"
               href="/"
-              css={{
-                backgroundColor: 'yellow',
-                color: 'black',
-                '&:hover': {
-                  backgroundColor: 'black',
-                  color: 'yellow',
-                },
-              }}
+              className="text-yellow-500 hover:bg-yellow-500 hover:text-black"
             >
               Inicio
+            </DropdownItem>
+            <DropdownItem
+              key="taxi"
+              as="a"
+              href="/taxi"
+              className="text-yellow-500 hover:bg-yellow-500 hover:text-black"
+            >
+              Capturar posición
+            </DropdownItem>
+            <DropdownItem
+              key="ruta"
+              as="a"
+              href="/taxi/ruta"
+              className="text-yellow-500 hover:bg-yellow-500 hover:text-black"
+            >
+              Ver Ruta
             </DropdownItem>
             <DropdownItem
               key="contacto"
               as="a"
               href="/contacto"
-              css={{
-                backgroundColor: 'yellow',
-                color: 'black',
-                '&:hover': {
-                  backgroundColor: 'black',
-                  color: 'yellow',
-                },
-              }}
+              className="text-yellow-500 hover:bg-yellow-500 hover:text-black"
             >
               Contacto
             </DropdownItem>
@@ -107,14 +145,7 @@ function Navbar() {
               key="sobre"
               as="a"
               href="/sobre"
-              css={{
-                backgroundColor: 'yellow',
-                color: 'black',
-                '&:hover': {
-                  backgroundColor: 'black',
-                  color: 'yellow',
-                },
-              }}
+              className="text-yellow-500 hover:bg-yellow-500 hover:text-black"
             >
               Sobre Nosotros
             </DropdownItem>
@@ -122,14 +153,7 @@ function Navbar() {
               key="ayuda"
               as="a"
               href="/ayuda"
-              css={{
-                backgroundColor: 'yellow',
-                color: 'black',
-                '&:hover': {
-                  backgroundColor: 'black',
-                  color: 'yellow',
-                },
-              }}
+              className="text-yellow-500 hover:bg-yellow-500 hover:text-black"
             >
               Ayuda
             </DropdownItem>
@@ -137,14 +161,7 @@ function Navbar() {
               key="login"
               as="a"
               href="/login"
-              css={{
-                backgroundColor: 'yellow',
-                color: 'black',
-                '&:hover': {
-                  backgroundColor: 'black',
-                  color: 'yellow',
-                },
-              }}
+              className="text-yellow-500 hover:bg-yellow-500 hover:text-black"
             >
               Iniciar Sesión
             </DropdownItem>
