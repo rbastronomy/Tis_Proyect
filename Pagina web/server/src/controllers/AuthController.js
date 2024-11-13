@@ -31,7 +31,7 @@ export class AuthController {
         const sessionCookie = auth.provider.createSessionCookie(session.id);
 
         reply.header('Set-Cookie', 'session_id=' + sessionCookie.id + '; HttpOnly; Secure; SameSite=Strict');
-        return reply.send({ message: 'Login successful', userId: user.id, roles, permissions });
+        return reply.send({ message: 'Login successful', userId: user.id, roles, permissions, usermail :user.email });
         
     } catch (error) {
         console.error('Login error:', error);

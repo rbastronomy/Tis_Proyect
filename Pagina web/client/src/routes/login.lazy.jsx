@@ -34,7 +34,7 @@ function Login() {
         }
 
         const result = await response.json();
-        console.log('Login successful:', result);
+        console.log('Login successful:', result, result.usermail);
         
 
     } catch (error) {
