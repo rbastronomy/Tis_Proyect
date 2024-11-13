@@ -4,17 +4,17 @@ import { Autocomplete, AutocompleteItem } from '@nextui-org/react';
 
 const useDebounce = (value, delay) => {
   const [debouncedValue, setDebouncedValue] = useState(value);
-  
+
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedValue(value);
     }, delay);
-    
+
     return () => {
       clearTimeout(handler);
     };
   }, [value, delay]);
-  
+
   return debouncedValue;
 };
 
@@ -104,8 +104,8 @@ function AddressAutocomplete({ onSelect }) {
     if (selected) {
       setQuery(selected.label);
       setSelectedValue(selected.label);
-      onSelect(selected.value);
-      console.log('Selected address:', selected.label);
+      onSelect(selected.value); // Llama a onSelect con las coordenadas correctas
+      console.log('Selected address:', selected.label); // Verificación
     }
   };
 
@@ -117,7 +117,7 @@ function AddressAutocomplete({ onSelect }) {
       items={suggestions}
       inputValue={query}
       isLoading={isLoading}
-      onInputChange={setQuery}
+      onInputChange={(value) => setQuery(value)}
       onSelectionChange={handleSelectionChange}
       onBlur={() => {
         if (selectedValue) {
@@ -144,4 +144,4 @@ AddressAutocomplete.propTypes = {
   onSelect: PropTypes.func.isRequired,
 };
 
-export default AddressAutocomplete; 
+export default AddressAutocomplete;

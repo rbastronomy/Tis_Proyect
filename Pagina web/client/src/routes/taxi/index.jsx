@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { Button } from '@nextui-org/react'
 import Map from '../../components/Map'
 import { useGeolocation } from '../../hooks/useGeolocation'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 export const Route = createFileRoute('/taxi/')({
   component: Taxi,
@@ -11,12 +11,15 @@ export const Route = createFileRoute('/taxi/')({
 function Taxi() {
   const [isTracking, setIsTracking] = useState(false)
   const { position, error, loading } = useGeolocation({ 
-    skip: !isTracking 
+    skip: !isTracking, 
+    enableHighAccuracy: true, // Asegura que se use la mayor precisión posible
+    timeout: 10000 // Limita el tiempo de espera para obtener la ubicación
   })
-  
-  const mapPosition = position 
-    ? [position.latitude, position.longitude]
-    : null
+
+  // Si no hay posición, se utiliza una posición predeterminada (Iquique)
+  const mapPosition = position && position.latitude && position.longitude 
+    ? { lat: position.latitude, lon: position.longitude }
+    : { lat: -20.2133, lon: -70.1503 }  // Iquique como fallback
 
   const handleTrackingToggle = () => {
     if (!isTracking) {
@@ -46,43 +49,49 @@ function Taxi() {
     }
   }
 
+  useEffect(() => {
+    if (position) {
+      console.log('Posición obtenida:', position)
+    }
+  }, [position])
+
   return (
-    <div className="flex flex-col min-h-screen bg-gray-900 text-white">
-      <main className="flex flex-col items-center p-6">
-        <h1 className="text-4xl font-bold mb-6">Bienvenido a Taxi Aeropuerto Tarapacá</h1>
-        <div className="flex flex-col items-center mb-4">
-          <Button 
-            color={isTracking ? "danger" : "primary"}
-            onClick={handleTrackingToggle}
-            isLoading={loading}
-            className="mb-4"
-          >
-            {loading ? 'Localizando...' : (isTracking ? 'Detener Seguimiento' : 'Iniciar Seguimiento')}
-          </Button>
+    <div className="relative min-h-screen">
+      {/* Mapa de pantalla completa solo si mapPosition tiene valores válidos */}
+      <div id="map-container" className="absolute inset-0 w-full h-full z-0">
+        <Map position={mapPosition} isTracking={isTracking} />
+      </div>
 
-          {/* Mensajes de Estado */}
-          {error && (
-            <div className="text-red-500 mb-2 text-center max-w-md">
-              {error}
-            </div>
-          )}
+      {/* Botón de seguimiento centrado en la parte superior */}
+      <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10">
+        <Button 
+          color={isTracking ? "danger" : "primary"}
+          onClick={handleTrackingToggle}
+          isLoading={loading}
+          className="px-6 py-3 text-lg font-bold rounded-full shadow-lg bg-blue-500 hover:bg-blue-700 text-white"
+        >
+          {loading ? 'Localizando...' : (isTracking ? 'Detener Seguimiento' : 'Iniciar Seguimiento')}
+        </Button>
+      </div>
 
-          {position && isTracking && (
-            <div className="mt-2 text-center">
-              <p>Latitude: {position.latitude.toFixed(4)}</p>
-              <p>Longitude: {position.longitude.toFixed(4)}</p>
-              {position.speed && <p>Velocidad: {position.speed.toFixed(2)} m/s</p>}
-              <p>Precisión: ±{position.accuracy.toFixed(0)}m</p>
-            </div>
-          )}
-        </div>
-        <div id="map-container" className="w-full max-w-4xl">
-          <Map 
-            position={mapPosition} 
-            isTracking={isTracking}
-          />
-        </div>
-      </main>
+      {/* Mensaje de error o datos de ubicación */}
+      <div className="absolute bottom-4 left-4 z-10 text-white bg-black bg-opacity-70 p-4 rounded-md shadow-md max-w-xs">
+        {error && (
+          <div className="text-red-500 mb-2">
+            {error}
+          </div>
+        )}
+        {position && isTracking && (
+          <div className="mt-2 text-sm">
+            <p>Latitude: {position.latitude.toFixed(4)}</p>
+            <p>Longitude: {position.longitude.toFixed(4)}</p>
+            {position.speed && <p>Velocidad: {position.speed.toFixed(2)} m/s</p>}
+            <p>Precisión: ±{position.accuracy.toFixed(0)}m</p>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
+
+export default Taxi

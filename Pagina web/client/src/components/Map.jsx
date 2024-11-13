@@ -4,7 +4,6 @@ import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import PropTypes from 'prop-types';
 
-// Fix for default marker icon issue in Leaflet
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
@@ -12,12 +11,13 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
 });
 
+// Componente para actualizar la posición del mapa cuando el seguimiento está activo
 function MapUpdater({ position, isTracking }) {
   const map = useMap();
 
   useEffect(() => {
     if (position && isTracking) {
-      map.setView(position, map.getZoom(), { animate: true });
+      map.setView([position.lat, position.lon], map.getZoom(), { animate: true });
     }
   }, [position, map, isTracking]);
 
@@ -25,81 +25,67 @@ function MapUpdater({ position, isTracking }) {
 }
 
 MapUpdater.propTypes = {
-  position: PropTypes.arrayOf(PropTypes.number),
-  isTracking: PropTypes.bool,
+  position: PropTypes.shape({
+    lat: PropTypes.number.isRequired,
+    lon: PropTypes.number.isRequired,
+  }).isRequired,
+  isTracking: PropTypes.bool.isRequired,
 };
 
-function Map({ position, startCoords, endCoords, route, isTracking }) {
-  const decodePolyline = (encoded) => {
-    if (!encoded) return [];
-    
-    let points = [];
-    let index = 0, len = encoded.length;
-    let lat = 0, lng = 0;
-
-    while (index < len) {
-      let b, shift = 0, result = 0;
-      do {
-        b = encoded.charCodeAt(index++) - 63;
-        result |= (b & 0x1f) << shift;
-        shift += 5;
-      } while (b >= 0x20);
-      let dlat = ((result & 1) ? ~(result >> 1) : (result >> 1));
-      lat += dlat;
-
-      shift = 0;
-      result = 0;
-      do {
-        b = encoded.charCodeAt(index++) - 63;
-        result |= (b & 0x1f) << shift;
-        shift += 5;
-      } while (b >= 0x20);
-      let dlng = ((result & 1) ? ~(result >> 1) : (result >> 1));
-      lng += dlng;
-
-      points.push([lat / 1E5, lng / 1E5]);
-    }
-    return points;
-  };
-
-  const routeCoordinates = route ? decodePolyline(route) : [];
-  const defaultPosition = [-20.2133, -70.1503]; // Iquique default position
+function Map({ position, startCoords, endCoords, routeCoordinates, isTracking }) {
+  const defaultPosition = { lat: -20.2133, lon: -70.1503 }; // Iquique default position
 
   return (
     <MapContainer 
       center={position || defaultPosition} 
       zoom={13} 
-      style={{ width: '100%', height: '400px' }}
+      style={{ width: '100%', height: '100%' }} 
     >
       <TileLayer
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         attribution="&copy; OpenStreetMap contributors"
       />
       
-      {/* Current position marker */}
+      {/* Mostrar el marcador para la ubicación del usuario si está disponible */}
       {position && (
-        <Marker position={position}>
-          {/* Opcional: Puedes agregar un popup aquí si es necesario */}
+        <Marker position={[position.lat, position.lon]}>
+          {/* Popup opcional que puedes agregar aquí */}
         </Marker>
       )}
 
-      {/* Route markers and polyline */}
+      {/* Opcionalmente, agregar marcadores para las coordenadas de inicio y fin */}
       {startCoords && <Marker position={[startCoords.lat, startCoords.lon]} />}
       {endCoords && <Marker position={[endCoords.lat, endCoords.lon]} />}
-      {route && <Polyline positions={routeCoordinates} color="blue" />}
+      
+      {/* Renderiza la polilínea de la ruta */}
+      {routeCoordinates && <Polyline positions={routeCoordinates.map(coord => [coord.lat, coord.lon])} color="blue" />}
 
-      {/* Pass the position as an array to MapUpdater */}
-      {position && <MapUpdater position={position} isTracking={isTracking} />}
+      {/* Actualiza la vista del mapa cuando cambia la posición */}
+      <MapUpdater position={position} isTracking={isTracking} />
     </MapContainer>
   );
 }
 
 Map.propTypes = {
-  position: PropTypes.arrayOf(PropTypes.number),
-  startCoords: PropTypes.object,
-  endCoords: PropTypes.object,
-  route: PropTypes.string,
-  isTracking: PropTypes.bool,
+  position: PropTypes.shape({
+    lat: PropTypes.number,
+    lon: PropTypes.number,
+  }),
+  startCoords: PropTypes.shape({
+    lat: PropTypes.number,
+    lon: PropTypes.number,
+  }),
+  endCoords: PropTypes.shape({
+    lat: PropTypes.number,
+    lon: PropTypes.number,
+  }),
+  routeCoordinates: PropTypes.arrayOf(
+    PropTypes.shape({
+      lat: PropTypes.number.isRequired,
+      lon: PropTypes.number.isRequired,
+    })
+  ),
+  isTracking: PropTypes.bool.isRequired,
 };
 
 export default React.memo(Map);
