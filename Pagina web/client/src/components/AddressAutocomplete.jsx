@@ -22,7 +22,7 @@ function AddressAutocomplete({ onSelect }) {
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedValue, setSelectedValue] = useState('');
+  const [selectedValue, setSelectedValue] = useState(null);
   const debouncedQuery = useDebounce(query, 1000);
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
@@ -102,10 +102,12 @@ function AddressAutocomplete({ onSelect }) {
   const handleSelectionChange = (key) => {
     const selected = suggestions.find(item => item.id === key);
     if (selected) {
+      setSelectedValue(selected.id);
       setQuery(selected.label);
-      setSelectedValue(selected.label);
-      onSelect(selected.value); // Llama a onSelect con las coordenadas correctas
-      console.log('Selected address:', selected.label); // Verificación
+      onSelect(selected.value);
+      setTimeout(() => {
+        setQuery(selected.label);
+      }, 0);
     }
   };
 
@@ -116,13 +118,19 @@ function AddressAutocomplete({ onSelect }) {
       className="max-w-xs"
       items={suggestions}
       inputValue={query}
+      selectedKey={selectedValue}
+      defaultSelectedKey={selectedValue}
       isLoading={isLoading}
-      onInputChange={(value) => setQuery(value)}
-      onSelectionChange={handleSelectionChange}
-      onBlur={() => {
-        if (selectedValue) {
-          setQuery(selectedValue);
+      onInputChange={(value) => {
+        setQuery(value);
+        if (!value) {
+          setSelectedValue(null);
         }
+      }}
+      onSelectionChange={handleSelectionChange}
+      onClear={() => {
+        setQuery('');
+        setSelectedValue(null);
       }}
     >
       {(item) => (
