@@ -23,37 +23,6 @@ function Ruta() {
     setEndCoords(coords)
   }
 
-  const decodePolyline = (encoded) => {
-    if (!encoded) return [];
-    let points = [];
-    let index = 0, len = encoded.length;
-    let lat = 0, lng = 0;
-
-    while (index < len) {
-      let b, shift = 0, result = 0;
-      do {
-        b = encoded.charCodeAt(index++) - 63;
-        result |= (b & 0x1f) << shift;
-        shift += 5;
-      } while (b >= 0x20);
-      let dlat = ((result & 1) ? ~(result >> 1) : (result >> 1));
-      lat += dlat;
-
-      shift = 0;
-      result = 0;
-      do {
-        b = encoded.charCodeAt(index++) - 63;
-        result |= (b & 0x1f) << shift;
-        shift += 5;
-      } while (b >= 0x20);
-      let dlng = ((result & 1) ? ~(result >> 1) : (result >> 1));
-      lng += dlng;
-
-      points.push({ lat: lat / 1E5, lon: lng / 1E5 });
-    }
-    return points;
-  };
-
   const fetchRoute = async () => {
     if (!startCoords || !endCoords) {
       setErrorMessage("Por favor, selecciona tanto el inicio como el destino.")
@@ -66,9 +35,14 @@ function Ruta() {
 
       console.log(`Calculando ruta desde ${origin} hasta ${destination}`)
       
-      // Llama a la API de direcciones (por ejemplo, Google Maps Directions API o similar)
       const response = await fetch(
-        `https://maps.googleapis.com/maps/api/directions/json?origin=${origin}&destination=${destination}&key=YOUR_GOOGLE_MAPS_API_KEY`
+        `/api/directions?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
       )
 
       if (!response.ok) {
@@ -79,9 +53,8 @@ function Ruta() {
       console.log('Datos recibidos de la API:', data)
 
       if (data.status === 'OK' && data.routes?.length > 0) {
-        const decodedCoordinates = decodePolyline(data.routes[0].overview_polyline.points);
-        setRouteCoordinates(decodedCoordinates);
-        setErrorMessage(null);
+        setRouteCoordinates(data.routes[0].decodedCoordinates)
+        setErrorMessage(null)
         console.log("Ruta establecida correctamente")
       } else {
         setErrorMessage("No se encontró una ruta entre los puntos seleccionados.")
