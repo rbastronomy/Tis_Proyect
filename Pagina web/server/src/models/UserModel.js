@@ -28,6 +28,10 @@ export class UserModel extends BaseModel {
     return this.db(this.tableName).insert(data).returning('*');
   }
 
+  async getByEmail(email) {
+    return this.db(this.tableName).where({ email }).first();
+  }
+
   // Custom method for creating a user with a transaction
   async createWithTransaction(data) {
     return this.transaction(async (trx) => {

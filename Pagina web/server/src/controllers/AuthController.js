@@ -14,28 +14,29 @@ export class AuthController {
    * @param {Object} reply - Fastify reply object.
    */
   async login(request, reply) {
-    const { username, password } = request.body;
+    const { email, password } = request.body;
 
     try {
-      const user = await auth.authenticateUser('username', username, password);
-      if (!user) {
-        return reply.status(401).send({ error: 'Invalid username or password' });
-      }
 
-      const roles = await userService.getRoles(user.id);
-      const permissions = await userService.getPermissions(user.id);
+        const user = await userService.validateUserCredentials(email, password);
+        
+        if (!user) {
+            return reply.status(401).send({ error: 'Invalid email or password' });
+        }
 
-      const session = await auth.createSession(user.id, { roles, permissions });
-      const sessionCookie = auth.provider.createSessionCookie(session.id);
+        const roles = await userService.getRoles(user.id);
+        const permissions = await userService.getPermissions(user.id);
 
-      reply.setCookie(sessionCookie.name, sessionCookie.value, sessionCookie.attributes);
-      return reply.send({ message: 'Login successful', userId: user.id, roles, permissions });
+        const session = await auth.createSession(user.id);
+        const sessionCookie = auth.provider.createSessionCookie(session.id);
+
+        reply.header('Set-Cookie', 'session_id=' + sessionCookie.id + '; HttpOnly; Secure; SameSite=Strict');
+        return reply.send({ message: 'Login successful', userId: user.id, roles, permissions });
+        
     } catch (error) {
-      if (error instanceof LuciaError) {
-        return reply.status(401).send({ error: 'Invalid username or password' });
-      }
-      request.log.error(error);
-      return reply.status(500).send({ error: 'An error occurred during login' });
+        console.error('Login error:', error);
+        request.log.error(error);
+        return reply.status(500).send({ error: 'An error occurred during login' });
     }
   }
 

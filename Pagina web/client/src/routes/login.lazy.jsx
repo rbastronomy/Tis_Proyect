@@ -14,11 +14,34 @@ function Login() {
     }
   });
 
-  const onSubmit = (data) => {
-    console.log('Login submitted');
-    console.log('Email:', data.email);
-    console.log('Password:', data.password);
-  };
+  const onSubmit = async (data) => {
+    try {
+        const response = await fetch('http://127.0.0.1:3000/api/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+                email: data.email,  // Usando 'email' aquí
+                password: data.password,
+            }),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Login failed');
+        }
+
+        const result = await response.json();
+        console.log('Login successful:', result);
+        window.location.href = 'http://localhost:5173/';
+
+    } catch (error) {
+        console.error('Error en el login:', error.message);
+        alert(`Login Error: ${error.message}`);
+    }
+};
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-100">

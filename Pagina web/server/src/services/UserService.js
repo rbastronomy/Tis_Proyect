@@ -10,8 +10,16 @@ export class UserService extends BaseService {
   }
 
   //nethod to validate user credentials
-  async validateUserCredentials(username, password) {
-    const user = await this.model.getByUsername(username);
+  async validateUserCredentials(identifier, password) {
+    let user;
+    if (identifier.includes('@')) {
+      // Assuming identifier is an email if it contains '@'
+      user = await this.model.getByEmail(identifier);
+    } else {
+      // Otherwise, assume it's a username
+      user = await this.model.getByUsername(identifier);
+    }
+    
     if (user && user.password === password) {
       return user;
     }
