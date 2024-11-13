@@ -35,7 +35,7 @@ function Login() {
 
         const result = await response.json();
         console.log('Login successful:', result);
-        window.location.href = 'http://localhost:5173/';
+        
 
     } catch (error) {
         console.error('Error en el login:', error.message);
