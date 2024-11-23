@@ -11,13 +11,17 @@ class Auth {
     provider;
 
     constructor() {
-        // Create a new pg pool using the same connection details as Knex
         const pgPool = new pg.Pool(db.client.config.connection);
 
-        // Create the adapter using the pg pool
         const adapter = new NodePostgresAdapter(pgPool, {
-        user: 'auth_user',
-        session: 'user_session',
+            user: 'persona',
+            session: 'user_session',
+            getUserAttributes: (attributes) => ({
+                rut: attributes.rut,
+                nombre: attributes.nombre,
+                correo: attributes.correo,
+                idroles: attributes.idroles
+            })
         });
 
         const isProduction = process.env.NODE_ENV === 'production';
@@ -30,28 +34,29 @@ class Auth {
                 },
             },
             getUserAttributes: async (user) => {
-                // Fetch roles and permissions
-                const roles = await db('user_roles')
-                .join('roles', 'user_roles.role_id', 'roles.id')
-                .where('user_roles.user_id', user.id)
-                .select('roles.name');
+                const persona = await db('persona')
+                    .where('rut', user.rut)
+                    .first();
 
-                const permissions = await db('user_roles')
-                .join('role_permissions', 'user_roles.role_id', 'role_permissions.role_id')
-                .join('permissions', 'role_permissions.permission_id', 'permissions.id')
-                .where('user_roles.user_id', user.id)
-                .select('permissions.name');
+                const role = await db('roles')
+                    .where('idroles', persona.idroles)
+                    .first();
+
+                const permissions = await db('posee')
+                    .join('permiso', 'posee.idpermisos', 'permiso.idpermisos')
+                    .where('posee.idroles', persona.idroles)
+                    .select('permiso.nombrepermiso');
 
                 return {
-                username: user.username,
-                email: user.email,
-                roles: roles.map((role) => role.name),
-                permissions: permissions.map((permission) => permission.name),
+                    rut: persona.rut,
+                    nombre: persona.nombre,
+                    correo: persona.correo,
+                    role: role.nombrerol,
+                    permissions: permissions.map(p => p.nombrepermiso)
                 };
             }
         });
     }
-
 
     /**
    * Verifies a user session.
