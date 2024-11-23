@@ -1,4 +1,4 @@
-import { mapsController } from '../controllers/maps.controller.js'
+import { mapsController } from '../controllers/MapController.js'
 
 export default async function mapsRoutes(fastify) {
   fastify.get('/api/directions', {

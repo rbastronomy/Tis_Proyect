@@ -8,7 +8,7 @@ import auth from './auth/auth.js';
 import userRoutes from './routes/userRoutes.js';
 import roleRoutes from './routes/roleRoutes.js';
 import permissionRoutes from './routes/permissionRoutes.js';
-import mapsRoutes from './routes/maps.routes.js';
+import mapsRoutes from './routes/mapRoutes.js';
 import authRoutes from './routes/authroutes.js';
 import fastifyCors from '@fastify/cors'; // CORS plugin
 
