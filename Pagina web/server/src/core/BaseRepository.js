@@ -1,15 +1,15 @@
-const knex = require('../config/database');
+import { db } from '../db/database.js';
 
-class BaseRepository {
+export class BaseRepository {
   constructor(tableName) {
     this.tableName = tableName;
-    this.knex = knex;
+    this.db = db;
   }
 
   // Método genérico para encontrar por ID
   async findById(id, idColumn = 'id') {
     try {
-      return await this.knex(this.tableName)
+      return await this.db(this.tableName)
         .where(idColumn, id)
         .first();
     } catch (error) {
@@ -20,7 +20,7 @@ class BaseRepository {
   // Método genérico para encontrar todos los registros
   async findAll(filters = {}, options = {}) {
     try {
-      let query = this.knex(this.tableName).where(filters);
+      let query = this.db(this.tableName).where(filters);
 
       // Opcional: Paginación
       if (options.page && options.pageSize) {
@@ -50,7 +50,7 @@ class BaseRepository {
         Object.entries(data).filter(([, v]) => v !== undefined)
       );
 
-      const [insertedId] = await this.knex(this.tableName)
+      const [insertedId] = await this.db(this.tableName)
         .insert(cleanData)
         .returning('id');
 
@@ -68,7 +68,7 @@ class BaseRepository {
         Object.entries(data).filter(([, v]) => v !== undefined)
       );
 
-      return await this.knex(this.tableName)
+      return await this.db(this.tableName)
         .where(idColumn, id)
         .update(cleanData);
     } catch (error) {
@@ -79,7 +79,7 @@ class BaseRepository {
   // Método genérico para eliminar un registro
   async delete(id, idColumn = 'id') {
     try {
-      return await this.knex(this.tableName)
+      return await this.db(this.tableName)
         .where(idColumn, id)
         .del();
     } catch (error) {
@@ -90,7 +90,7 @@ class BaseRepository {
   // Método genérico para realizar una operación de soft delete
   async softDelete(id, idColumn = 'id', deletedAtColumn = 'deleted_at') {
     try {
-      return await this.knex(this.tableName)
+      return await this.db(this.tableName)
         .where(idColumn, id)
         .update({
           [deletedAtColumn]: new Date(),
@@ -103,7 +103,7 @@ class BaseRepository {
 
   // Método para transacciones
   async transaction(callback) {
-    return await this.knex.transaction(async (trx) => {
+    return await this.db.transaction(async (trx) => {
       try {
         return await callback(trx);
       } catch (error) {
@@ -115,7 +115,7 @@ class BaseRepository {
   // Método para búsqueda con condiciones complejas
   async findWhere(conditions, options = {}) {
     try {
-      let query = this.knex(this.tableName);
+      let query = this.db(this.tableName);
 
       // Agregar condiciones
       Object.entries(conditions).forEach(([key, value]) => {
@@ -151,7 +151,7 @@ class BaseRepository {
   // Método para contar registros
   async count(filters = {}) {
     try {
-      const [result] = await this.knex(this.tableName)
+      const [result] = await this.db(this.tableName)
         .where(filters)
         .count('* as total');
 
@@ -161,5 +161,3 @@ class BaseRepository {
     }
   }
 }
-
-module.exports = BaseRepository;

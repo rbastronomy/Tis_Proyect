@@ -1,75 +1,119 @@
 import { BaseService } from '../core/BaseService.js';
-import { UserModel } from '../models/UserModel.js';
-import { RoleService } from './RoleService.js';
+import auth from '../auth/auth.js';
+import UserRepository from '../repository/UserRepository.js';
 
 export class UserService extends BaseService {
   constructor() {
-    const userModel = new UserModel();
-    super(userModel);
-    this.roleService = new RoleService();
+    const userRepository = new UserRepository();
+    super(userRepository);
+    this.auth = auth;
   }
 
-  //nethod to validate user credentials
-  async validateUserCredentials(identifier, password) {
-    let user;
-    if (identifier.includes('@')) {
-      // Assuming identifier is an email if it contains '@'
-      user = await this.model.getByEmail(identifier);
-    } else {
-      // Otherwise, assume it's a username
-      user = await this.model.getByUsername(identifier);
-    }
+  async getUserWithAuth(rut) {
+    const user = await this.repository.findByRut(rut);
+    if (!user) return null;
+
+    const roles = await this.repository.getRoles(rut);
+    const permissions = await this.repository.getPermissions(rut);
     
-    if (user && user.password === password) {
-      return user;
-    }
-    return null;
+    user.role = roles[0]?.nombrerol;
+    user.permissions = permissions.map(p => p.nombrepermiso);
+    
+    return user;
   }
 
-  async getByUsername(username) {
-    return this.model.getByUsername(username);
-  }
-
-  async createWithTransaction(data) {
-    return this.model.createWithTransaction(data);
-  }
-
-  async getRoles(userId) {
-    return this.model.getRoles(userId);
-  }
-
-  async assignRole(userId, roleId) {
-    return this.model.assignRole(userId, roleId);
-  }
-
-  async removeRole(userId, roleId) {
-    return this.model.removeRole(userId, roleId);
-  }
-
-  async getPermissions(userId) {
-    return this.model.getPermissions(userId);
-  }
-
-  /**
-   * Retrieves a role by its name.
-   * @param {string} roleName - The role's name.
-   * @returns {Object} - The role object.
-   */
-  async getRoleByName(roleName) {
-    return this.roleService.model.getByName(roleName);
-  }
-
-  /**
-   * Assigns default roles or permissions if needed.
-   * @param {number} userId - The user's ID.
-   * @param {Array} roles - List of roles to assign.
-   */
-  async assignDefaultRoles(userId, roles = ['user']) {
-    for (const roleName of roles) {
-      const role = await this.getRoleByName(roleName);
-      if (role) {
-        await this.assignRole(userId, role.id);
+  async register(userData) {
+    try {
+      // Check if user exists
+      const existingUser = await this.repository.findByEmail(userData.correo);
+      if (existingUser) {
+        throw new Error('User already exists');
       }
+
+      // Create user in database
+      const user = await this.repository.create(userData);
+
+      // Create Lucia auth user
+      const authUser = await this.auth.createUser({
+        key: {
+          providerId: "email",
+          providerUserId: userData.correo.toLowerCase(),
+          password: userData.contrasena // Lucia will hash this
+        },
+        attributes: user.toAuthAttributes()
+      });
+
+      // Assign default role if specified
+      if (userData.idroles) {
+        await this.repository.assignRole(user.rut, userData.idroles);
+      }
+
+      // Create session
+      const session = await this.auth.createSession({
+        userId: authUser.userId,
+        attributes: {}
+      });
+
+      return { user, session };
+    } catch (error) {
+      throw error;
     }
+  }
+
+  async login(identifier, password) {
+    try {
+      // Find user by key and validate password using Lucia
+      const key = await this.auth.useKey(
+        "email",
+        identifier.toLowerCase(),
+        password
+      );
+
+      // Get user with roles and permissions
+      const user = await this.getUserWithAuth(key.userId);
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      // Create new session
+      const session = await this.auth.createSession({
+        userId: key.userId,
+        attributes: {}
+      });
+
+      return { user, session };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async logout(sessionId) {
+    try {
+      await this.auth.invalidateSession(sessionId);
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async validateSession(sessionId) {
+    try {
+      return await this.auth.validateSession(sessionId);
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async getByEmail(email) {
+    return this.repository.findByEmail(email);
+  }
+
+  async create(userData) {
+    // Add any business logic/validation here before creating the user
+    return this.repository.create(userData);
+  }
+
+  async update(rut, userData) {
+    // Add any business logic/validation here before updating
+    return this.repository.update(rut, userData);
   }
 }

@@ -1,72 +1,81 @@
-import auth from '../auth/auth.js';
 import { UserService } from '../services/UserService.js';
-import { LuciaError } from 'lucia-auth';
+import { AuthError } from '../auth/auth.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-const userService = new UserService();
-
 export class AuthController {
+  constructor() {
+    this.userService = new UserService();
+  }
+
   /**
-   * Handles user login using Lucia Auth.
-   * @param {Object} request - Fastify request object.
-   * @param {Object} reply - Fastify reply object.
+   * Handles user login
+   * @param {Object} request - Fastify request object containing login credentials
+   * @param {Object} request.body - Request body
+   * @param {string} request.body.identifier - Username or email
+   * @param {string} request.body.password - User password
+   * @param {Object} reply - Fastify reply object
+   * @returns {Promise<Object>} Response object containing user data and session info
+   * @throws {AuthError} When login credentials are invalid
    */
   async login(request, reply) {
-    const { email, password } = request.body;
+    const { identifier, password } = request.body;
 
     try {
-
-        const user = await userService.validateUserCredentials(email, password);
-        
-        if (!user) {
-            return reply.status(401).send({ error: 'Invalid email or password' });
-        }
-
-        const roles = await userService.getRoles(user.id);
-        const permissions = await userService.getPermissions(user.id);
-
-        const session = await auth.createSession(user.id);
-        const sessionCookie = auth.provider.createSessionCookie(session.id);
-
-        reply.header('Set-Cookie', 'session_id=' + sessionCookie.id + '; HttpOnly; Secure; SameSite=Strict');
-        return reply.send({ message: 'Login successful', userId: user.id, roles, permissions, usermail :user.email });
-        
+      const { user, session } = await this.userService.login(identifier, password);
+      
+      const sessionCookie = this.userService.auth.createSessionCookie(session);
+      reply.header('Set-Cookie', sessionCookie.serialize());
+      
+      return reply.send({ 
+        message: 'Login successful', 
+        user: user.toJSON(),
+        role: user.role,
+        permissions: user.permissions
+      });
     } catch (error) {
-        console.error('Login error:', error);
-        request.log.error(error);
-        return reply.status(500).send({ error: 'An error occurred during login' });
+      console.error('Login error:', error);
+      request.log.error(error);
+      
+      if (error instanceof AuthError) {
+        return reply.status(401).send({ 
+          error: error.message,
+          code: error.code 
+        });
+      }
+      
+      return reply.status(500).send({ error: 'An error occurred during login' });
     }
   }
 
   /**
-   * Handles user registration using Lucia Auth.
-   * @param {Object} request - Fastify request object.
-   * @param {Object} reply - Fastify reply object.
+   * Handles user registration
+   * @param {Object} request - Fastify request object
+   * @param {Object} request.body - Registration data
+   * @param {string} request.body.username - Username
+   * @param {string} request.body.email - User email
+   * @param {string} request.body.password - User password
+   * @param {Object} reply - Fastify reply object
+   * @returns {Promise<Object>} Response object containing new user data
+   * @throws {AuthError} When registration fails
    */
   async register(request, reply) {
-    const { username, password, email } = request.body;
-
     try {
-      // Check if user already exists
-      const existingUser = await userService.getByUsername(username);
-      if (existingUser) {
-        return reply.status(400).send({ error: 'Username already taken' });
-      }
-
-      // Create new user using Lucia Auth
-      const newUser = await auth.createUser({ username, password, email });
+      const { user, session } = await this.userService.register(request.body);
       
-      // Optionally assign a default role, e.g., 'user'
-      const defaultRole = await userService.getRoleByName('user');
-      if (defaultRole) {
-        await userService.assignRole(newUser.id, defaultRole.id);
-      }
+      const sessionCookie = this.userService.auth.createSessionCookie(session);
+      reply.header('Set-Cookie', sessionCookie.serialize());
 
-      return reply.send({ message: 'Registration successful', userId: newUser.id });
+      return reply.send({ 
+        message: 'Registration successful', 
+        user: user.toJSON() 
+      });
     } catch (error) {
-      if (error instanceof LuciaError) {
+      if (error.message === 'User already exists') {
+        return reply.status(400).send({ error: error.message });
+      }
+      if (error instanceof AuthError) {
         return reply.status(400).send({ error: error.message });
       }
       request.log.error(error);
@@ -75,16 +84,19 @@ export class AuthController {
   }
 
   /**
-   * Handles user logout.
-   * @param {Object} request - Fastify request object.
-   * @param {Object} reply - Fastify reply object.
+   * Handles user logout
+   * @param {Object} request - Fastify request object
+   * @param {Object} request.cookies - Request cookies containing session ID
+   * @param {Object} reply - Fastify reply object
+   * @returns {Promise<Object>} Response confirming successful logout
+   * @throws {Error} When logout fails
    */
   async logout(request, reply) {
-    const sessionId = request.cookies[auth.provider.sessionCookieName];
+    const sessionId = request.cookies[this.userService.auth.provider.sessionCookieName];
 
     try {
-      await auth.invalidateSession(sessionId);
-      reply.clearCookie(auth.provider.sessionCookieName);
+      await this.userService.logout(sessionId);
+      reply.clearCookie(this.userService.auth.provider.sessionCookieName);
       return reply.send({ message: 'Logout successful' });
     } catch (error) {
       request.log.error(error);
@@ -93,19 +105,22 @@ export class AuthController {
   }
 
   /**
-   * Validates the current user session.
-   * @param {Object} request - Fastify request object.
-   * @param {Object} reply - Fastify reply object.
+   * Validates user session
+   * @param {Object} request - Fastify request object
+   * @param {Object} request.cookies - Request cookies containing session ID
+   * @param {Object} reply - Fastify reply object
+   * @returns {Promise<Object>} Response containing session validation status and user data
+   * @throws {Error} When session validation fails
    */
   async validateSession(request, reply) {
-    const sessionId = request.cookies[auth.provider.sessionCookieName];
+    const sessionId = request.cookies[this.userService.auth.provider.sessionCookieName];
 
     try {
-      const { session, user } = await auth.verifySession(sessionId);
+      const session = await this.userService.validateSession(sessionId);
       if (!session) {
         return reply.status(401).send({ error: 'Invalid session' });
       }
-      return reply.send({ message: 'Session is valid', user });
+      return reply.send({ message: 'Session is valid', user: session.user });
     } catch (error) {
       request.log.error(error);
       return reply.status(500).send({ error: 'An error occurred during session validation' });

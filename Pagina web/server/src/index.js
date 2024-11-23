@@ -1,16 +1,15 @@
 'use strict';
 
 import Fastify from 'fastify';
-import { connectDB } from './db/database.js'; // Corrected import
+import { connectDB } from './db/database.js';
 import dotenv from 'dotenv';
-import process from 'process'; // Make process available
-import auth from './auth/auth.js';
+import process from 'process';
+import fastifyCors from '@fastify/cors';
 import userRoutes from './routes/userRoutes.js';
 import roleRoutes from './routes/roleRoutes.js';
 import permissionRoutes from './routes/permissionRoutes.js';
 import mapsRoutes from './routes/mapRoutes.js';
 import authRoutes from './routes/authroutes.js';
-import fastifyCors from '@fastify/cors'; // CORS plugin
 
 dotenv.config();
 
@@ -23,7 +22,7 @@ const startServer = async () => {
       logger: true,
     });
 
-    // Register CORS (fixing duplicate CORS registration)
+    // Register CORS
     await fastify.register(fastifyCors, {
       origin: 'http://localhost:5173', // Your frontend URL
       credentials: true,               // Allow credentials (cookies)

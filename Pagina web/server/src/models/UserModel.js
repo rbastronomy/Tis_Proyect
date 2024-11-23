@@ -1,79 +1,111 @@
-import { BaseModel } from '../core/BaseModel.js';
-
-export class UserModel extends BaseModel {
-  constructor() {
-    super('users');
+export class UserModel {
+  constructor({
+    rut,
+    nombre,
+    apellidop,
+    apellidom,
+    fnacimiento,
+    correo,
+    ntelefono,
+    nacionalidad,
+    genero,
+    contrasena,
+    estadop,
+    role,
+    fcontratacion,
+    licenciaconducir,
+    adm_fcontratacion,
+    cviajes,
+    permissions = []
+  }) {
+    this.rut = rut;
+    this.nombre = nombre;
+    this.apellidop = apellidop;
+    this.apellidom = apellidom;
+    this.fnacimiento = fnacimiento;
+    this.correo = correo;
+    this.ntelefono = ntelefono;
+    this.nacionalidad = nacionalidad;
+    this.genero = genero;
+    this.contrasena = contrasena;
+    this.estadop = estadop;
+    this.role = role;
+    this.fcontratacion = fcontratacion;
+    this.licenciaconducir = licenciaconducir;
+    this.adm_fcontratacion = adm_fcontratacion;
+    this.cviajes = cviajes;
+    this.permissions = permissions;
   }
 
-  // Use inherited create method from BaseModel
-  async create(data) {
-    return super.create(data);
+  // Domain methods
+  getNombreCompleto() {
+    return `${this.nombre} ${this.apellidop} ${this.apellidom}`;
   }
 
-  // Use inherited update method from BaseModel
-  async update(id, data) {
-    return super.update(id, data);
+  isLicenciaVigente() {
+    const today = new Date();
+    const licenciaDate = new Date(this.licenciaconducir);
+    return licenciaDate > today;
   }
 
-  /**
-   * Retrieves a user by username.
-   * @param {string} username - The user's username.
-   * @returns {Object|null} - The user object or null.
-   */
-  async getByUsername(username) {
-    return this.db(this.tableName).where({ username }).first();
+  getAntiguedad() {
+    const today = new Date();
+    const contratacionDate = new Date(this.fcontratacion);
+    const diffTime = Math.abs(today - contratacionDate);
+    const diffYears = Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 365)); 
+    return diffYears;
   }
 
-  async createUser(data) {
-    return this.db(this.tableName).insert(data).returning('*');
+  isActive() {
+    return this.estadop === 'ACTIVO';
   }
 
-  async getByEmail(email) {
-    return this.db(this.tableName).where({ email }).first();
+  hasPermission(permission) {
+    return this.permissions.includes(permission);
   }
 
-  // Custom method for creating a user with a transaction
-  async createWithTransaction(data) {
-    return this.transaction(async (trx) => {
-      const [user] = await trx(this.tableName).insert(data).returning('*');
-      // Add more operations within the transaction if needed
-      return user;
-    });
+  hasRole(roleName) {
+    return this.role?.name === roleName;
   }
 
- 
-  /**
-   * Retrieves roles associated with a user.
-   * @param {number} userId - The user's ID.
-   * @returns {Array} - List of roles.
-   */
-  async getRoles(userId) {
-    return this.db('user_roles')
-      .join('roles', 'user_roles.role_id', 'roles.id')
-      .where('user_roles.user_id', userId)
-      .select('roles.id', 'roles.name', 'roles.description');
+  // Method to convert model to JSON representation
+  toJSON() {
+    return {
+      rut: this.rut,
+      nombre: this.nombre,
+      apellidop: this.apellidop,
+      apellidom: this.apellidom,
+      fnacimiento: this.fnacimiento,
+      correo: this.correo,
+      ntelefono: this.ntelefono,
+      nacionalidad: this.nacionalidad,
+      genero: this.genero,
+      estadop: this.estadop,
+      role: this.role,
+      fcontratacion: this.fcontratacion,
+      licenciaconducir: this.licenciaconducir,
+      adm_fcontratacion: this.adm_fcontratacion,
+      cviajes: this.cviajes
+    };
   }
 
-  async assignRole(userId, roleId) {
-    return this.db('user_roles').insert({ user_id: userId, role_id: roleId });
+  // Static method to create a User instance from database data
+  static fromDB(data) {
+    return new UserModel(data);
   }
 
-  async removeRole(userId, roleId) {
-    return this.db('user_roles')
-      .where({ user_id: userId, role_id: roleId })
-      .del();
+  // Method to convert model to auth attributes
+  toAuthAttributes() {
+    return {
+      rut: this.rut,
+      nombre: this.nombre,
+      correo: this.correo,
+      role: this.role?.id
+    };
   }
 
- /**
-   * Retrieves permissions associated with a user through roles.
-   * @param {number} userId - The user's ID.
-   * @returns {Array} - List of permissions.
-   */
- async getPermissions(userId) {
-  return this.db('user_roles')
-    .join('role_permissions', 'user_roles.role_id', 'role_permissions.role_id')
-    .join('permissions', 'role_permissions.permission_id', 'permissions.id')
-    .where('user_roles.user_id', userId)
-    .select('permissions.id', 'permissions.name', 'permissions.description');
-}
+  // New method to get role ID when needed
+  getRoleId() {
+    return this.role?.id;
+  }
 }
