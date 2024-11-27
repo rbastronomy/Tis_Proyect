@@ -17,9 +17,11 @@ export class RoleModel{
 
   toJSON(){
     return {
-      codigor: this.codigor,
-      descripcionr: this.descripcionr,
-      deleter: this.deleter,
+      idroles: this.idroles,
+      nombrerol: this.nombrerol,
+      descripcionro: this.descripcionrol,
+      fechacreadarol: this.fechacreadarol,
+      esadorol: this.estadorol
     };
   }
 
