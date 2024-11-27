@@ -1,10 +1,25 @@
-const BaseModel = require('./BaseModel');
-
-class HistoryModel extends BaseModel {
-    constructor() {
-        super('history');
+export class HistoryModel{
+    constructor({
+        idhistorial,
+        fcambio,
+        estadoh
+    }){
+        this.idhistorial = idhistorial;
+        this.fcambio = fcambio;
+        this.estadoh = estadoh;
     }
 
-    // Define any additional methods or overrides specific to HistoryModel here
+    //Agregar metodos necesarios para el manejo de la clase
+
+    toJSON(){
+        return {
+            idhistorial: this.idhistorial,
+            fcambio: this.fcambio,
+            estadoh: this.estadoh,
+        };
+    }
+
+    static fromDB(data){
+        return new HistoryModel(data);
+    }
 }
-module.exports = HistoryModel;
