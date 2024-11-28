@@ -3,25 +3,48 @@ import { PermissionModel } from '../models/PermissionModel.js'
 
 
 class PermissionRepository extends BaseRepository{
-    constructor(knex){
-        super(knex, 'permiso')
+    constructor(){
+        super('permiso')
     }
 
     async create(PermissionData){
-        const[createdPermission] = await this.kenx(this.table)
-            .insert(PermissionData)
-            .returning('*');
-        return PermissionModel.fromDB(createdPermission)
+        try {
+            const[createdPermission] = await this.db(this.table)
+                .insert(PermissionData)
+                .returning('*');
+            return PermissionModel.fromDB(createdPermission) 
+        } catch (error) {
+            throw new Error(`Error creating permission: ${error.message}`);
+        }
     }
 
     async update(idpermiso, updateData){
-        const[updatedPermission] = await this.knex(this.table)
-            .where({codigo})
-            .update(updateData)
-            .returning('*');
-        return updatedPermission? PermissionModel.fromDB(updatedPermission) : null
+        try {
+            const[updatedPermission] = await this.db(this.table)
+                .where({idpermiso})
+                .update(updateData)
+                .returning('*');
+            return updatedPermission? PermissionModel.fromDB(updatedPermission) : null
+        } catch (error) {
+            throw new Error(`Error updating permission: ${error.message}`);
+        }
+    }
+
+    async softDelete(idpermiso){
+        try {
+            const[deletedPermission] = await this.db(this.table)
+                .where({idpermiso})
+                .update({
+                    estadop: 'eliminado',
+                    deleted_at: new Date()
+                })
+                .returning('*');
+            return deletedPermission ? PermissionModel.fromDB(deletedPermission) : null
+        } catch (error) {
+            throw new Error(`Error softdeleting data: ${error.message}`);
+        }
     }
 
 }
 
-module.export = PermissionRepository
+export default PermissionRepository;
