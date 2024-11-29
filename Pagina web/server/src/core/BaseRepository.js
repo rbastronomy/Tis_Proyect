@@ -156,11 +156,7 @@ export class BaseRepository {
   // Método para transacciones
   async transaction(callback) {
     return await this.db.transaction(async (trx) => {
-      try {
-        return await callback(trx);
-      } catch (error) {
-        throw error;
-      }
+      return await callback(trx);
     });
   }
 

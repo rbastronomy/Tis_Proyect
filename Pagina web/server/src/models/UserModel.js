@@ -1,49 +1,45 @@
 import { BaseModel } from '../core/BaseModel.js';
 
 export class UserModel extends BaseModel {
-  constructor({
-    rut,
-    nombre,
-    apellidop,
-    apellidom,
-    fnacimiento,
-    correo,
-    ntelefono,
-    nacionalidad,
-    genero,
-    contrasena,
-    estadop,
-    role,
-    fcontratacion,
-    licenciaconducir,
-    adm_fcontratacion,
-    cviajes
-  }) {
-    super({
-      rut,
-      nombre,
-      apellidop,
-      apellidom,
-      fnacimiento,
-      correo,
-      ntelefono,
-      nacionalidad,
-      genero,
-      contrasena,
-      estadop,
-      role,
-      fcontratacion,
-      licenciaconducir,
-      adm_fcontratacion,
-      cviajes,
-    });
+  static defaultData = {
+    rut: null,
+    nombre: '',
+    apellidop: '',
+    apellidom: '',
+    fnacimiento: null,
+    correo: '',
+    ntelefono: '',
+    nacionalidad: '',
+    genero: '',
+    contrasena: '',
+    estadop: 'ACTIVO',
+    role: null,
+    fcontratacion: null,
+    licenciaconducir: null,
+    adm_fcontratacion: null,
+    cviajes: 0
+  };
+
+  constructor(data = {}) {
+    super(data, UserModel.defaultData);
   }
-  
- // Getters para propiedades comunes
- get rut() { return this._data.rut; }
- get nombre() { return this._data.nombre; }
- get apellidop() { return this._data.apellidop; }
- get apellidom() { return this._data.apellidom; }
+
+  // Getters for common properties
+  get rut() { return this._data.rut; }
+  get nombre() { return this._data.nombre; }
+  get apellidop() { return this._data.apellidop; }
+  get apellidom() { return this._data.apellidom; }
+  get fnacimiento() { return this._data.fnacimiento; }
+  get correo() { return this._data.correo; }
+  get ntelefono() { return this._data.ntelefono; }
+  get nacionalidad() { return this._data.nacionalidad; }
+  get genero() { return this._data.genero; }
+  get estadop() { return this._data.estadop; }
+  get role() { return this._data.role; }
+  get fcontratacion() { return this._data.fcontratacion; }
+  get licenciaconducir() { return this._data.licenciaconducir; }
+  get adm_fcontratacion() { return this._data.adm_fcontratacion; }
+  get cviajes() { return this._data.cviajes; }
 
   // Domain methods
   getNombreCompleto() {
@@ -69,14 +65,13 @@ export class UserModel extends BaseModel {
   }
 
   hasPermission(permissionName) {
-    return this.role?.hasPermission(permissionName) || false;
+    return this._data.role?.hasPermission(permissionName) || false;
   }
 
   hasRole(roleName) {
     return this._data.role?.nombrerol === roleName;
   }
 
-  // Method to convert model to JSON representation
   toJSON() {
     return {
       rut: this._data.rut,
@@ -97,7 +92,6 @@ export class UserModel extends BaseModel {
     };
   }
 
-  // Method to convert model to auth attributes
   toAuthAttributes() {
     return {
       rut: this._data.rut,
@@ -107,7 +101,6 @@ export class UserModel extends BaseModel {
     };
   }
 
-  // New method to get role ID when needed
   getRoleId() {
     return this._data.role?.idroles;
   }

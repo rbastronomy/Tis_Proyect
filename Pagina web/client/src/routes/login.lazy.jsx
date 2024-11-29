@@ -1,13 +1,14 @@
 import { createLazyFileRoute } from '@tanstack/react-router';
-import { Card, CardHeader, CardBody, Input, Button } from "@nextui-org/react";
+import { Card, CardHeader, CardBody, Input, Button, Link, Divider } from "@nextui-org/react";
 import { useForm, Controller } from "react-hook-form";
+import { PasswordInput } from '../components/PasswordInput';
 
 export const Route = createLazyFileRoute('/login')({
   component: Login,
 });
 
 function Login() {
-  const { control, handleSubmit, formState: { errors } } = useForm({
+  const { control, handleSubmit, formState: { errors, isSubmitting } } = useForm({
     defaultValues: {
       email: '',
       password: ''
@@ -16,43 +17,41 @@ function Login() {
 
   const onSubmit = async (data) => {
     try {
-        const response = await fetch('api/login', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            credentials: 'include',
-            body: JSON.stringify({
-                email: data.email,  // Usando 'email' aquí
-                password: data.password,
-            }),
-        });
+      const response = await fetch('api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(data),
+      });
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Login failed');
-        }
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Error al iniciar sesión');
+      }
 
-        const result = await response.json();
-        console.log('Login successful:', result, result.usermail);
-        
+      const result = await response.json();
+      console.log('Login successful:', result);
+      // Add navigation logic here
 
     } catch (error) {
-        console.error('Error en el login:', error.message);
-        alert(`Login Error: ${error.message}`);
+      console.error('Error en el login:', error.message);
+      // Add toast notification here instead of alert
     }
-};
+  };
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-100">
-      <div className="flex justify-center items-center flex-grow">
-        <Card className="w-full max-w-md bg-white shadow-md rounded">
-          <CardHeader className="flex gap-3 p-4 bg-gray-800 text-white">
-            <div className="flex flex-col">
-              <p className="text-md">Iniciar Sesión</p>
-              <p className="text-small text-gray-400">Introduce tus credenciales</p>
-            </div>
+    <div className="flex flex-col min-h-screen bg-gradient-to-b from-sky-50 to-white">
+      <div className="flex justify-center items-center flex-grow py-12">
+        <Card className="w-full max-w-md bg-white/50 backdrop-blur-sm">
+          <CardHeader className="flex flex-col gap-1 p-6">
+            <h1 className="text-2xl font-bold tracking-tight text-center">Iniciar Sesión</h1>
+            <p className="text-sm text-default-500 text-center">
+              Ingrese sus credenciales para acceder al sistema
+            </p>
           </CardHeader>
+          <Divider/>
           <CardBody className="p-6">
             <form className="flex flex-col gap-4" onSubmit={handleSubmit(onSubmit)}>
               <Controller
@@ -70,39 +69,59 @@ function Login() {
                     {...field}
                     label="Correo Electrónico"
                     type="email"
-                    placeholder="Introduce tu correo electrónico"
+                    placeholder="ejemplo@correo.com"
                     isInvalid={!!errors.email}
                     errorMessage={errors.email?.message}
-                    className="border-gray-300 rounded-md shadow-sm"
+                    variant="bordered"
+                    classNames={{
+                      input: "bg-transparent",
+                      inputWrapper: "bg-white/50"
+                    }}
                   />
                 )}
               />
-              <Controller
-                name="password"
-                control={control}
-                rules={{ 
-                  required: "La contraseña es obligatoria",
-                  minLength: {
-                    value: 6,
-                    message: "La contraseña debe tener al menos 6 caracteres"
-                  }
-                }}
-                render={({ field }) => (
-                  <Input
-                    {...field}
-                    label="Contraseña"
-                    type="password"
-                    placeholder="Introduce tu contraseña"
-                    isInvalid={!!errors.password}
-                    errorMessage={errors.password?.message}
-                    className="border-gray-300 rounded-md shadow-sm"
-                  />
-                )}
-              />
-              <Button color="primary" type="submit" className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
-                Iniciar Sesión
+              <div className="space-y-1">
+                <Controller
+                  name="password"
+                  control={control}
+                  rules={{ 
+                    required: "La contraseña es obligatoria",
+                    minLength: {
+                      value: 6,
+                      message: "La contraseña debe tener al menos 6 caracteres"
+                    }
+                  }}
+                  render={({ field }) => (
+                    <PasswordInput
+                      {...field}
+                      label="Contraseña"
+                      placeholder="Introduce tu contraseña"
+                      error={errors.password?.message}
+                    />
+                  )}
+                />
+                <div className="flex justify-end">
+                  <Link href="#" size="sm" className="text-orange-500 hover:text-orange-600">
+                    ¿Olvidó su contraseña?
+                  </Link>
+                </div>
+              </div>
+              
+              <Button 
+                className="w-full bg-orange-500 hover:bg-orange-600 text-white"
+                type="submit" 
+                isLoading={isSubmitting}
+              >
+                {isSubmitting ? "Iniciando sesión..." : "Iniciar Sesión"}
               </Button>
             </form>
+
+            <div className="mt-4 text-center text-sm">
+              <span className="text-default-500">¿No tiene una cuenta? </span>
+              <Link href="/registro" className="text-orange-500 hover:text-orange-600">
+                Regístrese aquí
+              </Link>
+            </div>
           </CardBody>
         </Card>
       </div>
