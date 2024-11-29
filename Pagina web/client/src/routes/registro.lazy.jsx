@@ -2,33 +2,45 @@ import { createLazyFileRoute } from '@tanstack/react-router';
 import { Card, CardHeader, CardBody, Input, Button, Link, Divider } from "@nextui-org/react";
 import { useForm, Controller } from "react-hook-form";
 import { PasswordInput } from '../components/PasswordInput';
-
-export const Route = createLazyFileRoute('/registro')({
-  component: Registro,
-});
+import { useRut } from '../hooks/useRut';
+import { useState } from 'react';
 
 function Registro() {
+  const [step, setStep] = useState(1);
+  const { rut, updateRut, isValid: isRutValid } = useRut();
+  
   const { control, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm({
     defaultValues: {
       nombre: '',
-      email: '',
-      telefono: '',
-      password: '',
+      correo: '',
+      ntelefono: '',
+      contrasena: '',
       confirmPassword: ''
     }
   });
 
-  const password = watch("password");
+  const password = watch("contrasena");
 
   const onSubmit = async (data) => {
     try {
-      const response = await fetch('api/registro', {
+      if (step === 1) {
+        if (!isRutValid) {
+          return;
+        }
+        setStep(2);
+        return;
+      }
+
+      const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         credentials: 'include',
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          ...data,
+          rut: rut.raw
+        }),
       });
 
       if (!response.ok) {
@@ -38,11 +50,8 @@ function Registro() {
 
       const result = await response.json();
       console.log('Registro exitoso:', result);
-      // Add navigation logic here
-
     } catch (error) {
       console.error('Error en el registro:', error.message);
-      // Add toast notification here instead of alert
     }
   };
 
@@ -51,139 +60,150 @@ function Registro() {
       <div className="flex justify-center items-center flex-grow py-12">
         <Card className="w-full max-w-md bg-white/50 backdrop-blur-sm">
           <CardHeader className="flex flex-col gap-1 p-6">
-            <h1 className="text-2xl font-bold tracking-tight text-center">Crear Cuenta</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-center">
+              {step === 1 ? 'Verificación de RUT' : 'Crear Cuenta'}
+            </h1>
             <p className="text-sm text-default-500 text-center">
-              Complete el formulario para registrarse
+              {step === 1 ? 'Ingrese su RUT para continuar' : 'Complete sus datos personales'}
             </p>
           </CardHeader>
           <Divider/>
           <CardBody className="p-6">
             <form className="flex flex-col gap-4" onSubmit={handleSubmit(onSubmit)}>
-              <Controller
-                name="nombre"
-                control={control}
-                rules={{ 
-                  required: "El nombre es obligatorio",
-                  minLength: {
-                    value: 2,
-                    message: "El nombre debe tener al menos 2 caracteres"
-                  }
-                }}
-                render={({ field }) => (
+              {step === 1 ? (
+                // Step 1: RUT Verification
+                <div className="space-y-4">
                   <Input
-                    {...field}
-                    label="Nombre Completo"
-                    placeholder="Juan Pérez"
-                    isInvalid={!!errors.nombre}
-                    errorMessage={errors.nombre?.message}
+                    value={rut.formatted}
+                    onChange={(e) => updateRut(e.target.value)}
+                    label="RUT"
+                    placeholder="12.345.678-9"
+                    isInvalid={!isRutValid && rut.formatted !== ''}
+                    errorMessage={!isRutValid && rut.formatted !== '' ? "RUT inválido" : ""}
                     variant="bordered"
                     classNames={{
                       input: "bg-transparent",
                       inputWrapper: "bg-white/50"
                     }}
                   />
-                )}
-              />
+                  <Button 
+                    className="w-full bg-orange-500 hover:bg-orange-600 text-white"
+                    type="submit"
+                    isDisabled={!isRutValid}
+                  >
+                    Continuar
+                  </Button>
+                </div>
+              ) : (
+                // Step 2: Personal Information
+                <>
+                  <Controller
+                    name="nombre"
+                    control={control}
+                    rules={{ required: "El nombre es obligatorio" }}
+                    render={({ field }) => (
+                      <Input
+                        {...field}
+                        label="Nombre Completo"
+                        placeholder="Juan Pérez"
+                        isInvalid={!!errors.nombre}
+                        errorMessage={errors.nombre?.message}
+                        variant="bordered"
+                      />
+                    )}
+                  />
 
-              <Controller
-                name="email"
-                control={control}
-                rules={{ 
-                  required: "El correo electrónico es obligatorio",
-                  pattern: {
-                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                    message: "Dirección de correo electrónico no válida"
-                  }
-                }}
-                render={({ field }) => (
-                  <Input
-                    {...field}
-                    type="email"
-                    label="Correo Electrónico"
-                    placeholder="ejemplo@correo.com"
-                    isInvalid={!!errors.email}
-                    errorMessage={errors.email?.message}
-                    variant="bordered"
-                    classNames={{
-                      input: "bg-transparent",
-                      inputWrapper: "bg-white/50"
+                  <Controller
+                    name="correo"
+                    control={control}
+                    rules={{ 
+                      required: "El correo es obligatorio",
+                      pattern: {
+                        value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                        message: "Correo inválido"
+                      }
                     }}
+                    render={({ field }) => (
+                      <Input
+                        {...field}
+                        type="email"
+                        label="Correo Electrónico"
+                        placeholder="ejemplo@correo.com"
+                        isInvalid={!!errors.correo}
+                        errorMessage={errors.correo?.message}
+                        variant="bordered"
+                      />
+                    )}
                   />
-                )}
-              />
 
-              <Controller
-                name="telefono"
-                control={control}
-                rules={{ 
-                  required: "El teléfono es obligatorio",
-                  pattern: {
-                    value: /^[0-9]{9}$/,
-                    message: "Número de teléfono no válido (9 dígitos)"
-                  }
-                }}
-                render={({ field }) => (
-                  <Input
-                    {...field}
-                    type="tel"
-                    label="Teléfono"
-                    placeholder="912345678"
-                    isInvalid={!!errors.telefono}
-                    errorMessage={errors.telefono?.message}
-                    variant="bordered"
-                    classNames={{
-                      input: "bg-transparent",
-                      inputWrapper: "bg-white/50"
+                  <Controller
+                    name="ntelefono"
+                    control={control}
+                    rules={{ 
+                      required: "El teléfono es obligatorio",
+                      pattern: {
+                        value: /^[0-9]{9}$/,
+                        message: "Teléfono inválido (9 dígitos)"
+                      }
                     }}
+                    render={({ field }) => (
+                      <Input
+                        {...field}
+                        type="tel"
+                        label="Teléfono"
+                        placeholder="912345678"
+                        isInvalid={!!errors.ntelefono}
+                        errorMessage={errors.ntelefono?.message}
+                        variant="bordered"
+                      />
+                    )}
                   />
-                )}
-              />
 
-              <Controller
-                name="password"
-                control={control}
-                rules={{ 
-                  required: "La contraseña es obligatoria",
-                  minLength: {
-                    value: 6,
-                    message: "La contraseña debe tener al menos 6 caracteres"
-                  }
-                }}
-                render={({ field }) => (
-                  <PasswordInput
-                    {...field}
-                    label="Contraseña"
-                    placeholder="Introduce tu contraseña"
-                    error={errors.password?.message}
+                  <Controller
+                    name="contrasena"
+                    control={control}
+                    rules={{ 
+                      required: "La contraseña es obligatoria",
+                      minLength: {
+                        value: 6,
+                        message: "La contraseña debe tener al menos 6 caracteres"
+                      }
+                    }}
+                    render={({ field }) => (
+                      <PasswordInput
+                        {...field}
+                        label="Contraseña"
+                        error={errors.contrasena?.message}
+                      />
+                    )}
                   />
-                )}
-              />
 
-              <Controller
-                name="confirmPassword"
-                control={control}
-                rules={{ 
-                  required: "Debe confirmar la contraseña",
-                  validate: value => 
-                    value === password || "Las contraseñas no coinciden"
-                }}
-                render={({ field }) => (
-                  <PasswordInput
-                    {...field}
-                    label="Confirmar Contraseña"
-                    placeholder="Confirma tu contraseña"
-                    error={errors.confirmPassword?.message}
+                  <Controller
+                    name="confirmPassword"
+                    control={control}
+                    rules={{ 
+                      required: "Debe confirmar la contraseña",
+                      validate: value => 
+                        value === password || "Las contraseñas no coinciden"
+                    }}
+                    render={({ field }) => (
+                      <PasswordInput
+                        {...field}
+                        label="Confirmar Contraseña"
+                        error={errors.confirmPassword?.message}
+                      />
+                    )}
                   />
-                )}
-              />
-              
-              <Button 
-                className="w-full bg-orange-500 hover:bg-orange-600 text-white"
-                type="submit"
-                isLoading={isSubmitting}
-              >
-                {isSubmitting ? "Registrando..." : "Registrarse"}
-              </Button>
+
+                  <Button 
+                    className="w-full bg-orange-500 hover:bg-orange-600 text-white"
+                    type="submit"
+                    isLoading={isSubmitting}
+                  >
+                    {isSubmitting ? "Registrando..." : "Registrarse"}
+                  </Button>
+                </>
+              )}
             </form>
 
             <div className="mt-4 text-center text-sm">
@@ -197,4 +217,8 @@ function Registro() {
       </div>
     </div>
   );
-} 
+}
+
+export const Route = createLazyFileRoute('/registro')({
+  component: Registro
+}); 
