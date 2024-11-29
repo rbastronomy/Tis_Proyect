@@ -1,41 +1,50 @@
-export class TripModel{
-    constructor({
-        codigo,
-        origenv,
-        destinov,
-        duracion,
-        pasajeros,
-        observacion,
-        estadov,
-        deletedatvj,
-    }){
-        this.codigo = codigo;
-        this.origenv = origenv;
-        this.destinov = destinov;
-        this.duracion = duracion;
-        this.pasajeros = pasajeros;
-        this.observacion = observacion;
-        this.estadov = estadov;
-        this.deletedatvj = deletedatvj;
+import { BaseModel } from '../core/BaseModel.js';
+
+export class TripModel extends BaseModel {
+    static defaultData = {
+        codigo: null,
+        origenv: '',
+        destinov: '',
+        duracion: 0,
+        pasajeros: 0,
+        observacion: '',
+        estadov: 'ACTIVO',
+        deletedatvj: null
+    };
+
+    constructor(data = {}) {
+        super(data, TripModel.defaultData);
     }
 
-    //Agregar metodos necesarios para el manejo de la clase
-       
-    toJSON(){
+    // Getters
+    get codigo() { return this._data.codigo; }
+    get origenv() { return this._data.origenv; }
+    get destinov() { return this._data.destinov; }
+    get duracion() { return this._data.duracion; }
+    get pasajeros() { return this._data.pasajeros; }
+    get observacion() { return this._data.observacion; }
+    get estadov() { return this._data.estadov; }
+    get deletedatvj() { return this._data.deletedatvj; }
+
+    // Domain methods
+    isDeleted() {
+        return this._data.deletedatvj !== null;
+    }
+
+    isActive() {
+        return this._data.estadov === 'ACTIVO';
+    }
+
+    toJSON() {
         return {
-            codigo: this.codigo,
-            origenv: this.origenv,
-            destinov: this.destinov,
-            duracion: this.duracion,
-            pasajeros: this.pasajeros,
-            observacion: this.observacion,
-            estadov: this.estadov,
-            deletedatvj: this.deletedatvj,
+            codigo: this._data.codigo,
+            origenv: this._data.origenv,
+            destinov: this._data.destinov,
+            duracion: this._data.duracion,
+            pasajeros: this._data.pasajeros,
+            observacion: this._data.observacion,
+            estadov: this._data.estadov,
+            deletedatvj: this._data.deletedatvj,
         };
     }
-
-    static fromDB(data){
-        return new TripModel(data);
-    }
-
 }

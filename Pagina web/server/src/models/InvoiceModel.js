@@ -1,41 +1,48 @@
-//factura/boleta
+import { BaseModel } from '../core/BaseModel.js';
 
+export class InvoiceModel extends BaseModel {
+    static defaultData = {
+        codigoboleta: null,
+        total: 0,
+        femision: new Date(),
+        metodopago: '',
+        descripciont: '',
+        estadob: 'ACTIVO',
+        deletedatbo: null
+    };
 
-export class InvoiceModel{
-    constructor({
-        codigoboleta,
-        total,
-        femision,
-        metodopago,
-        descripciont,
-        estadob,
-        deletedatbo
-    }){
-        this.codigoboleta = codigoboleta;
-        this.total = total;
-        this.femision = femision;
-        this.metodopago = metodopago;
-        this.descripciont = descripciont;
-        this.estadob = estadob;
-        this.deletedatbo = deletedatbo;
+    constructor(data = {}) {
+        super(data, InvoiceModel.defaultData);
     }
-    
-    //Agregar metodos necesarios para el manejo de la clase
 
-    toJSON(){
+    // Getters
+    get codigoboleta() { return this._data.codigoboleta; }
+    get total() { return this._data.total; }
+    get femision() { return this._data.femision; }
+    get metodopago() { return this._data.metodopago; }
+    get descripciont() { return this._data.descripciont; }
+    get estadob() { return this._data.estadob; }
+    get deletedatbo() { return this._data.deletedatbo; }
+
+    // Domain methods
+    isDeleted() {
+        return this._data.deletedatbo !== null;
+    }
+
+    isActive() {
+        return this._data.estadob === 'ACTIVO';
+    }
+
+    toJSON() {
         return {
-            codigoboleta: this.codigoboleta,
-            total: this.total,
-            femision: this.femision,
-            metodopago: this.metodopago,
-            descripciont: this.descripciont,
-            estadob: this.estadob,
-            deletedatbo: this.deletedatbo,
+            codigoboleta: this._data.codigoboleta,
+            total: this._data.total,
+            femision: this._data.femision,
+            metodopago: this._data.metodopago,
+            descripciont: this._data.descripciont,
+            estadob: this._data.estadob,
+            deletedatbo: this._data.deletedatbo,
         };
-    }
-
-    static fromDB(data){
-        return new InvoiceModel(data);
     }
 }
 
