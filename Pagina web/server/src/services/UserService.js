@@ -12,12 +12,6 @@ export class UserService extends BaseService {
   async getUserWithAuth(rut) {
     const user = await this.repository.findByRut(rut);
     if (!user) return null;
-
-    const roles = await this.repository.getRoles(rut);
-    const permissions = await this.repository.getPermissions(rut);
-    
-    user.role = roles[0]?.nombrerol;
-    user.permissions = permissions.map(p => p.nombrepermiso);
     
     return user;
   }

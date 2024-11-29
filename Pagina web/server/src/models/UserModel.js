@@ -15,8 +15,7 @@ export class UserModel {
     fcontratacion,
     licenciaconducir,
     adm_fcontratacion,
-    cviajes,
-    permissions = []
+    cviajes
   }) {
     this.rut = rut;
     this.nombre = nombre;
@@ -34,7 +33,6 @@ export class UserModel {
     this.licenciaconducir = licenciaconducir;
     this.adm_fcontratacion = adm_fcontratacion;
     this.cviajes = cviajes;
-    this.permissions = permissions;
   }
 
   // Domain methods
@@ -60,12 +58,12 @@ export class UserModel {
     return this.estadop === 'ACTIVO';
   }
 
-  hasPermission(permission) {
-    return this.permissions.includes(permission);
+  hasPermission(permissionName) {
+    return this.role?.hasPermission(permissionName) || false;
   }
 
   hasRole(roleName) {
-    return this.role?.name === roleName;
+    return this.role?.nombrerol === roleName;
   }
 
   // Method to convert model to JSON representation
@@ -81,7 +79,7 @@ export class UserModel {
       nacionalidad: this.nacionalidad,
       genero: this.genero,
       estadop: this.estadop,
-      role: this.role,
+      role: this.role?.toJSON(),
       fcontratacion: this.fcontratacion,
       licenciaconducir: this.licenciaconducir,
       adm_fcontratacion: this.adm_fcontratacion,
@@ -100,12 +98,12 @@ export class UserModel {
       rut: this.rut,
       nombre: this.nombre,
       correo: this.correo,
-      role: this.role?.id
+      role: this.role?.idroles
     };
   }
 
   // New method to get role ID when needed
   getRoleId() {
-    return this.role?.id;
+    return this.role?.idroles;
   }
 }

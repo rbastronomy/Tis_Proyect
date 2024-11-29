@@ -15,13 +15,12 @@ export class RoleModel {
     this.permissions = permissions;
   }
 
-  // Domain methods
-  isActive() {
-    return this.estadorol === 'ACTIVO';
-  }
-
   hasPermission(permissionName) {
     return this.permissions.some(p => p.nombrepermiso === permissionName);
+  }
+
+  getPermissions() {
+    return this.permissions;
   }
 
   toJSON() {
@@ -31,7 +30,7 @@ export class RoleModel {
       descripcionrol: this.descripcionrol,
       fechacreadarol: this.fechacreadarol,
       estadorol: this.estadorol,
-      permissions: this.permissions
+      permissions: this.permissions.map(p => p.nombrepermiso)
     };
   }
 
