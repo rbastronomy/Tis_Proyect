@@ -1,15 +1,14 @@
+import { BaseController } from "../core/BaseController";
+import { TaxiService } from "../services/TaxiService";
 
-
-export class TaxiController {
-    constructor(taxiRepository) {
-      this.taxiRepository = taxiRepository;
+export class TaxiController extends BaseController {
+    constructor() {
+      const taxiService = new TaxiService();
+      super(taxiService);
+      this.service = taxiService;
     }
-  
-    /**
-     * Create a new taxi
-     * @param {Object} request - Fastify request object
-     * @param {Object} reply - Fastify reply object
-     */
+    
+    /*
     async createTaxi(request, reply) {
       try {
         const taxiData = request.body;
@@ -24,37 +23,24 @@ export class TaxiController {
         });
       }
     }
-  
-    /**
-     * Update an existing taxi
-     * @param {Object} request - Fastify request object
-     * @param {Object} reply - Fastify reply object
-     */
+    */
     async updateTaxi(request, reply) {
       try {
         const { patente } = request.params;
         const updateData = request.body;
-        const updatedTaxi = await this.taxiRepository.update(patente, updateData);
+        const updatedTaxi = await this.service.updateTaxi(patente, updateData);
         
-        reply.code(200).send(updatedTaxi);
+        return reply.code(200).send(updatedTaxi);
       } catch (error) {
         request.log.error(error);
-        reply.code(400).send({ 
-          message: 'Error updating taxi', 
-          error: error.message 
-        });
+        reply.code(400).send({ message: 'Error updating taxi', error: error.message });
       }
     }
   
-    /**
-     * Get taxi by license plate
-     * @param {Object} request - Fastify request object
-     * @param {Object} reply - Fastify reply object
-     */
     async getTaxiByLicensePlate(request, reply) {
       try {
         const { patente } = request.params;
-        const taxi = await this.taxiRepository.findByLicensePlate(patente);
+        const taxi = await this.service.findByLicensePlate(patente);
         
         if (!taxi) {
           return reply.code(404).send({ message: 'Taxi not found' });
@@ -70,11 +56,6 @@ export class TaxiController {
       }
     }
   
-    /**
-     * Search taxis
-     * @param {Object} request - Fastify request object
-     * @param {Object} reply - Fastify reply object
-     */
     async searchTaxis(request, reply) {
       try {
         const searchCriteria = request.query;
@@ -90,11 +71,6 @@ export class TaxiController {
       }
     }
   
-    /**
-     * Soft delete a taxi
-     * @param {Object} request - Fastify request object
-     * @param {Object} reply - Fastify reply object
-     */
     async deleteTaxi(request, reply) {
       try {
         const { patente } = request.params;
@@ -110,11 +86,6 @@ export class TaxiController {
       }
     }
   
-    /**
-     * Check technical review status
-     * @param {Object} request - Fastify request object
-     * @param {Object} reply - Fastify reply object
-     */
     async checkTechnicalReview(request, reply) {
       try {
         const { patente } = request.params;
@@ -132,4 +103,31 @@ export class TaxiController {
         });
       }
     }
+    
+    async listTaxis(request, reply) {
+      try {
+          const { 
+              page = 1, 
+              limit = 10, 
+              sortBy = 'createdAt', 
+              sortOrder = 'desc' 
+          } = request.query;
+
+          const result = await this.service.listTaxis({
+              page: Number(page),
+              limit: Number(limit),
+              sortBy,
+              sortOrder
+          });
+          
+          return reply.code(200).send(result);
+      } catch (error) {
+          request.log.error(error);
+          return reply.code(400).send({ 
+              message: 'Error listing taxis', 
+              error: error.message 
+          });
+      }
+    }
+
   }

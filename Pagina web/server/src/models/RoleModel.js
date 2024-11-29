@@ -1,32 +1,40 @@
-export class RoleModel{
+export class RoleModel {
   constructor({
-    idroles,
-    nombrerol,
-    descripcionrol,
-    fechacreadarol,
-    estadorol
-  }){
+    idroles = null,
+    nombrerol = '',
+    descripcionrol = '',
+    fechacreadarol = new Date(),
+    estadorol = 'ACTIVO',
+    permissions = []
+  } = {}) {
     this.idroles = idroles;
     this.nombrerol = nombrerol;
     this.descripcionrol = descripcionrol;
     this.fechacreadarol = fechacreadarol;
     this.estadorol = estadorol;
+    this.permissions = permissions;
   }
 
-  //Agregar metodos necesarios para el manejo de la clase
+  hasPermission(permissionName) {
+    return this.permissions.some(p => p.nombrepermiso === permissionName);
+  }
 
-  toJSON(){
+  getPermissions() {
+    return this.permissions;
+  }
+
+  toJSON() {
     return {
       idroles: this.idroles,
       nombrerol: this.nombrerol,
-      descripcionro: this.descripcionrol,
+      descripcionrol: this.descripcionrol,
       fechacreadarol: this.fechacreadarol,
-      esadorol: this.estadorol
+      estadorol: this.estadorol,
+      permissions: this.permissions.map(p => p.nombrepermiso)
     };
   }
 
-  static fromDB(data){
+  static fromDB(data) {
     return new RoleModel(data);
   }
-
 }

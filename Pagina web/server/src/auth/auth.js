@@ -1,6 +1,7 @@
 import { Lucia } from 'lucia';
 import { NodePostgresAdapter } from '@lucia-auth/adapter-postgresql';
 import { db } from '../db/database.js';
+import { RoleModel } from '../models/RoleModel.js';
 import dotenv from 'dotenv';
 import process from 'process';
 import pg from 'pg';
@@ -65,28 +66,50 @@ class Auth {
             getUserAttributes: async (user) => {
                 try {
                     const persona = await db('persona')
+                        .join('roles', 'persona.idroles', 'roles.idroles')
                         .where('rut', user.rut)
+                        .select(
+                            'persona.*',
+                            'roles.idroles',
+                            'roles.nombrerol',
+                            'roles.descripcionrol',
+                            'roles.fechacreadarol',
+                            'roles.estadorol'
+                        )
                         .first();
 
                     if (!persona) {
                         throw AuthError.UserNotFound();
                     }
 
-                    const role = await db('roles')
-                        .where('idroles', persona.idroles)
-                        .first();
-
+                    // Get role permissions
                     const permissions = await db('posee')
                         .join('permiso', 'posee.idpermisos', 'permiso.idpermisos')
                         .where('posee.idroles', persona.idroles)
-                        .select('permiso.nombrepermiso');
+                        .select('permiso.*');
+
+                    // Create role instance with permissions
+                    const role = new RoleModel({
+                        idroles: persona.idroles,
+                        nombrerol: persona.nombrerol,
+                        descripcionrol: persona.descripcionrol,
+                        fechacreadarol: persona.fechacreadarol,
+                        estadorol: persona.estadorol,
+                        permissions: permissions
+                    });
+
+                    // Remove role fields from user data
+                    delete persona.idroles;
+                    delete persona.nombrerol;
+                    delete persona.descripcionrol;
+                    delete persona.fechacreadarol;
+                    delete persona.estadorol;
 
                     return {
                         rut: persona.rut,
                         nombre: persona.nombre,
                         correo: persona.correo,
-                        role: role.nombrerol,
-                        permissions: permissions.map(p => p.nombrepermiso)
+                        role: role.toJSON() // Use role's toJSON method
                     };
                 } catch (error) {
                     if (error instanceof AuthError) throw error;

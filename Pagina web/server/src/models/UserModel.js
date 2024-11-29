@@ -17,8 +17,7 @@ export class UserModel extends BaseModel {
     fcontratacion,
     licenciaconducir,
     adm_fcontratacion,
-    cviajes,
-    permissions = []
+    cviajes
   }) {
     super({
       rut,
@@ -70,12 +69,12 @@ export class UserModel extends BaseModel {
     return this._data.estadop === 'ACTIVO';
   }
 
-  hasPermission(permission) {
-    return this._data.permissions.includes(permission);
+  hasPermission(permissionName) {
+    return this.role?.hasPermission(permissionName) || false;
   }
 
   hasRole(roleName) {
-    return this._data.role?.name === roleName;
+    return this._data.role?.nombrerol === roleName;
   }
 
   // Method to convert model to JSON representation
@@ -91,13 +90,13 @@ export class UserModel extends BaseModel {
       nacionalidad: this._data.nacionalidad,
       genero: this._data.genero,
       estadop: this._data.estadop,
-      role: this._data.role,
+      role: this._data.role?.toJSON(),
       fcontratacion: this._data.fcontratacion,
       licenciaconducir: this._data.licenciaconducir,
       adm_fcontratacion: this._data.adm_fcontratacion,
       cviajes: this._data.cviajes
     };
-  }
+
 
   // Method to convert model to auth attributes
   toAuthAttributes() {
@@ -105,13 +104,13 @@ export class UserModel extends BaseModel {
       rut: this._data.rut,
       nombre: this._data.nombre,
       correo: this._data.correo,
-      role: this._data.role?.id
+      role: this._data.role?.idroles
     };
   }
 
   // New method to get role ID when needed
   getRoleId() {
-    return this._data.role?.id;
+    return this._data.role?.idroles;
   }
 
   /**

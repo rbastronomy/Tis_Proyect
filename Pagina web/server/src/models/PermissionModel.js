@@ -1,12 +1,12 @@
-export class PermissionModel{
+export class PermissionModel {
     constructor({
-        idpermiso,
-        nombrepermiso,
-        descripcionpermiso,
-        fechacreacion,
-        estadop,
-        deleteatp,
-    }){
+        idpermiso = null,
+        nombrepermiso = '',
+        descripcionpermiso = '',
+        fechacreacion = new Date(),
+        estadop = 'ACTIVO',
+        deleteatp = null
+    } = {}) {
         this.idpermiso = idpermiso;
         this.nombrepermiso = nombrepermiso;
         this.descripcionpermiso = descripcionpermiso;
@@ -15,9 +15,16 @@ export class PermissionModel{
         this.deleteatp = deleteatp;
     }
 
-    //Agregar metodos necesarios para el manejo de la clase
+    // Domain methods
+    isActive() {
+        return this.estadop === 'ACTIVO';
+    }
 
-    toJSON(){
+    isDeleted() {
+        return this.deleteatp !== null;
+    }
+
+    toJSON() {
         return {
             idpermiso: this.idpermiso,
             nombrepermiso: this.nombrepermiso,
@@ -28,7 +35,7 @@ export class PermissionModel{
         };
     }
 
-    static fromDB(data){
+    static fromDB(data) {
         return new PermissionModel(data);
     }
 }

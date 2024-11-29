@@ -1,5 +1,6 @@
 import { BaseRepository } from '../core/BaseRepository.js';
 import { UserModel } from '../models/UserModel.js';
+import { RoleModel } from '../models/RoleModel.js';
 
 class UserRepository extends BaseRepository {
   constructor() {
@@ -9,17 +10,7 @@ class UserRepository extends BaseRepository {
   _toModel(data) {
     if (!data) return null;
     
-    const modelData = {
-      ...data,
-      role: data.idroles ? {
-        id: data.idroles,
-        name: data.roleName
-      } : null
-    };
-
-    delete modelData.idroles;
-    
-    return new UserModel(modelData);
+    return new UserModel(data);
   }
 
   async findByEmail(email) {
@@ -34,31 +25,99 @@ class UserRepository extends BaseRepository {
   }
 
   async findByRut(rut) {
-    const options = {
-      joins: [{
-        table: 'roles',
-        on: { from: 'persona.idroles', to: 'roles.idroles' }
-      }],
-      select: [
-        'persona.*',
-        'roles.nombrerol as roleName'
-      ]
-    };
+    try {
+      const user = await this.db(this.tableName)
+        .join('roles', 'persona.idroles', 'roles.idroles')
+        .where('rut', rut)
+        .select(
+          'persona.*',
+          'roles.idroles',
+          'roles.nombrerol',
+          'roles.descripcionrol',
+          'roles.fechacreadarol',
+          'roles.estadorol'
+        )
+        .first();
 
-    const [user] = await this.findAll({ rut }, options);
-    return user;
+      if (!user) return null;
+
+      // Get role permissions
+      const permissions = await this.db('posee')
+        .join('permiso', 'posee.idpermisos', 'permiso.idpermisos')
+        .where('posee.idroles', user.idroles)
+        .select('permiso.*');
+
+      // Create role instance with permissions
+      const role = new RoleModel({
+        idroles: user.idroles,
+        nombrerol: user.nombrerol,
+        descripcionrol: user.descripcionrol,
+        fechacreadarol: user.fechacreadarol,
+        estadorol: user.estadorol,
+        permissions: permissions
+      });
+
+      // Remove role fields from user data
+      delete user.idroles;
+      delete user.nombrerol;
+      delete user.descripcionrol;
+      delete user.fechacreadarol;
+      delete user.estadorol;
+
+      // Create user model with role
+      return this._toModel({
+        ...user,
+        role
+      });
+    } catch (error) {
+      throw new Error(`Error finding user by RUT: ${error.message}`);
+    }
   }
 
-  async findAll(filters = {}, options = {}) {
+  async findAll(filters = {}) {
     try {
       const users = await this.db(this.tableName)
         .join('roles', 'persona.idroles', 'roles.idroles')
         .select(
           'persona.*',
-          'roles.nombrerol as roleName'
+          'roles.idroles',
+          'roles.nombrerol',
+          'roles.descripcionrol',
+          'roles.fechacreadarol',
+          'roles.estadorol'
         )
         .where(filters);
-      return users.map(user => this._toModel(user));
+
+      // Load permissions for each user's role
+      const usersWithRoles = await Promise.all(users.map(async (user) => {
+        const permissions = await this.db('posee')
+          .join('permiso', 'posee.idpermisos', 'permiso.idpermisos')
+          .where('posee.idroles', user.idroles)
+          .select('permiso.*');
+
+        const role = new RoleModel({
+          idroles: user.idroles,
+          nombrerol: user.nombrerol,
+          descripcionrol: user.descripcionrol,
+          fechacreadarol: user.fechacreadarol,
+          estadorol: user.estadorol,
+          permissions: permissions
+        });
+
+        // Remove role fields from user data
+        delete user.idroles;
+        delete user.nombrerol;
+        delete user.descripcionrol;
+        delete user.fechacreadarol;
+        delete user.estadorol;
+
+        return {
+          ...user,
+          role
+        };
+      }));
+
+      return usersWithRoles.map(user => this._toModel(user));
     } catch (error) {
       throw new Error(`Error finding all users: ${error.message}`);
     }
@@ -68,13 +127,13 @@ class UserRepository extends BaseRepository {
     try {
       const dbData = {
         ...userData,
-        idroles: userData.role?.id
+        idroles: userData.role?.idroles
       };
       delete dbData.role;
 
       const [id] = await super.create(dbData);
       const user = await this.findByRut(id);
-      return this._toModel(user);
+      return user;
     } catch (error) {
       throw new Error(`Error creating user: ${error.message}`);
     }
@@ -84,7 +143,7 @@ class UserRepository extends BaseRepository {
     try {
       await super.update(rut, userData, 'rut');
       const user = await this.findByRut(rut);
-      return this._toModel(user);
+      return user;
     } catch (error) {
       throw new Error(`Error updating user: ${error.message}`);
     }
@@ -92,12 +151,8 @@ class UserRepository extends BaseRepository {
 
   async getPermissions(rut) {
     try {
-      return await this.db('posee')
-        .join('permiso', 'posee.idpermisos', 'permiso.idpermisos')
-        .join('roles', 'posee.idroles', 'roles.idroles')
-        .join('persona', 'persona.idroles', 'roles.idroles')
-        .where('persona.rut', rut)
-        .select('permiso.nombrepermiso');
+      const user = await this.findByRut(rut);
+      return user?.role?.permissions || [];
     } catch (error) {
       throw new Error(`Error getting user permissions: ${error.message}`);
     }
