@@ -101,7 +101,7 @@ class Auth {
         try {
             return await this.provider.createSession(userId, attributes);
         } catch (error) {
-            throw AuthError.DatabaseError('Failed to create session');
+            throw AuthError.DatabaseError(`Failed to create session: ${error.message}`);
         }
     }
 
@@ -109,7 +109,7 @@ class Auth {
         try {
             await this.provider.invalidateSession(sessionId);
         } catch (error) {
-            throw AuthError.DatabaseError('Failed to invalidate session');
+            throw AuthError.DatabaseError(`Failed to invalidate session: ${error.message}`);
         }
     }
 
@@ -117,7 +117,7 @@ class Auth {
         try {
             await this.provider.invalidateUserSessions(userId);
         } catch (error) {
-            throw AuthError.DatabaseError('Failed to invalidate all sessions');
+            throw AuthError.DatabaseError(`Failed to invalidate all sessions: ${error.message}`);
         }
     }
 
