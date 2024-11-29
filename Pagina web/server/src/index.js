@@ -5,11 +5,7 @@ import { connectDB } from './db/database.js';
 import dotenv from 'dotenv';
 import process from 'process';
 import fastifyCors from '@fastify/cors';
-import userRoutes from './routes/userRoutes.js';
-import roleRoutes from './routes/roleRoutes.js';
-import permissionRoutes from './routes/permissionRoutes.js';
-import mapsRoutes from './routes/mapRoutes.js';
-import authRoutes from './routes/authroutes.js';
+import { setupRoutes } from './routes/index.js';
 
 dotenv.config();
 
@@ -28,12 +24,8 @@ const startServer = async () => {
       credentials: true,               // Allow credentials (cookies)
     });
 
-    // Register routes
-    await fastify.register(userRoutes, { prefix: '/api' });
-    await fastify.register(roleRoutes, { prefix: '/api' });
-    await fastify.register(permissionRoutes, { prefix: '/api' });
-    await fastify.register(mapsRoutes);
-    await fastify.register(authRoutes, { prefix: '/api' });
+    // Setup all routes using our new router system
+    setupRoutes(fastify);
 
     // Start listening
     await fastify.listen({ port: 3000, host: '0.0.0.0' });

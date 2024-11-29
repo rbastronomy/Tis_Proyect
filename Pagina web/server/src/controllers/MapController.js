@@ -1,3 +1,5 @@
+import process from 'process';
+
 export class MapsController {
   async getDirections(req, reply) {
     console.log('Recibido consulta:', req.query);
