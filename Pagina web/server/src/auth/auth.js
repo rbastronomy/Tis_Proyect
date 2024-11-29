@@ -1,10 +1,10 @@
 import { Lucia } from 'lucia';
 import { NodePostgresAdapter } from '@lucia-auth/adapter-postgresql';
 import { db } from '../db/database.js';
-import { RoleModel } from '../models/RoleModel.js';
 import dotenv from 'dotenv';
 import process from 'process';
 import pg from 'pg';
+import UserRepository from '../repository/UserRepository.js';
 
 dotenv.config();
 
@@ -39,8 +39,10 @@ export class AuthError extends Error {
 
 class Auth {
     provider;
+    userRepository;
 
     constructor() {
+        this.userRepository = new UserRepository();
         const pgPool = new pg.Pool(db.client.config.connection);
 
         const adapter = new NodePostgresAdapter(pgPool, {
@@ -65,51 +67,16 @@ class Auth {
             },
             getUserAttributes: async (user) => {
                 try {
-                    const persona = await db('persona')
-                        .join('roles', 'persona.idroles', 'roles.idroles')
-                        .where('rut', user.rut)
-                        .select(
-                            'persona.*',
-                            'roles.idroles',
-                            'roles.nombrerol',
-                            'roles.descripcionrol',
-                            'roles.fechacreadarol',
-                            'roles.estadorol'
-                        )
-                        .first();
-
-                    if (!persona) {
+                    const userModel = await this.userRepository.findByRut(user.rut);
+                    if (!userModel) {
                         throw AuthError.UserNotFound();
                     }
 
-                    // Get role permissions
-                    const permissions = await db('posee')
-                        .join('permiso', 'posee.idpermisos', 'permiso.idpermisos')
-                        .where('posee.idroles', persona.idroles)
-                        .select('permiso.*');
-
-                    // Create role instance with permissions
-                    const role = new RoleModel({
-                        idroles: persona.idroles,
-                        nombrerol: persona.nombrerol,
-                        descripcionrol: persona.descripcionrol,
-                        fechacreadarol: persona.fechacreadarol,
-                        estadorol: persona.estadorol,
-                        permissions: permissions
-                    });
-
-                    // Remove role fields from user data
-                    delete persona.idroles;
-                    delete persona.nombrerol;
-                    delete persona.descripcionrol;
-                    delete persona.fechacreadarol;
-                    delete persona.estadorol;
-
                     return {
-                        rut: persona.rut,
-                        nombre: persona.nombre,
-                        correo: persona.correo,
-                        role: role.toJSON() // Use role's toJSON method
+                        rut: userModel.rut,
+                        nombre: userModel.nombre,
+                        correo: userModel.correo,
+                        role: userModel.role?.toJSON()
                     };
                 } catch (error) {
                     if (error instanceof AuthError) throw error;
