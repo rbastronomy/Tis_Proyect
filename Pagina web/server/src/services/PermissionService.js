@@ -1,11 +1,37 @@
 import { BaseService } from '../core/BaseService.js';
-import { PermissionModel } from '../models/PermissionModel.js';
+import PermissionRepository from '../repository/PermissionRepository.js';
 
 export class PermissionService extends BaseService {
     constructor() {
-        const permissionModel = new PermissionModel();
-        super(permissionModel);
+        const permissionRepository = new PermissionRepository();
+        super(permissionRepository);
     }
 
-    // Additional methods if needed
+    /**
+     * Create a new permission
+     * @param {Object} permissionData - The permission data
+     * @returns {Promise<PermissionModel>}
+     */
+    async create(permissionData) {
+        // Add any validation logic here
+        return this.repository.create(permissionData);
+    }
+
+    /**
+     * Find permission by name
+     * @param {string} name - Permission name
+     * @returns {Promise<PermissionModel|null>}
+     */
+    async findByName(name) {
+        return this.repository.findByName(name);
+    }
+
+    /**
+     * Soft delete a permission
+     * @param {string} idpermiso - Permission ID
+     * @returns {Promise<PermissionModel|null>}
+     */
+    async softDelete(idpermiso) {
+        return this.repository.softDelete(idpermiso);
+    }
 }
