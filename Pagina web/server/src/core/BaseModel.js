@@ -1,32 +1,41 @@
 import { db } from '../db/database.js';
 
 export class BaseModel {
-  constructor(tableName) {
-    this.tableName = tableName;
-    this.db = db;
+  /**
+   * @param {Object} data - Datos iniciales del modelo
+   */
+  constructor(data = {}) {
+    this._data = { ...data };
   }
 
-  async getAll() {
-    return this.db(this.tableName).select('*');
+  /**
+   * Convierte el modelo a un objeto JSON plano
+   * @returns {Object}
+   */
+  toJSON() {
+    return { ...this._data };
   }
 
-  async getById(id) {
-    return this.db(this.tableName).where({ id }).first();
+  /**
+   * Actualiza las propiedades del modelo
+   * @param {Object} data - Nuevos datos para actualizar
+   */
+  update(data) {
+    Object.assign(this._data, data);
   }
 
-  async create(data) {
-    return this.db(this.tableName).insert(data).returning('*');
-  }
-
-  async update(id, data) {
-    return this.db(this.tableName).where({ id }).update(data).returning('*');
-  }
-
-  async delete(id) {
-    return this.db(this.tableName).where({ id }).del();
-  }
-
-  async transaction(callback) {
-    return this.db.transaction(callback);
+  /**
+   * Obtiene las propiedades que han sido modificadas
+   * @param {Object} newData - Nuevos datos para comparar
+   * @returns {Object}
+   */
+  getDirtyProperties(newData) {
+    const dirtyProps = {};
+    Object.keys(newData).forEach(key => {
+      if (this._data[key] !== newData[key]) {
+        dirtyProps[key] = newData[key];
+      }
+    });
+    return dirtyProps;
   }
 }

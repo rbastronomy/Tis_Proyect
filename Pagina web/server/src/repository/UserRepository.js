@@ -3,7 +3,7 @@ import { UserModel } from '../models/UserModel.js';
 
 class UserRepository extends BaseRepository {
   constructor() {
-    super('persona');
+    super('persona', UserModel);
   }
 
   _toModel(data) {
@@ -34,19 +34,19 @@ class UserRepository extends BaseRepository {
   }
 
   async findByRut(rut) {
-    try {
-      const user = await this.db(this.tableName)
-        .join('roles', 'persona.idroles', 'roles.idroles')
-        .where('rut', rut)
-        .select(
-          'persona.*',
-          'roles.nombrerol as roleName'
-        )
-        .first();
-      return this._toModel(user);
-    } catch (error) {
-      throw new Error(`Error finding user by RUT: ${error.message}`);
-    }
+    const options = {
+      joins: [{
+        table: 'roles',
+        on: { from: 'persona.idroles', to: 'roles.idroles' }
+      }],
+      select: [
+        'persona.*',
+        'roles.nombrerol as roleName'
+      ]
+    };
+
+    const [user] = await this.findAll({ rut }, options);
+    return user;
   }
 
   async findAll(filters = {}, options = {}) {
