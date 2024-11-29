@@ -36,7 +36,6 @@ export class UserModel extends BaseModel {
       licenciaconducir,
       adm_fcontratacion,
       cviajes,
-      permissions
     });
   }
   
@@ -96,7 +95,7 @@ export class UserModel extends BaseModel {
       adm_fcontratacion: this._data.adm_fcontratacion,
       cviajes: this._data.cviajes
     };
-
+  }
 
   // Method to convert model to auth attributes
   toAuthAttributes() {
@@ -118,6 +117,7 @@ export class UserModel extends BaseModel {
    * @param {Object} data - Datos crudos de la base de datos
    * @returns {UserModel}
    */
+
   static fromDB(data) {
     if (!data) return null;
     
