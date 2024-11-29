@@ -21,6 +21,7 @@ import { Route as PostPostIdImport } from './routes/post/$postId'
 // Create Virtual Routes
 
 const SobreLazyImport = createFileRoute('/sobre')()
+const RegistroLazyImport = createFileRoute('/registro')()
 const LoginLazyImport = createFileRoute('/login')()
 const ContactoLazyImport = createFileRoute('/contacto')()
 const AyudaLazyImport = createFileRoute('/ayuda')()
@@ -32,6 +33,11 @@ const SobreLazyRoute = SobreLazyImport.update({
   path: '/sobre',
   getParentRoute: () => rootRoute,
 } as any).lazy(() => import('./routes/sobre.lazy').then((d) => d.Route))
+
+const RegistroLazyRoute = RegistroLazyImport.update({
+  path: '/registro',
+  getParentRoute: () => rootRoute,
+} as any).lazy(() => import('./routes/registro.lazy').then((d) => d.Route))
 
 const LoginLazyRoute = LoginLazyImport.update({
   path: '/login',
@@ -105,6 +111,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginLazyImport
       parentRoute: typeof rootRoute
     }
+    '/registro': {
+      id: '/registro'
+      path: '/registro'
+      fullPath: '/registro'
+      preLoaderRoute: typeof RegistroLazyImport
+      parentRoute: typeof rootRoute
+    }
     '/sobre': {
       id: '/sobre'
       path: '/sobre'
@@ -150,6 +163,7 @@ export interface FileRoutesByFullPath {
   '/ayuda': typeof AyudaLazyRoute
   '/contacto': typeof ContactoLazyRoute
   '/login': typeof LoginLazyRoute
+  '/registro': typeof RegistroLazyRoute
   '/sobre': typeof SobreLazyRoute
   '/post/$postId': typeof PostPostIdRoute
   '/taxi/ruta': typeof TaxiRutaRoute
@@ -162,6 +176,7 @@ export interface FileRoutesByTo {
   '/ayuda': typeof AyudaLazyRoute
   '/contacto': typeof ContactoLazyRoute
   '/login': typeof LoginLazyRoute
+  '/registro': typeof RegistroLazyRoute
   '/sobre': typeof SobreLazyRoute
   '/post/$postId': typeof PostPostIdRoute
   '/taxi/ruta': typeof TaxiRutaRoute
@@ -175,6 +190,7 @@ export interface FileRoutesById {
   '/ayuda': typeof AyudaLazyRoute
   '/contacto': typeof ContactoLazyRoute
   '/login': typeof LoginLazyRoute
+  '/registro': typeof RegistroLazyRoute
   '/sobre': typeof SobreLazyRoute
   '/post/$postId': typeof PostPostIdRoute
   '/taxi/ruta': typeof TaxiRutaRoute
@@ -189,6 +205,7 @@ export interface FileRouteTypes {
     | '/ayuda'
     | '/contacto'
     | '/login'
+    | '/registro'
     | '/sobre'
     | '/post/$postId'
     | '/taxi/ruta'
@@ -200,6 +217,7 @@ export interface FileRouteTypes {
     | '/ayuda'
     | '/contacto'
     | '/login'
+    | '/registro'
     | '/sobre'
     | '/post/$postId'
     | '/taxi/ruta'
@@ -211,6 +229,7 @@ export interface FileRouteTypes {
     | '/ayuda'
     | '/contacto'
     | '/login'
+    | '/registro'
     | '/sobre'
     | '/post/$postId'
     | '/taxi/ruta'
@@ -224,6 +243,7 @@ export interface RootRouteChildren {
   AyudaLazyRoute: typeof AyudaLazyRoute
   ContactoLazyRoute: typeof ContactoLazyRoute
   LoginLazyRoute: typeof LoginLazyRoute
+  RegistroLazyRoute: typeof RegistroLazyRoute
   SobreLazyRoute: typeof SobreLazyRoute
   PostPostIdRoute: typeof PostPostIdRoute
   TaxiRutaRoute: typeof TaxiRutaRoute
@@ -236,6 +256,7 @@ const rootRouteChildren: RootRouteChildren = {
   AyudaLazyRoute: AyudaLazyRoute,
   ContactoLazyRoute: ContactoLazyRoute,
   LoginLazyRoute: LoginLazyRoute,
+  RegistroLazyRoute: RegistroLazyRoute,
   SobreLazyRoute: SobreLazyRoute,
   PostPostIdRoute: PostPostIdRoute,
   TaxiRutaRoute: TaxiRutaRoute,
@@ -259,6 +280,7 @@ export const routeTree = rootRoute
         "/ayuda",
         "/contacto",
         "/login",
+        "/registro",
         "/sobre",
         "/post/$postId",
         "/taxi/ruta",
@@ -277,6 +299,9 @@ export const routeTree = rootRoute
     },
     "/login": {
       "filePath": "login.lazy.jsx"
+    },
+    "/registro": {
+      "filePath": "registro.lazy.jsx"
     },
     "/sobre": {
       "filePath": "sobre.lazy.jsx"
