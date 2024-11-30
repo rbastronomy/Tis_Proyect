@@ -1,10 +1,13 @@
 import { BaseService } from '../core/BaseService.js';
-import RoleRepository from '../repository/RoleRespository.js';
+import { RoleRepository } from '../repository/RoleRepository.js';
+import { PermissionService } from './PermissionService.js';
 
 export class RoleService extends BaseService {
     constructor() {
         const roleRepository = new RoleRepository();
         super(roleRepository);
+        this.roleRepository = roleRepository;
+        this.permissionService = new PermissionService();
     }
 
     /**
@@ -13,7 +16,15 @@ export class RoleService extends BaseService {
      * @returns {Promise<Array>} Array of permissions
      */
     async getPermissions(roleId) {
-        return this.repository.getPermissions(roleId);
+        const role = await this.roleRepository.findById(roleId);
+        if (!role) return [];
+
+        const permissionIds = role.permissions.map(p => p.idpermisos);
+        const permissions = await Promise.all(
+            permissionIds.map(id => this.permissionService.findById(id))
+        );
+
+        return permissions.filter(p => p !== null);
     }
 
     /**
@@ -23,7 +34,13 @@ export class RoleService extends BaseService {
      * @returns {Promise<void>}
      */
     async assignPermission(roleId, permissionId) {
-        return this.repository.assignPermission(roleId, permissionId);
+        // Verify permission exists before assigning
+        const permission = await this.permissionService.findById(permissionId);
+        if (!permission) {
+            throw new Error('Permission not found');
+        }
+
+        return this.roleRepository.assignPermission(roleId, permissionId);
     }
 
     /**
@@ -33,7 +50,30 @@ export class RoleService extends BaseService {
      * @returns {Promise<void>}
      */
     async removePermission(roleId, permissionId) {
-        return this.repository.removePermission(roleId, permissionId);
+        // Verify permission exists before removing
+        const permission = await this.permissionService.findById(permissionId);
+        if (!permission) {
+            throw new Error('Permission not found');
+        }
+
+        return this.roleRepository.removePermission(roleId, permissionId);
+    }
+
+    /**
+     * Find role by ID with permissions
+     * @param {string} id - Role ID
+     * @returns {Promise<RoleModel|null>}
+     */
+    async findById(id) {
+        const role = await this.roleRepository.findById(id);
+        if (!role) return null;
+
+        // Get full permission objects using PermissionService
+        const permissions = await this.getPermissions(id);
+        return {
+            ...role,
+            permissions
+        };
     }
 
     /**
@@ -42,8 +82,19 @@ export class RoleService extends BaseService {
      * @returns {Promise<RoleModel>}
      */
     async create(roleData) {
-        // Add any validation logic here
-        return this.repository.create(roleData);
+        // Verify all permissions exist before creating role
+        if (roleData.permissions?.length) {
+            await Promise.all(
+                roleData.permissions.map(async permissionId => {
+                    const permission = await this.permissionService.findById(permissionId);
+                    if (!permission) {
+                        throw new Error(`Permission ${permissionId} not found`);
+                    }
+                })
+            );
+        }
+
+        return this.roleRepository.create(roleData);
     }
 
     /**
@@ -52,6 +103,14 @@ export class RoleService extends BaseService {
      * @returns {Promise<RoleModel|null>}
      */
     async findByName(name) {
-        return this.repository.findByName(name);
+        const role = await this.roleRepository.findByName(name);
+        if (!role) return null;
+
+        // Get full permission objects using PermissionService
+        const permissions = await this.getPermissions(role.idroles);
+        return {
+            ...role,
+            permissions
+        };
     }
 }

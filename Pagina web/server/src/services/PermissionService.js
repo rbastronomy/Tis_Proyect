@@ -34,4 +34,13 @@ export class PermissionService extends BaseService {
     async softDelete(idpermiso) {
         return this.repository.softDelete(idpermiso);
     }
+
+    /**
+     * Find permission by ID
+     * @param {string} id - Permission ID
+     * @returns {Promise<PermissionModel|null>}
+     */
+    async findById(id) {
+        return this.repository.findById(id);
+    }
 }
