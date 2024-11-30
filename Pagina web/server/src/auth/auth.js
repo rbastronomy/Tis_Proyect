@@ -1,5 +1,5 @@
 import { Lucia } from 'lucia';
-import { NodePostgresAdapter } from '@lucia-auth/adapter-postgresql';
+import { CustomPostgresAdapter } from './CustomPostgresAdapter.js';
 import { db } from '../db/database.js';
 import dotenv from 'dotenv';
 import process from 'process';
@@ -45,15 +45,9 @@ class Auth {
         this.userRepository = new UserRepository();
         const pgPool = new pg.Pool(db.client.config.connection);
 
-        const adapter = new NodePostgresAdapter(pgPool, {
+        const adapter = new CustomPostgresAdapter(pgPool, {
             user: 'persona',
-            session: 'user_session',
-            getUserAttributes: (attributes) => ({
-                rut: attributes.rut,
-                nombre: attributes.nombre,
-                correo: attributes.correo,
-                idroles: attributes.idroles
-            })
+            session: 'user_session'
         });
 
         const isProduction = process.env.NODE_ENV === 'production';
@@ -63,44 +57,70 @@ class Auth {
             sessionCookie: {
                 attributes: {
                     secure: isProduction,
-                },
-            },
-            getUserAttributes: async (user) => {
-                try {
-                    const userModel = await this.userRepository.findByRut(user.rut);
-                    if (!userModel) {
-                        throw AuthError.UserNotFound();
-                    }
-
-                    return {
-                        rut: userModel.rut,
-                        nombre: userModel.nombre,
-                        correo: userModel.correo,
-                        role: userModel.role?.toJSON()
-                    };
-                } catch (error) {
-                    if (error instanceof AuthError) throw error;
-                    throw AuthError.DatabaseError(error.message);
+                    sameSite: 'lax',
+                    domain: process.env.COOKIE_DOMAIN || undefined,
+                    path: '/'
                 }
-            }
+            },
+            getUserAttributes: (attributes) => ({
+                rut: attributes.id,
+                nombre: attributes.nombre,
+                apellidop: attributes.apellidop,
+                apellidom: attributes.apellidom,
+                correo: attributes.correo,
+                role: attributes.role
+            })
         });
     }
 
     async verifySession(sessionId) {
         try {
+            if (!sessionId || typeof sessionId !== 'string') {
+                console.log('Invalid session ID type or value:', sessionId);
+                throw AuthError.InvalidSession();
+            }
+
+            console.log('Validating session:', sessionId);
             const { session, user } = await this.provider.validateSession(sessionId);
-            if (!session) throw AuthError.InvalidSession();
+            console.log('Session validation result:', { session, user });
+            
+            if (!session || !user) {
+                console.log('Invalid session result:', { session, user });
+                throw AuthError.InvalidSession();
+            }
+
             return { session, user };
         } catch (error) {
-            if (error instanceof AuthError) throw error;
-            throw AuthError.InvalidSession();
+            console.error('Session verification error:', {
+                message: error.message,
+                code: error.code,
+                stack: error.stack,
+                name: error.name
+            });
+            throw error instanceof AuthError ? error : AuthError.InvalidSession();
         }
     }
 
-    async createSession(userId, attributes = {}) {
+    async createSession(userId) {
         try {
-            return await this.provider.createSession(userId, attributes);
+            const stringUserId = userId.toString();
+            const session = await this.provider.createSession(stringUserId);
+
+            return session;
         } catch (error) {
+            console.error('Detailed session creation error:', {
+                error: error.message,
+                stack: error.stack,
+                code: error.code,
+                detail: error.detail,
+                position: error.position,
+                routine: error.routine
+            });
+            
+            if (error.query) {
+                console.error('Failed SQL Query:', error.query);
+            }
+
             throw AuthError.DatabaseError(`Failed to create session: ${error.message}`);
         }
     }
@@ -122,7 +142,7 @@ class Auth {
     }
 
     createSessionCookie(session) {
-        return this.provider.createSessionCookie(session);
+        return this.provider.createSessionCookie(session.id);
     }
 }
 

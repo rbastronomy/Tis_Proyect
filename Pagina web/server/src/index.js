@@ -5,29 +5,39 @@ import { connectDB } from './db/database.js';
 import dotenv from 'dotenv';
 import process from 'process';
 import fastifyCors from '@fastify/cors';
+import fastifyCookie from '@fastify/cookie';
 import { setupRoutes } from './routes/index.js';
 
 dotenv.config();
 
 const startServer = async () => {
   try {
-    // Ensure the database connection is established
     await connectDB();
 
     const fastify = Fastify({
       logger: true,
     });
 
-    // Register CORS
+    // Register CORS first
     await fastify.register(fastifyCors, {
-      origin: 'http://localhost:5173', // Your frontend URL
-      credentials: true,               // Allow credentials (cookies)
+      origin: 'http://localhost:5173',
+      credentials: true,
     });
 
-    // Setup all routes using our new router system
+    // Register cookie plugin with configuration
+    await fastify.register(fastifyCookie, {
+      secret: process.env.COOKIE_SECRET || 'my-secret', // Cookie signing secret
+      hook: 'onRequest', // The hook to be used for parsing cookies
+      parseOptions: {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax'
+      }
+    });
+
+    // Setup routes
     setupRoutes(fastify);
 
-    // Start listening
     await fastify.listen({ port: 3000, host: '0.0.0.0' });
     fastify.log.info('Server is running on port 3000');
   } catch (error) {

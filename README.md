@@ -135,6 +135,29 @@ El backend estará disponible en http://localhost:4000.
 - Con ambos servidores corriendo, el frontend y el backend estarán conectados, permitiendo que la aplicación funcione correctamente en desarrollo.
 - Estará disponible en http://localhost:3000, mientras que tu backend estará en http://localhost:4000.
 
+## Gestión de la Base de Datos
+
+### Reiniciar la Base de Datos
+Si necesitas empezar desde cero después de cambios grandes en la base de datos o migraciones, puedes seguir estos pasos:
+
+1. Primero, elimina todas las tablas existentes ejecutando esta consulta SQL en PostgreSQL:
+```sql
+DO $$ 
+DECLARE 
+    r RECORD;
+BEGIN
+    FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP
+        EXECUTE 'DROP TABLE IF EXISTS ' || quote_ident(r.tablename) || ' CASCADE';
+    END LOOP;
+END $$;
+```
+
+2. Luego, en la carpeta `server`, ejecuta los siguientes comandos para recrear las tablas y poblarlas con datos iniciales:
+```bash
+npm run migrate
+knex seed:run
+```
+
 ## Licencia
 Este proyecto está licenciado bajo la Licencia MIT. Consulta el archivo LICENSE para más detalles.
 

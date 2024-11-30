@@ -11,7 +11,11 @@ export class RoleModel extends BaseModel {
   };
 
   constructor(data = {}) {
-    super(data, RoleModel.defaultData);
+    const sanitizedData = {
+      ...data,
+      permissions: Array.isArray(data.permissions) ? data.permissions : []
+    };
+    super(sanitizedData, RoleModel.defaultData);
   }
 
   // Getters for common properties
@@ -23,7 +27,9 @@ export class RoleModel extends BaseModel {
   get permissions() { return this._data.permissions; }
 
   hasPermission(permissionName) {
-    return this._data.permissions.some(p => p.nombrepermiso === permissionName);
+    return this._data.permissions.some(p => 
+      p.nombrepermiso === permissionName || p.name === permissionName
+    );
   }
 
   getPermissions() {
@@ -37,7 +43,19 @@ export class RoleModel extends BaseModel {
       descripcionrol: this._data.descripcionrol,
       fechacreadarol: this._data.fechacreadarol,
       estadorol: this._data.estadorol,
-      permissions: this._data.permissions.map(p => p.nombrepermiso)
+      permissions: this._data.permissions.map(p => 
+        p.nombrepermiso || p.name || p
+      )
     };
+  }
+
+  /**
+   * Creates a RoleModel instance from database data
+   * @param {Object} data - Raw database data
+   * @returns {RoleModel|null}
+   */
+  static fromDB(data) {
+    if (!data) return null;
+    return new RoleModel(data);
   }
 }

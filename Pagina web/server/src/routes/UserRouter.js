@@ -30,7 +30,7 @@ export class UserRouter extends BaseRouter {
         const { userId } = request.params;
         
         // Special case - allow admin or self
-        if (!request.user.roles.includes('admin') && request.user.id !== parseInt(userId)) {
+        if (!request.user.roles.includes('admin') && request.user.rut !== parseInt(userId)) {
           throw { statusCode: 403, message: 'Forbidden: Insufficient permissions' };
         }
         

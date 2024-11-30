@@ -4,10 +4,12 @@ export class BaseRepository {
   /**
    * @param {string} tableName - Nombre de la tabla en la base de datos
    * @param {class} ModelClass - Clase del modelo a utilizar para las instancias
+   * @param {string} primaryKey - Nombre de la columna ID
    */
-  constructor(tableName, ModelClass) {
+  constructor(tableName, ModelClass, primaryKey = 'id') {
     this.tableName = tableName;
     this.ModelClass = ModelClass;
+    this.primaryKey = primaryKey;
     this.db = db;
   }
 
@@ -25,13 +27,12 @@ export class BaseRepository {
   /**
    * Encuentra un registro por ID
    * @param {string|number} id - Identificador del registro
-   * @param {string} idColumn - Nombre de la columna ID
    * @returns {Promise<Object|null>} - Instancia del modelo o null
    */
-  async findById(id, idColumn = 'id') {
+  async findById(id) {
     try {
       const result = await this.db(this.tableName)
-        .where(idColumn, id)
+        .where(this.primaryKey, id)
         .first();
       return this._toModel(result);
     } catch (error) {
@@ -42,43 +43,16 @@ export class BaseRepository {
   /**
    * Encuentra todos los registros que coincidan con los filtros
    * @param {Object} filters - Filtros a aplicar
-   * @param {Object} options - Opciones de paginación y ordenamiento
    * @returns {Promise<Array>} - Array de instancias del modelo
    */
-  async findAll(filters = {}, options = {}) {
+  async findAll(filters = {}) {
     try {
-      let query = this.db(this.tableName).where(filters);
-
-      // Opcional: Paginación
-      if (options.page && options.pageSize) {
-        const page = Math.max(1, options.page);
-        const pageSize = options.pageSize;
-        query = query
-          .limit(pageSize)
-          .offset((page - 1) * pageSize);
-      }
-
-      if (options.orderBy) {
-        query = query.orderBy(options.orderBy, options.order || 'asc');
-      }
-
-      if (options.joins) {
-        options.joins.forEach(join => {
-          query = query.join(join.table, join.on.from, join.on.to);
-        });
-      }
-
-      if (options.select) {
-        query = query.select(options.select);
-      }
-
-      const results = await query;
-      // Convierte los resultados a instancias del modelo
-      return Array.isArray(results) 
-        ? results.map(result => this._toModel(result))
-        : [this._toModel(results)];
+      const results = await this.db(this.tableName)
+        .where(filters)
+        .select('*');
+      return results.map(result => this._toModel(result));
     } catch (error) {
-      throw new Error(`Error al recuperar registros de ${this.tableName}: ${error.message}`);
+      throw new Error(`Error al buscar todos en ${this.tableName}: ${error.message}`);
     }
   }
 
@@ -89,18 +63,12 @@ export class BaseRepository {
    */
   async create(data) {
     try {
-      // Eliminar campos undefined
-      const cleanData = Object.fromEntries(
-        Object.entries(data).filter(([, v]) => v !== undefined)
-      );
-
       const [id] = await this.db(this.tableName)
-        .insert(cleanData)
-        .returning('id');
-
-      return this.findById(id);
+        .insert(data)
+        .returning(this.primaryKey);
+      return id;
     } catch (error) {
-      throw new Error(`Error al crear registro en ${this.tableName}: ${error.message}`);
+      throw new Error(`Error al crear en ${this.tableName}: ${error.message}`);
     }
   }
 
@@ -108,44 +76,38 @@ export class BaseRepository {
    * Actualiza un registro existente
    * @param {string|number} id - Identificador del registro
    * @param {Object} data - Datos a actualizar
-   * @param {string} idColumn - Nombre de la columna ID
    * @returns {Promise<Object>} - Instancia del modelo actualizado
    */
-  async update(id, data, idColumn = 'id') {
+  async update(id, data) {
     try {
-      // Eliminar campos undefined
-      const cleanData = Object.fromEntries(
-        Object.entries(data).filter(([, v]) => v !== undefined)
-      );
-
-      await this.db(this.tableName)
-        .where(idColumn, id)
-        .update(cleanData);
-
-      return this.findById(id, idColumn);
+      const [updated] = await this.db(this.tableName)
+        .where(this.primaryKey, id)
+        .update(data)
+        .returning('*');
+      return this._toModel(updated);
     } catch (error) {
-      throw new Error(`Error al actualizar registro en ${this.tableName}: ${error.message}`);
+      throw new Error(`Error al actualizar en ${this.tableName}: ${error.message}`);
     }
   }
 
   // Método genérico para eliminar un registro
-  async delete(id, idColumn = 'id') {
+  async delete(id) {
     try {
-      return await this.db(this.tableName)
-        .where(idColumn, id)
-        .del();
+      await this.db(this.tableName)
+        .where(this.primaryKey, id)
+        .delete();
     } catch (error) {
-      throw new Error(`Error al eliminar registro en ${this.tableName}: ${error.message}`);
+      throw new Error(`Error al eliminar en ${this.tableName}: ${error.message}`);
     }
   }
 
   // Método genérico para realizar una operación de soft delete
-  async softDelete(id, idColumn = 'id', deletedAtColumn = 'deleted_at') {
+  async softDelete(id, idColumn = 'deleted_at') {
     try {
       return await this.db(this.tableName)
-        .where(idColumn, id)
+        .where(this.primaryKey, id)
         .update({
-          [deletedAtColumn]: new Date(),
+          [idColumn]: new Date(),
           active: false
         });
     } catch (error) {

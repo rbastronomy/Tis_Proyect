@@ -1,11 +1,9 @@
 import { BaseRepository } from '../core/BaseRepository.js';
 import { RoleModel } from '../models/RoleModel.js';
-import PermissionRepository from './PermissionRepository.js';
 
 export class RoleRepository extends BaseRepository {
   constructor() {
-    super('roles');
-    this.permissionRepository = new PermissionRepository();
+    super('roles', RoleModel, 'idroles');
   }
 
   _toModel(data) {
@@ -13,16 +11,23 @@ export class RoleRepository extends BaseRepository {
     return new RoleModel(data);
   }
 
+  /**
+   * Finds a role by its ID
+   * @param {string|number} roleId - The ID of the role
+   * @returns {Promise<RoleModel|null>} - The role model or null if not found
+   */
   async findById(roleId) {
     try {
       const role = await this.db(this.tableName)
-        .where('idroles', roleId)
+        .where(this.primaryKey, roleId)
         .first();
 
       if (!role) return null;
 
-      // Get permissions for this role
-      const permissions = await this.getPermissions(roleId);
+      const permissions = await this.db('permiso')
+        .join('posee', 'permiso.idpermisos', 'posee.idpermisos')
+        .where('posee.idroles', roleId)
+        .select('permiso.*');
       
       return this._toModel({
         ...role,
@@ -33,14 +38,14 @@ export class RoleRepository extends BaseRepository {
     }
   }
 
-  async getPermissions(roleId) {
+  async findByName(name) {
     try {
-      return await this.db('posee')
-        .join('permiso', 'posee.idpermisos', 'permiso.idpermisos')
-        .where('posee.idroles', roleId)
-        .select('permiso.*');
+      const role = await this.db(this.tableName)
+        .where('nombrerol', name)
+        .first();
+      return this._toModel(role);
     } catch (error) {
-      throw new Error(`Error getting role permissions: ${error.message}`);
+      throw new Error(`Error finding role by name: ${error.message}`);
     }
   }
 
@@ -48,7 +53,8 @@ export class RoleRepository extends BaseRepository {
     try {
       await this.db('posee').insert({
         idroles: roleId,
-        idpermisos: permissionId
+        idpermisos: permissionId,
+        fcambio: new Date()
       });
     } catch (error) {
       throw new Error(`Error assigning permission: ${error.message}`);
@@ -70,9 +76,14 @@ export class RoleRepository extends BaseRepository {
 
   async create(roleData) {
     try {
-      const [roleId] = await super.create(roleData);
-      
-      // If permissions are provided, assign them
+      const [roleId] = await this.db(this.tableName)
+        .insert({
+          ...roleData,
+          fechacreadarol: new Date(),
+          estadorol: 'ACTIVO'
+        })
+        .returning('idroles');
+
       if (roleData.permissions?.length) {
         await Promise.all(
           roleData.permissions.map(permissionId => 
@@ -84,15 +95,6 @@ export class RoleRepository extends BaseRepository {
       return this.findById(roleId);
     } catch (error) {
       throw new Error(`Error creating role: ${error.message}`);
-    }
-  }
-
-  async update(roleId, roleData) {
-    try {
-      await super.update(roleId, roleData);
-      return this.findById(roleId);
-    } catch (error) {
-      throw new Error(`Error updating role: ${error.message}`);
     }
   }
 } 

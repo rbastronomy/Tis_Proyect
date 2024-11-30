@@ -3,7 +3,7 @@ import { PermissionModel } from '../models/PermissionModel.js';
 
 class PermissionRepository extends BaseRepository {
     constructor() {
-        super('permiso');
+        super('permiso', PermissionModel, 'idpermisos');
     }
 
     _toModel(data) {
@@ -11,45 +11,17 @@ class PermissionRepository extends BaseRepository {
         return new PermissionModel(data);
     }
 
-    /**
-     * Create new permission
-     * @param {Object} permissionData - Permission data
-     * @returns {Promise<PermissionModel>}
-     */
-    async create(permissionData) {
+    async findById(permissionId) {
         try {
-            const [createdPermission] = await this.db(this.tableName)
-                .insert(permissionData)
-                .returning('*');
-            return this._toModel(createdPermission);
+            const permission = await this.db(this.tableName)
+                .where('idpermisos', permissionId)
+                .first();
+            return this._toModel(permission);
         } catch (error) {
-            throw new Error(`Error creating permission: ${error.message}`);
+            throw new Error(`Error finding permission by ID: ${error.message}`);
         }
     }
 
-    /**
-     * Update permission
-     * @param {string} idpermiso - Permission ID
-     * @param {Object} updateData - Data to update
-     * @returns {Promise<PermissionModel|null>}
-     */
-    async update(idpermiso, updateData) {
-        try {
-            const [updatedPermission] = await this.db(this.tableName)
-                .where({ idpermiso })
-                .update(updateData)
-                .returning('*');
-            return updatedPermission ? this._toModel(updatedPermission) : null;
-        } catch (error) {
-            throw new Error(`Error updating permission: ${error.message}`);
-        }
-    }
-
-    /**
-     * Find permission by name
-     * @param {string} name - Permission name
-     * @returns {Promise<PermissionModel|null>}
-     */
     async findByName(name) {
         try {
             const permission = await this.db(this.tableName)
@@ -61,23 +33,18 @@ class PermissionRepository extends BaseRepository {
         }
     }
 
-    /**
-     * Soft delete permission
-     * @param {string} idpermiso - Permission ID
-     * @returns {Promise<PermissionModel|null>}
-     */
-    async softDelete(idpermiso) {
+    async create(permissionData) {
         try {
-            const [deletedPermission] = await this.db(this.tableName)
-                .where({ idpermiso })
-                .update({
-                    estadop: 'ELIMINADO',
-                    deleteatp: new Date()
+            const [permissionId] = await this.db(this.tableName)
+                .insert({
+                    ...permissionData,
+                    fechacreacion: new Date(),
                 })
-                .returning('*');
-            return deletedPermission ? this._toModel(deletedPermission) : null;
+                .returning('idpermisos');
+
+            return this.findById(permissionId);
         } catch (error) {
-            throw new Error(`Error soft deleting permission: ${error.message}`);
+            throw new Error(`Error creating permission: ${error.message}`);
         }
     }
 }

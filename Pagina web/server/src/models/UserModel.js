@@ -13,6 +13,7 @@ export class UserModel extends BaseModel {
     genero: '',
     contrasena: '',
     estadop: 'ACTIVO',
+    idroles: null,
     role: null,
     fcontratacion: null,
     licenciaconducir: null,
@@ -36,10 +37,13 @@ export class UserModel extends BaseModel {
   get genero() { return this._data.genero; }
   get estadop() { return this._data.estadop; }
   get role() { return this._data.role; }
+  set role(value) { this._data.role = value; }
   get fcontratacion() { return this._data.fcontratacion; }
   get licenciaconducir() { return this._data.licenciaconducir; }
   get adm_fcontratacion() { return this._data.adm_fcontratacion; }
   get cviajes() { return this._data.cviajes; }
+  get idroles() { return this._data.idroles; }
+  get contrasena() { return this._data.contrasena; }
 
   // Domain methods
   getNombreCompleto() {
@@ -97,7 +101,7 @@ export class UserModel extends BaseModel {
       rut: this._data.rut,
       nombre: this._data.nombre,
       correo: this._data.correo,
-      role: this._data.role?.idroles
+      idroles: this._data.idroles
     };
   }
 

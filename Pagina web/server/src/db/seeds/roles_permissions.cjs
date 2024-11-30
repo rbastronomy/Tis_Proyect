@@ -1,30 +1,101 @@
-   // Pagina web/server/src/db/seeds/initial_roles_permissions.cjs
+   // Pagina web/server/src/db/seeds/roles_permissions.cjs
    exports.seed = async function(knex) {
-    // Inserts seed entries for roles
+    // Clean the tables first
+    await knex('posee').del();
+    await knex('permiso').del();
+    await knex('roles').del();
+
+    // Insert roles
     await knex('roles').insert([
-      { name: 'admin', description: 'Administrator with full access' },
-      { name: 'user', description: 'Regular user with limited access' },
+      { 
+        idroles: 1,
+        nombrerol: 'ADMIN',
+        descripcionrol: 'Administrador con acceso completo',
+        fechacreadarol: new Date(),
+        estadorol: 'ACTIVO'
+      },
+      { 
+        idroles: 2,
+        nombrerol: 'USER',
+        descripcionrol: 'Usuario con acceso limitado',
+        fechacreadarol: new Date(),
+        estadorol: 'ACTIVO'
+      },
+      { 
+        idroles: 3,
+        nombrerol: 'CONDUCTOR',
+        descripcionrol: 'Conductor con acceso a viajes',
+        fechacreadarol: new Date(),
+        estadorol: 'ACTIVO'
+      }
     ]);
 
-    // Inserts seed entries for permissions
-    await knex('permissions').insert([
-      { name: 'create_user', description: 'Permission to create users' },
-      { name: 'delete_user', description: 'Permission to delete users' },
-      { name: 'assign_role', description: 'Permission to assign roles' },
-      // Add more permissions as needed
+    // Insert permissions
+    await knex('permiso').insert([
+      {
+        idpermisos: 1,
+        nombrepermiso: 'crear_usuario',
+        descripcionpermiso: 'Permiso para crear usuarios',
+        fechacreacion: new Date()
+      },
+      {
+        idpermisos: 2,
+        nombrepermiso: 'eliminar_usuario',
+        descripcionpermiso: 'Permiso para eliminar usuarios',
+        fechacreacion: new Date()
+      },
+      {
+        idpermisos: 3,
+        nombrepermiso: 'asignar_rol',
+        descripcionpermiso: 'Permiso para asignar roles',
+        fechacreacion: new Date()
+      },
+      {
+        idpermisos: 4,
+        nombrepermiso: 'gestionar_viajes',
+        descripcionpermiso: 'Permiso para gestionar viajes',
+        fechacreacion: new Date()
+      }
     ]);
 
-    // Assign permissions to roles
-    const adminRole = await knex('roles').where({ name: 'admin' }).first();
-    const userRole = await knex('roles').where({ name: 'cliente' }).first();
+    // Assign permissions to roles through 'posee' table
+    const rolePermissions = [
+      // Admin has all permissions
+      { 
+        idroles: 1, 
+        idpermisos: 1,
+        fcambio: new Date()
+      },
+      { 
+        idroles: 1, 
+        idpermisos: 2,
+        fcambio: new Date()
+      },
+      { 
+        idroles: 1, 
+        idpermisos: 3,
+        fcambio: new Date()
+      },
+      { 
+        idroles: 1, 
+        idpermisos: 4,
+        fcambio: new Date()
+      },
+      
+      // User has limited permissions
+      { 
+        idroles: 2, 
+        idpermisos: 4,
+        fcambio: new Date()
+      },
+      
+      // Driver has trip management permissions
+      { 
+        idroles: 3, 
+        idpermisos: 4,
+        fcambio: new Date()
+      }
+    ];
 
-    const permissions = await knex('permissions').select('id');
-
-    // Admin has all permissions
-    for (const permission of permissions) {
-      await knex('role_permissions').insert({ role_id: adminRole.id, permission_id: permission.id });
-    }
-
-    // User role can have specific permissions if needed
-    // Example: Users can create content but not manage users
+    await knex('posee').insert(rolePermissions);
   };
