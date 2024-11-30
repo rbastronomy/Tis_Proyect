@@ -1,15 +1,13 @@
 exports.up = function(knex) {
     return knex.schema.createTable('user_session', function(table) {
-        table.text('id').primary();
+        table.string('id', 255).primary();
         table.integer('user_id')
             .unsigned()
             .notNullable()
             .references('rut')
             .inTable('persona')
-            .onDelete('CASCADE')
-            .onUpdate('CASCADE');
-        table.timestamp('expires_at').notNullable();
-        table.timestamp('created_at').defaultTo(knex.fn.now());
+            .onDelete('CASCADE');
+        table.timestamp('expires_at', { useTz: true }).notNullable();
         table.index('user_id');
     });
 };

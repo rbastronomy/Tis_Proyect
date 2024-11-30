@@ -6,7 +6,6 @@ exports.up = function(knex) {
         table.date('fechacreacion');
         table.unique('idpermisos');
         table.unique('nombrepermiso');
-        table.unique('fechacreacion');
         table.timestamps(true, true);
     });
 };

@@ -8,8 +8,6 @@ exports.up = function(knex) {
         
         table.unique('idroles');
         table.unique('nombrerol');
-        table.unique('descripcionrol');
-        table.unique('fechacreadarol');
         
         table.timestamps(true, true);
     });
