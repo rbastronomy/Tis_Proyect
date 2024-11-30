@@ -1,12 +1,18 @@
 import { createLazyFileRoute } from '@tanstack/react-router';
+import { useNavigate } from '@tanstack/react-router';
 import { Card, CardHeader, CardBody, Input, Button, Link, Divider } from "@nextui-org/react";
 import { useForm, Controller } from "react-hook-form";
 import { PasswordInput } from '../components/PasswordInput';
 import { useRut } from '../hooks/useRut';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useAuth } from '../hooks/useAuth';
 
 function Registro() {
+  const { refreshAuth } = useAuth();
   const [step, setStep] = useState(1);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+  const navigate = useNavigate();
   const { rut, updateRut, isValid: isRutValid } = useRut();
   
   const { control, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm({
@@ -23,6 +29,7 @@ function Registro() {
 
   const onSubmit = async (data) => {
     try {
+      setError('');
       if (step === 1) {
         if (!isRutValid) {
           return;
@@ -38,22 +45,59 @@ function Registro() {
         },
         credentials: 'include',
         body: JSON.stringify({
-          ...data,
-          rut: rut.raw
+          rut: rut.raw,
+          nombre: data.nombre,
+          correo: data.correo,
+          ntelefono: data.ntelefono,
+          contrasena: data.contrasena,
+          estadop: 'ACTIVO',
         }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
+        setError(errorData.error || 'Error al registrar usuario');
         throw new Error(errorData.error || 'Error al registrar usuario');
       }
 
       const result = await response.json();
       console.log('Registro exitoso:', result);
+      await refreshAuth();
+      setSuccess(true);
     } catch (error) {
       console.error('Error en el registro:', error.message);
+      setError(error.message);
+      if (error.message.includes('already exists')) {
+        console.error('El usuario ya existe');
+      } else {
+        console.error('Error en el registro');
+      }
     }
   };
+
+  useEffect(() => {
+    if (success) {
+      const timer = setTimeout(() => {
+        navigate({ to: '/' });
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [success, navigate]);
+
+  if (success) {
+    return (
+      <div className="flex flex-col min-h-screen bg-gradient-to-b from-sky-50 to-white justify-center items-center">
+        <Card className="w-full max-w-md bg-white/50 backdrop-blur-sm p-6">
+          <CardHeader>
+            <h2 className="text-2xl font-bold text-center">¡Registro Exitoso!</h2>
+          </CardHeader>
+          <CardBody>
+            <p className="text-center">Has sido registrado correctamente. Serás redirigido al inicio en 5 segundos.</p>
+          </CardBody>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-b from-sky-50 to-white">
@@ -104,8 +148,8 @@ function Registro() {
                     render={({ field }) => (
                       <Input
                         {...field}
-                        label="Nombre Completo"
-                        placeholder="Juan Pérez"
+                        label="Nombre"
+                        placeholder="Ejemplo: Juan"
                         isInvalid={!!errors.nombre}
                         errorMessage={errors.nombre?.message}
                         variant="bordered"
@@ -215,6 +259,11 @@ function Registro() {
           </CardBody>
         </Card>
       </div>
+      {error && (
+        <div className="text-red-500 text-sm text-center mt-2">
+          {error}
+        </div>
+      )}
     </div>
   );
 }

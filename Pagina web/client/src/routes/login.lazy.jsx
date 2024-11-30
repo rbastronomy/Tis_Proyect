@@ -1,13 +1,18 @@
-import { createLazyFileRoute } from '@tanstack/react-router';
+import { createLazyFileRoute, useNavigate } from '@tanstack/react-router';
 import { Card, CardHeader, CardBody, Input, Button, Link, Divider } from "@nextui-org/react";
 import { useForm, Controller } from "react-hook-form";
 import { PasswordInput } from '../components/PasswordInput';
+import { useState } from 'react';
+import { useAuth } from '../hooks/useAuth';
 
 export const Route = createLazyFileRoute('/login')({
   component: Login,
 });
 
 function Login() {
+  const { refreshAuth } = useAuth();
+  const [error, setError] = useState('');
+  const navigate = useNavigate();
   const { control, handleSubmit, formState: { errors, isSubmitting } } = useForm({
     defaultValues: {
       email: '',
@@ -17,27 +22,31 @@ function Login() {
 
   const onSubmit = async (data) => {
     try {
-      const response = await fetch('api/login', {
+      setError('');
+      const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         credentials: 'include',
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          email: data.email,
+          password: data.password
+        }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
+        setError(errorData.error || 'Error al iniciar sesión');
         throw new Error(errorData.error || 'Error al iniciar sesión');
       }
 
-      const result = await response.json();
-      console.log('Login successful:', result);
-      // Add navigation logic here
+      await refreshAuth();
+      navigate({ to: '/' }, { replace: true });
 
     } catch (error) {
       console.error('Error en el login:', error.message);
-      // Add toast notification here instead of alert
+      setError(error.message);
     }
   };
 
@@ -122,6 +131,11 @@ function Login() {
                 Regístrese aquí
               </Link>
             </div>
+            {error && (
+              <div className="text-red-500 text-sm text-center mt-2">
+                {error}
+              </div>
+            )}
           </CardBody>
         </Card>
       </div>
