@@ -1,20 +1,47 @@
 import { Button, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from "@nextui-org/react";
 import { useAuth } from '../hooks/useAuth.jsx';
+import { useNavigate } from '@tanstack/react-router';
 
 function Navbar() {
   const { isAuthenticated, user, logout, loading } = useAuth();
+  const navigate = useNavigate();
 
-  if (loading) {
-    return (
-      <header className="bg-black text-white flex justify-between items-center p-4">
-        <div id="logo-container" className="flex items-center">
-          <img src="/logo.png" alt="Logo de Taxi Aeropuerto Tarapacá" id="logo-image" className="h-10 mr-2" />
-          <div id="logo-text" className="text-lg font-bold">Aeropuerto Iquique Tarapacá</div>
-        </div>
-        <div className="animate-pulse bg-gray-600 h-8 w-24 rounded"></div>
-      </header>
-    );
-  }
+  console.log('Navbar render state:', {
+    isAuthenticated,
+    user,
+    loading
+  });
+
+  const isUserValid = user && typeof user === 'object' && 'nombre' in user;
+  const userName = isUserValid ? user.nombre : 'Usuario';
+
+  const handleNavigation = (path) => {
+    navigate({ to: path });
+  };
+
+  const handleLogout = async () => {
+    console.log('Logout clicked');
+    await logout();
+  };
+
+  const menuItems = [
+    { key: "/", label: "Inicio" },
+    { key: "/taxi", label: "Capturar posición" },
+    { key: "/taxi/ruta", label: "Ver Ruta" },
+    { key: "/contacto", label: "Contacto" },
+    { key: "/sobre", label: "Sobre Nosotros" },
+    { key: "/ayuda", label: "Ayuda" },
+  ];
+
+  const authMenuItems = isAuthenticated && isUserValid
+    ? [
+        { key: "/dashboard", label: `Dashboard (${userName})` },
+        { key: "logout", label: "Cerrar Sesión" }
+      ]
+    : [
+        { key: "/login", label: "Iniciar Sesión" },
+        { key: "/registro", label: "Registrarse" }
+      ];
 
   return (
     <header className="bg-black text-white flex justify-between items-center p-4">
@@ -22,6 +49,8 @@ function Navbar() {
         <img src="/logo.png" alt="Logo de Taxi Aeropuerto Tarapacá" id="logo-image" className="h-10 mr-2" />
         <div id="logo-text" className="text-lg font-bold">Aeropuerto Iquique Tarapacá</div>
       </div>
+
+      {/* Desktop Navigation */}
       <nav className="hidden md:flex space-x-4">
         <Button
           auto
@@ -99,7 +128,7 @@ function Navbar() {
         >
           Ayuda
         </Button>
-        {isAuthenticated ? (
+        {isAuthenticated && isUserValid ? (
           <>
             <Button
               auto
@@ -180,106 +209,77 @@ function Navbar() {
           </>
         )}
       </nav>
+
+      {/* Mobile Navigation */}
       <div className="md:hidden">
-        <Dropdown>
+        <Dropdown
+          showArrow={true}
+          classNames={{
+            base: "before:bg-black",
+            content: "bg-black/90 backdrop-blur-sm border border-yellow-500",
+          }}
+        >
           <DropdownTrigger>
-            <Button auto bordered color="warning" className="hover:bg-yellow-500 hover:text-black">
+            <Button 
+              auto 
+              bordered 
+              color="warning"
+              className="hover:bg-yellow-500 hover:text-black transition-colors"
+            >
               Menú
             </Button>
           </DropdownTrigger>
-          <DropdownMenu
-            aria-label="Navigation"
-            className="bg-black border border-yellow-500 dark:border-yellow-500"
+          <DropdownMenu 
+            aria-label="Mobile Navigation"
             itemClasses={{
-              base: "data-[hover=true]:bg-yellow-500 data-[hover=true]:text-black",
+              base: [
+                "rounded-lg",
+                "text-yellow-500",
+                "transition-colors",
+                "hover:bg-yellow-500",
+                "hover:text-black",
+                "data-[hover=true]:bg-yellow-500",
+                "data-[hover=true]:text-black",
+                "data-[selectable=true]:focus:bg-yellow-500",
+                "data-[selectable=true]:focus:text-black",
+                "data-[pressed=true]:opacity-70",
+                "data-[focus-visible=true]:ring-yellow-500"
+              ],
+              description: "text-yellow-400",
+              divider: "bg-yellow-500/20",
+              title: [
+                "text-yellow-500",
+                "font-bold",
+                "group-hover:text-black",
+                "data-[hover=true]:text-black"
+              ],
+              shortcut: "text-yellow-500/50",
+            }}
+            variant="flat"
+            selectionMode="single"
+            selectedKeys={new Set([])}
+            onSelectionChange={(keys) => {
+              const key = Array.from(keys)[0];
+              if (key === "logout") {
+                handleLogout();
+              } else {
+                handleNavigation(key);
+              }
             }}
           >
-            <DropdownItem
-              key="inicio"
-              as="a"
-              href="/"
-              className="text-yellow-500 hover:bg-yellow-500 hover:text-black"
-            >
-              Inicio
-            </DropdownItem>
-            <DropdownItem
-              key="taxi"
-              as="a"
-              href="/taxi"
-              className="text-yellow-500 hover:bg-yellow-500 hover:text-black"
-            >
-              Capturar posición
-            </DropdownItem>
-            <DropdownItem
-              key="ruta"
-              as="a"
-              href="/taxi/ruta"
-              className="text-yellow-500 hover:bg-yellow-500 hover:text-black"
-            >
-              Ver Ruta
-            </DropdownItem>
-            <DropdownItem
-              key="contacto"
-              as="a"
-              href="/contacto"
-              className="text-yellow-500 hover:bg-yellow-500 hover:text-black"
-            >
-              Contacto
-            </DropdownItem>
-            <DropdownItem
-              key="sobre"
-              as="a"
-              href="/sobre"
-              className="text-yellow-500 hover:bg-yellow-500 hover:text-black"
-            >
-              Sobre Nosotros
-            </DropdownItem>
-            <DropdownItem
-              key="ayuda"
-              as="a"
-              href="/ayuda"
-              className="text-yellow-500 hover:bg-yellow-500 hover:text-black"
-            >
-              Ayuda
-            </DropdownItem>
-            {isAuthenticated ? (
-              <>
-                <DropdownItem
-                  key="dashboard"
-                  as="a"
-                  href="/dashboard"
-                  className="text-yellow-500 hover:bg-yellow-500 hover:text-black"
-                >
-                  Dashboard
-                </DropdownItem>
-                <DropdownItem
-                  key="logout"
-                  className="text-yellow-500 hover:bg-yellow-500 hover:text-black"
-                  onClick={logout}
-                >
-                  Cerrar Sesión
-                </DropdownItem>
-              </>
-            ) : (
-              <>
-                <DropdownItem
-                  key="login"
-                  as="a"
-                  href="/login"
-                  className="text-yellow-500 hover:bg-yellow-500 hover:text-black"
-                >
-                  Iniciar Sesión
-                </DropdownItem>
-                <DropdownItem
-                  key="registro"
-                  as="a"
-                  href="/registro"
-                  className="text-yellow-500 hover:bg-yellow-500 hover:text-black"
-                >
-                  Registrarse
-                </DropdownItem>
-              </>
-            )}
+            {[...menuItems, ...authMenuItems].map((item) => (
+              <DropdownItem 
+                key={item.key} 
+                textValue={item.label}
+                className="px-4 py-3 my-1 first:mt-2 last:mb-2 group"
+                classNames={{
+                  base: "rounded-lg transition-colors",
+                  title: "font-semibold text-base"
+                }}
+              >
+                {item.label}
+              </DropdownItem>
+            ))}
           </DropdownMenu>
         </Dropdown>
       </div>

@@ -11,11 +11,23 @@ const AuthContext = createContext();
  * @param {React.ReactNode} props.children - Child components
  */
 export const AuthProvider = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  // Initialize all states together to ensure consistency
+  const [authState, setAuthState] = useState({
+    isAuthenticated: false,
+    user: null,
+    loading: true,
+    initialized: false  // New flag to track initial load
+  });
 
-  // Extract the fetch auth status logic into a named function
+  // Update all related states together
+  const updateAuthState = (updates) => {
+    setAuthState(prev => ({
+      ...prev,
+      ...updates,
+      initialized: true  // Mark as initialized once we get first response
+    }));
+  };
+
   const fetchAuthStatus = async () => {
     try {
       const response = await fetch('/api/auth/validate-session', {
@@ -28,18 +40,25 @@ export const AuthProvider = ({ children }) => {
 
       if (response.ok) {
         const data = await response.json();
-        setIsAuthenticated(true);
-        setUser(data.user);
+        updateAuthState({
+          isAuthenticated: true,
+          user: data.user,
+          loading: false
+        });
       } else {
-        setIsAuthenticated(false);
-        setUser(null);
+        updateAuthState({
+          isAuthenticated: false,
+          user: null,
+          loading: false
+        });
       }
     } catch (error) {
       console.error('Error fetching auth status:', error);
-      setIsAuthenticated(false);
-      setUser(null);
-    } finally {
-      setLoading(false);
+      updateAuthState({
+        isAuthenticated: false,
+        user: null,
+        loading: false
+      });
     }
   };
 
@@ -47,9 +66,8 @@ export const AuthProvider = ({ children }) => {
     fetchAuthStatus();
   }, []);
 
-  // Update refreshAuth to use the fetchAuthStatus function
   const refreshAuth = async () => {
-    setLoading(true);
+    updateAuthState({ loading: true });
     await fetchAuthStatus();
   };
 
@@ -58,6 +76,9 @@ export const AuthProvider = ({ children }) => {
    */
   const logout = async () => {
     try {
+      // Set loading state while logging out
+      updateAuthState({ loading: true });
+      
       const response = await fetch('/api/auth/logout', {
         method: 'POST',
         credentials: 'include',
@@ -65,25 +86,44 @@ export const AuthProvider = ({ children }) => {
           'Accept': 'application/json',
           'Content-Type': 'application/json'
         },
-        // Send an empty object to avoid the empty body error
         body: JSON.stringify({})
       });
 
       if (response.ok) {
-        setIsAuthenticated(false);
-        setUser(null);
+        updateAuthState({
+          isAuthenticated: false,
+          user: null,
+          loading: false
+        });
         window.location.href = '/';
       } else {
         const error = await response.json();
         console.error('Failed to log out:', error);
+        // Reset loading state on error
+        updateAuthState({ loading: false });
       }
     } catch (error) {
       console.error('Error during logout:', error);
+      // Reset loading state on error
+      updateAuthState({ loading: false });
     }
   };
 
+  // Don't render children until we have completed initial auth check
+  if (!authState.initialized) {
+    return null; // or a loading spinner
+  }
+
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, loading, logout, refreshAuth }}>
+    <AuthContext.Provider 
+      value={{ 
+        isAuthenticated: authState.isAuthenticated,
+        user: authState.user,
+        loading: authState.loading,
+        logout,
+        refreshAuth 
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

@@ -33,10 +33,10 @@ export class UserService extends BaseService {
 
       // Create a proper RoleModel instance
       const roleModel = new RoleModel({
-        idroles: role.idroles,
-        nombrerol: role.nombrerol,
-        descripcionrol: role.descripcionrol,
-        permissions: role.permissions
+        idroles: role._data.idroles,
+        nombrerol: role._data.nombrerol,
+        descripcionrol: role._data.descripcionrol,
+        permissions: role._data.permissions
       });
 
       // Attach role model to user
