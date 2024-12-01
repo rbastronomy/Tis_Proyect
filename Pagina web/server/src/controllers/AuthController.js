@@ -2,6 +2,7 @@ import { UserService } from '../services/UserService.js';
 import { AuthService } from '../services/AuthService.js';
 import { AuthError } from '../auth/auth.js';
 import dotenv from 'dotenv';
+import { setCookie, clearCookie } from '../utils/cookieUtils.js';
 
 dotenv.config();
 
@@ -87,27 +88,23 @@ export class AuthController {
    */
   async logout(request, reply) {
     try {
-      // Get the raw cookie header string
+      // Accede al encabezado de cookies directamente
       const cookieHeader = request.headers.cookie || '';
-      
-      // Extract the session ID using the provider's method
+
+      console.log('Cookie header:', cookieHeader);
+      // Extrae el ID de sesión usando el método del proveedor
       const sessionId = this.authService.auth.provider.readSessionCookie(cookieHeader);
       
       if (!sessionId) {
         return reply.status(401).send({ error: 'No session found' });
       }
 
-      // Invalidate the session
+      // Invalida la sesión
       await this.authService.logout(sessionId);
       
-      // Clear the session cookie
+      // Limpia la cookie de sesión
       const cookieName = this.authService.auth.provider.sessionCookieName;
-      reply.clearCookie(cookieName, {
-        path: '/',
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax'
-      });
+      clearCookie(reply, cookieName);
 
       return reply.send({ message: 'Logout successful' });
     } catch (error) {

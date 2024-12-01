@@ -5,7 +5,6 @@ import { connectDB } from './db/database.js';
 import dotenv from 'dotenv';
 import process from 'process';
 import fastifyCors from '@fastify/cors';
-import fastifyCookie from '@fastify/cookie';
 import { setupRoutes } from './routes/index.js';
 
 dotenv.config();
@@ -24,16 +23,6 @@ const startServer = async () => {
       credentials: true,
     });
 
-    // Register cookie plugin with configuration
-    await fastify.register(fastifyCookie, {
-      secret: process.env.COOKIE_SECRET || 'my-secret', // Cookie signing secret
-      hook: 'onRequest', // The hook to be used for parsing cookies
-      parseOptions: {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax'
-      }
-    });
 
     // Setup routes
     setupRoutes(fastify);
