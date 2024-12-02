@@ -1,30 +1,48 @@
-export class RatingModel{
-    constructor({
-        idvaloracion,
-        comentario,
-        calificacion,
-        fvaloracion,
-        estadov,
-        deletedatvj
-    }){
-        this.idvaloracion = idvaloracion;
-        this.comentario = comentario;
-        this.calificacion = calificacion;
-        this.fvaloracion = fvaloracion;
-        this.estadov = estadov;
-        this.deletedatvj = deletedatvj;
+import { BaseModel } from "../core/BaseModel";
+
+export class RatingModel extends BaseModel{
+
+    static ratingData = {
+        idvaloracion: null,
+        comentario: '',
+        calificacion: 0,
+        fvaloracion: new Date(),
+        estadov: 'ACTIVO',
+        deletedatvj: null
     }
 
-    //Agregar metodos necesarios para el manejo de la clase
+    constructor(data = {}){
+        super(data, RatingModel.ratingData);
+    }
+
+    get idvaloracion() { return this._data.idvaloracion; }
+    get comentario() { return this._data.comentario; }
+    get calificacion() { return this._data.calificacion; }
+    get fvaloracion() { return this._data.fvaloracion; }
+
+    isPositive(){
+        return this._data.calificacion >= 4;
+    }
+
+    isNegative(){
+        return this._data.calificacion <= 2;
+    }
+
+    getQualitativeRating(){
+        if(this._data.calificacion >=4) return 'EXCELENTE';
+        if(this._data.calificacion <=3) return 'BUENO';
+        if(this._data.calificacion <=2) return 'REGULAR';
+        return 'NEUTRO';
+    }
 
     toJSON(){
         return {
-            idvaloracion: this.idvaloracion,
-            comentario: this.comentario,
-            calificacion: this.calificacion,
-            fvaloracion: this.fvaloracion,
-            estadov: this.estadov,
-            deletedatvj: this.deletedatvj,
+            idvaloracion: this._data_idvaloracion,
+            comentario: this._data.comentario,
+            calificacion: this._data.calificacion,
+            fvaloracion: this._data.fvaloracion,
+            estadov: this._data.estadov,
+            deletedatvj: this._data.deletedatvj,
         };
     }
 

@@ -1,21 +1,32 @@
-export class HistoryModel{
-    constructor({
-        idhistorial,
-        fcambio,
-        estadoh
-    }){
-        this.idhistorial = idhistorial;
-        this.fcambio = fcambio;
-        this.estadoh = estadoh;
+import { BaseModel } from "../core/BaseModel";
+
+export class HistoryModel extends BaseModel{
+
+    static historyData = {
+        idhistorial: null,
+        fcambio: new Date(),
+        estadoh: ''
     }
 
-    //Agregar metodos necesarios para el manejo de la clase
+    constructor(data = {}){
+        super(data, HistoryModel.historyData);
+    }
+
+    get idhistorial() { return this._data.idhistorial; }
+    get fcambio() { return this._data.fcambio; }
+    get estadoh() { return this._data.estadoh; }
+
+    getTimeSinceChange(){
+        const changeData = new Date(this._data.fcambio);
+        const now = new Date();
+        return (now - changeData) / (1000 * 60 * 60 * 24);
+    }
 
     toJSON(){
         return {
-            idhistorial: this.idhistorial,
-            fcambio: this.fcambio,
-            estadoh: this.estadoh,
+            idhistorial: this._data.idhistorial,
+            fcambio: this._data.fcambio,
+            estadoh: this._data.estadoh,
         };
     }
 

@@ -1,35 +1,50 @@
-//tarifa
+import { BaseModel } from "../core/BaseModel";
 
-export class RateModel{
-    constructor({
-        id,
-        descripciont,
-        precio,
-        tipo,
-        fcreada,
-        estadot,
-        deleteatt
-    }){
-        this.id = id;
-        this.descripciont = descripciont;
-        this.precio = precio;
-        this.tipo = tipo;
-        this.fcreada = fcreada;
-        this.estadot = estadot;
-        this.deleteatt = deleteatt;
+export class RateModel extends BaseModel{
+
+    static rateData = {
+        id: null,
+        rut: null,
+        descripciont: '',
+        precio: 0,
+        tipo: '',
+        fcreada: new Date(),
+        estadot: 'ACTIVO',
+        deleteatt: null,
+        persona: null
     }
 
-    //Agregar metodos necesarios para el manejo de la clase
+    constructor(data = {}){
+        super(data, RateModel.rateData);
+    }
+
+    get id() { return this._data.id; }
+    get descripciont() { return this._data.descripciont; }
+    get precio() { return this._data.precio; }
+    get tipo() { return this._data.tipo; }
+    get estadot() { return this._data.estadot; }
+
+    getPersona(){
+        return this._data.persona;
+    }
+
+    isActive(){
+        return this._data.estadot === 'ACTIVO';
+    }
+
+    calculateTotal(){
+        return this._data.precio * cantidad;
+    }
 
     toJSON(){
         return {
-            id: this.id,
-            descripciont: this.descripciont,
-            precio: this.precio,
-            tipo: this.tipo,
-            fcreada: this.fcreada,
-            estadot: this.estadot,
-            deleteatt: this.deleteatt,
+            id: this._data.id,
+            descripciont: this._data.descripciont,
+            precio: this._data.precio,
+            tipo: this._data.tipo,
+            fcreada: this._data.fcreada,
+            estadot: this._data.estadot,
+            deleteatt: this._data.deleteatt,
         };
     }
 

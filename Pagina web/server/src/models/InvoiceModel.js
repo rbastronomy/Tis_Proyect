@@ -1,7 +1,7 @@
 import { BaseModel } from '../core/BaseModel.js';
 
 export class InvoiceModel extends BaseModel {
-    static defaultData = {
+    static invoiceData = {
         codigoboleta: null,
         total: 0,
         femision: new Date(),
@@ -12,7 +12,7 @@ export class InvoiceModel extends BaseModel {
     };
 
     constructor(data = {}) {
-        super(data, InvoiceModel.defaultData);
+        super(data, InvoiceModel.invoiceData);
     }
 
     // Getters
@@ -29,6 +29,10 @@ export class InvoiceModel extends BaseModel {
         return this._data.deletedatbo !== null;
     }
 
+    itsFullyPaid(){
+        return this._data.estadob ==='PAGADO'; 
+    }
+
     isActive() {
         return this._data.estadob === 'ACTIVO';
     }
@@ -43,6 +47,10 @@ export class InvoiceModel extends BaseModel {
             estadob: this._data.estadob,
             deletedatbo: this._data.deletedatbo,
         };
+    }
+
+    static fromDB(data) {
+        return new InvoiceModel(data);
     }
 }
 

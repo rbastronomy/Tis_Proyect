@@ -1,7 +1,7 @@
 import { BaseModel } from '../core/BaseModel.js';
 
 export class TripModel extends BaseModel {
-    static defaultData = {
+    static tripData = {
         codigo: null,
         origenv: '',
         destinov: '',
@@ -9,11 +9,11 @@ export class TripModel extends BaseModel {
         pasajeros: 0,
         observacion: '',
         estadov: 'ACTIVO',
-        deletedatvj: null
+        deletedatvj: null,
     };
 
     constructor(data = {}) {
-        super(data, TripModel.defaultData);
+        super(data, TripModel.tripData);
     }
 
     // Getters
@@ -27,13 +27,15 @@ export class TripModel extends BaseModel {
     get deletedatvj() { return this._data.deletedatvj; }
 
     // Domain methods
-    isDeleted() {
-        return this._data.deletedatvj !== null;
+    isCompleted() {
+        return this._data.estadov === 'COMPLETADO';
     }
 
     isActive() {
         return this._data.estadov === 'ACTIVO';
     }
+
+    get
 
     toJSON() {
         return {
