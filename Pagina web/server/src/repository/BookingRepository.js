@@ -43,4 +43,36 @@ class BookingRepository extends BaseRepository {
         throw new Error(`Error softdeleting data: ${error.message}`);
         }
     }
+
+    async findReservasPending() {
+        try {
+        const reservas = await this.db(this.tableName)
+            .where({ estado: "pendiente" })
+            .select("*");
+        return reservas.map((reserva) => BookingModel.fromDB(reserva));
+        } catch (error) {
+        throw new Error(`Error getting data: ${error.message}`);
+        }
+    }
+
+    async findByEstado(estado) {
+        try {
+        const reservas = await this.db(this.tableName)
+            .where({ estado })
+            .select("*");
+        return reservas.map((reserva) => BookingModel.fromDB(reserva));
+        } catch (error) {
+        throw new Error(`Error getting data: ${error.message}`);
+        }
+    }
+
+    async findAll() {
+        try {
+        const reservas = await this.db(this.tableName).select("*");
+        return reservas.map((reserva) => BookingModel.fromDB(reserva));
+        } catch (error) {
+        throw new Error(`Error getting data: ${error.message}`);
+        }
+    }
+    
 }
