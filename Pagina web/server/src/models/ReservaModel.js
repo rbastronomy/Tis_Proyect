@@ -8,6 +8,8 @@ import { HistorialModel } from './HistorialModel.js';
 export class ReservaModel extends BaseModel {
   static defaultData = {
     codigoreserva: null,
+    codigoviaje: null,
+    coidgoboleta: null,
     idhistorial: null,
     rut_conductor: null,
     patente_taxi: null,
@@ -143,9 +145,39 @@ export class ReservaModel extends BaseModel {
     return this._data.servicio?.tipo;
   }
 
+  associateViaje(viajeModel) {
+    this._data.codigoviaje = viajeModel.codigoviaje;
+    this._data.viaje_info = {
+      duracion: viajeModel.duracionv,
+      observacion: viajeModel.observacionv,
+      fecha: viajeModel.fechav
+    };
+  }
+
+  associateBoleta(boletaModel) {
+    this._data.codigoboleta = boletaModel.codigoboleta;
+    this._data.boleta_info = {
+      total: boletaModel.total,
+      fecha: boletaModel.femision,
+      metodo_pago: boletaModel.metodopago,
+      descripcion: boletaModel.descripciont
+    };
+  }
+
+  generateRelationship(){
+    return {
+      codigoreserva: this._data.codigoreserva,
+      codigoviaje: this._data.codigoviaje,
+      codigoboleta: this._data.codigoboleta,
+      fechagenerada: new Date()
+    };
+  }
+
   toJSON() {
     const json = {
       codigoreserva: this._data.codigoreserva,
+      codigoviaje: this._data.codigoviaje,
+      codigoboleta: this._data.codigoboleta,
       idhistorial: this._data.idhistorial,
       rut_conductor: this._data.rut_conductor,
       patente_taxi: this._data.patente_taxi,

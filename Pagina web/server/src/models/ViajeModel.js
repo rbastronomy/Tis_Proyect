@@ -4,6 +4,7 @@ export class ViajeModel extends BaseModel {
   static defaultData = {
     codigoviaje: null,
     codigoreserva: null,
+    codigoboleta: null,
     duracionv: 0,
     observacionv: '',
     fechav: null,
@@ -47,13 +48,36 @@ export class ViajeModel extends BaseModel {
     return !!this._data.taxi_modelo;
   }
 
+  associateReserva(reservaModel) {
+    this._datacodigoreserva = reservaModel.codigoreserva;
+    this._data.origenv = reservaModel.origen;
+    this._data.destinov = reservaModel.destino;
+    this._data.tipo = reservaModel.tipo;
+    this._data.reserva_observacion = reservaModel.observacion;
+  }
+
+  associateBoleta (BoletaModel){
+    this._data.codigoboleta = BoletaModel.codigoboleta;
+  }
+
+  generateRelationship(){
+    return{
+      codigo: this._data.codigoviaje,
+      codigoreserva: this._data.codigoreserva,
+      codigoboleta: this._data.codigoboleta,
+      fechagenerada: new Date()
+    }
+  }
+
   toJSON() {
     const json = {
       codigoviaje: this._data.codigoviaje,
       codigoreserva: this._data.codigoreserva,
+      codigoboleta: this._data.codigoboleta,
       duracionv: this._data.duracionv,
       observacionv: this._data.observacionv,
-      fechav: this._data.fechav
+      fechav: this._data.fechav,
+      fechagenerada: this._data.fechagenerada
     };
 
     if (this.hasReservaInfo()) {

@@ -6,6 +6,17 @@ export class ReservaRepository extends BaseRepository {
     super('reserva', ReservaModel, 'codigoreserva');
   }
 
+  async findByViaje(codigoviaje) {
+    try {
+      const result = await this.db(this.tableName)
+      .where('codigoviaje', codigoviaje)
+      .first();
+    return  ReservaModel.fromDB(result);
+    } catch (error) {
+      throw new Error(`Error buscando reserva por viaje: ${error.message}`);
+    }
+  }
+
   /**
    * Find reservas with filters
    * @param {Object} filters - Filter criteria
@@ -82,5 +93,26 @@ export class ReservaRepository extends BaseRepository {
       .first();
 
     return result ? new this.modelClass(result) : null;
+  }
+
+  async findWithDetails(codigoreserva) {
+    try {
+      const result = await this.db(this.tableName)
+        .select(
+          'reserva.*',
+          'viaje.duracionv',
+          'viaje.fechav',
+          'viaje.origenv',
+          'viaje.destinov',
+          'boleta.total',
+          'boleta.metodopago',
+        )
+        .leftJoin('viaje', 'reserva.codigoviaje', 'viaje.codigoviaje')
+        .leftJoin('boleta', 'reserva.codigoboleta', 'boleta.codigoboleta')
+        .where('reserva.codigoreserva', codigoreserva)
+        .first();
+    } catch (error) {
+      throw new Error(`Error buscando reserva con detalles: ${error.message}`);
+    }
   }
 } 

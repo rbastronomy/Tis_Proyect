@@ -30,12 +30,13 @@
     "@lucia-auth/adapter-postgresql": "^3.1.2",
     "argon2": "^0.41.1",
     "dotenv": "^16.4.5",
-    "fastify": "^5.0.0",
+    "fastify": "^5.1.0",
     "fastify-cors": "^6.0.3",
     "fastify-plugin": "^5.0.1",
     "knex": "^3.1.0",
     "lucia": "^3.2.0",
     "lucia-auth": "^1.8.0",
+    "node": "^20.18.1",
     "pg": "^8.13.0"
   },
   "type": "module"
