@@ -1,4 +1,4 @@
-import { BaseModel } from "../core/BaseModel";
+import { BaseModel } from '../core/BaseModel.js';
 
 export class TaxiModel extends BaseModel{
 
