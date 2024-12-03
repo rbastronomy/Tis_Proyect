@@ -24,18 +24,27 @@ function Navbar() {
     await logout();
   };
 
+  console.log(user?.role?.nombrerol);
+
   const menuItems = [
     { key: "/", label: "Inicio" },
+    ...(isAuthenticated ? [
+      { key: "/reservas/list", label: "Mis Reservas" },
+      { key: "/reservas/create", label: "Nueva Reserva" }
+    ] : []),
     { key: "/taxi", label: "Capturar posición" },
     { key: "/taxi/ruta", label: "Ver Ruta" },
     { key: "/contacto", label: "Contacto" },
     { key: "/sobre", label: "Sobre Nosotros" },
     { key: "/ayuda", label: "Ayuda" },
+    ...(isAuthenticated && user?.role?.nombrerol === 'ADMINISTRADOR' 
+      ? [{ key: "/admin/dashboard", label: "Panel Admin" }] 
+      : []
+    ),
   ];
 
   const authMenuItems = isAuthenticated && isUserValid
     ? [
-        { key: "/dashboard", label: `Dashboard (${userName})` },
         { key: "logout", label: "Cerrar Sesión" }
       ]
     : [
@@ -62,6 +71,30 @@ function Navbar() {
         >
           Inicio
         </Button>
+        {isAuthenticated && (
+          <>
+            <Button
+              auto
+              bordered
+              color="warning"
+              className="hover:bg-yellow-500 hover:text-black"
+              as="a"
+              href="/reservas"
+            >
+              Mis Reservas
+            </Button>
+            <Button
+              auto
+              bordered
+              color="warning"
+              className="hover:bg-yellow-500 hover:text-black"
+              as="a"
+              href="/reservas/create"
+            >
+              Nueva Reserva
+            </Button>
+          </>
+        )}
         <Dropdown>
           <DropdownTrigger>
             <Button
@@ -128,6 +161,18 @@ function Navbar() {
         >
           Ayuda
         </Button>
+        {isAuthenticated && user?.role?.nombrerol === 'ADMINISTRADOR' && (
+          <Button
+            auto
+            bordered
+            color="warning"
+            className="hover:bg-yellow-500 hover:text-black"
+            as="a"
+            href="/admin/dashboard"
+          >
+            Panel Admin
+          </Button>
+        )}
         {isAuthenticated && isUserValid ? (
           <>
             <Button
