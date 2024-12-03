@@ -6,10 +6,10 @@ export class ReservaRepository extends BaseRepository {
     super('reserva', ReservaModel, 'codigoreserva');
   }
 
-  async findByViaje(codigoviaje) {
+  async findByViaje(codigo) {
     try {
       const result = await this.db(this.tableName)
-      .where('codigoviaje', codigoviaje)
+      .where('codigo', codigo)
       .first();
     return  ReservaModel.fromDB(result);
     } catch (error) {
@@ -107,7 +107,7 @@ export class ReservaRepository extends BaseRepository {
           'boleta.total',
           'boleta.metodopago',
         )
-        .leftJoin('viaje', 'reserva.codigoviaje', 'viaje.codigoviaje')
+        .leftJoin('viaje', 'reserva.codigo', 'viaje.codigo')
         .leftJoin('boleta', 'reserva.codigoboleta', 'boleta.codigoboleta')
         .where('reserva.codigoreserva', codigoreserva)
         .first();

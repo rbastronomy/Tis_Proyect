@@ -8,7 +8,7 @@ import { HistorialModel } from './HistorialModel.js';
 export class ReservaModel extends BaseModel {
   static defaultData = {
     codigoreserva: null,
-    codigoviaje: null,
+    codigo: null,
     coidgoboleta: null,
     idhistorial: null,
     rut_conductor: null,
@@ -146,7 +146,7 @@ export class ReservaModel extends BaseModel {
   }
 
   associateViaje(viajeModel) {
-    this._data.codigoviaje = viajeModel.codigoviaje;
+    this._data.codigo = viajeModel.codigo;
     this._data.viaje_info = {
       duracion: viajeModel.duracionv,
       observacion: viajeModel.observacionv,
@@ -167,7 +167,7 @@ export class ReservaModel extends BaseModel {
   generateRelationship(){
     return {
       codigoreserva: this._data.codigoreserva,
-      codigoviaje: this._data.codigoviaje,
+      codigo: this._data.codigo,
       codigoboleta: this._data.codigoboleta,
       fechagenerada: new Date()
     };
@@ -176,7 +176,7 @@ export class ReservaModel extends BaseModel {
   toJSON() {
     const json = {
       codigoreserva: this._data.codigoreserva,
-      codigoviaje: this._data.codigoviaje,
+      codigo: this._data.codigo,
       codigoboleta: this._data.codigoboleta,
       idhistorial: this._data.idhistorial,
       rut_conductor: this._data.rut_conductor,

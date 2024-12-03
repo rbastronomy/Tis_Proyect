@@ -3,7 +3,8 @@ import { BaseModel } from "../core/BaseModel";
 export class BoletaModel extends BaseModel {
     static boletaData = {
         codigoboleta: null,
-        codigoviaje: null,
+        //viaje 
+        codigo: null,
         coidgoreserva: null,
         total: 0,
         femision: new Date(),
@@ -36,7 +37,7 @@ export class BoletaModel extends BaseModel {
     }
 
     associateViaje (viajeModel){
-        this._data.codigoviaje = viajeModel.codigoviaje;
+        this._data.codigo = viajeModel.codigo;
         this._data.viaje_info = {
             duracion: viajeModel.duracionv,
             observacion: viajeModel.observacionv,
@@ -67,7 +68,7 @@ export class BoletaModel extends BaseModel {
     toJSON(){
         return {
             codigoboleta: this._data.codigoboleta,
-            codigoviaje: this._data.codigoviaje,
+            codigo: this._data.codigo,
             coidgoreserva: this._data.coidgoreserva,
             total: this._data.total,
             femision: this._data.femision,

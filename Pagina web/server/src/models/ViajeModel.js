@@ -2,7 +2,7 @@ import { BaseModel } from '../core/BaseModel.js';
 
 export class ViajeModel extends BaseModel {
   static defaultData = {
-    codigoviaje: null,
+    codigo: null,
     codigoreserva: null,
     codigoboleta: null,
     duracionv: 0,
@@ -25,7 +25,7 @@ export class ViajeModel extends BaseModel {
   }
 
   // Getters
-  get codigoviaje() { return this._data.codigoviaje; }
+  get codigo() { return this._data.codigo; }
   get codigoreserva() { return this._data.codigoreserva; }
   get duracionv() { return this._data.duracionv; }
   get observacionv() { return this._data.observacionv; }
@@ -62,7 +62,7 @@ export class ViajeModel extends BaseModel {
 
   generateRelationship(){
     return{
-      codigo: this._data.codigoviaje,
+      codigo: this._data.codigo,
       codigoreserva: this._data.codigoreserva,
       codigoboleta: this._data.codigoboleta,
       fechagenerada: new Date()
@@ -71,7 +71,7 @@ export class ViajeModel extends BaseModel {
 
   toJSON() {
     const json = {
-      codigoviaje: this._data.codigoviaje,
+      codigoviaje: this._data.codigo,
       codigoreserva: this._data.codigoreserva,
       codigoboleta: this._data.codigoboleta,
       duracionv: this._data.duracionv,

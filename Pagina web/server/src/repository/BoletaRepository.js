@@ -7,10 +7,10 @@ export class BoletaRepository extends BaseRepository {
       super('boleta', BoletaModel, 'codigoboleta');
     }
 
-    async findByViaje(codigoviaje){
+    async findByViaje(codigo){
       try{
         const resut = await this.db(this.tableName)
-          .where('codigoviaje', codigoviaje)
+          .where('codigo', codigo)
           .first();
         return BoletaModel.fromDB(resut);
       } catch (error){
@@ -37,7 +37,7 @@ export class BoletaRepository extends BaseRepository {
             'viaje.fechav',
             'reserva.origenv',
             'reserva.destinov')
-          .leftJoin('viaje', 'boleta.codigoviaje','viaje.codigoviaje')
+          .leftJoin('viaje', 'boleta.codigo','viaje.codigo')
           .leftJoin('reserva', 'boleta.codigoreserva', 'reserva.codigoreserva')
           .where('boleta.codigoboleta', codigoboleta)  
           .first();
