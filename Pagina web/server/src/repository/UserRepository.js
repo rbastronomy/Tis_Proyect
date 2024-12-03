@@ -3,7 +3,7 @@ import { UserModel } from '../models/UserModel.js';
 
 class UserRepository extends BaseRepository {
   constructor() {
-    super('persona', UserModel);
+    super('persona', UserModel, 'rut');
   }
 
   /**
