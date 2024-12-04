@@ -1,8 +1,68 @@
 import { ViajeRepository } from '../repositories/ViajeRepository.js';
+import { BaseRepository } from '../core/BaseRepository.js';
 
 export class ViajeService extends BaseService {
   constructor() {
     this.viajeRepository = new ViajeRepository();
+  }
+
+  async getiViajeById(codigo){
+    try {
+      const viaje = await this.repository.findById(codigo);
+      if(!viaje){
+        throw new Error('Viaje not found');
+      }
+      return viaje;
+    } catch (error) {
+      console.error('Error getting viaje by id:', error);
+      throw new Error('Failed to retrieve viaje details');
+    }
+  }
+
+  async createViaje(viajeData){
+    try {
+      this.validateViajeData(viajeData);
+      return await this.viajeRepository.create(viajeData);
+    } catch (error) {
+      console.error('Error creating viaje:', error);
+      throw new Error('Failed to create viaje');
+    }
+  }
+
+  async completedViaje(codigo, viajeData){
+    try {
+      return await this.viajeRepository.update(codigo,{
+        ...viajeData,
+        estadov: 'completado',
+      });
+    } catch (error) {
+      console.error('Error updating viaje:', error);
+      throw new Error('Failed to update viaje');
+    }
+  }
+
+  async cancelViaje(codigo){
+    try {
+      const viaje = await this.viajeRepository.findById(codigo);
+      if(!viaje){
+        throw new Error('Viaje not found');
+      }
+      return await this.viajeRepository.update(codigo,{
+        estadov: 'cancelado',
+      });
+    } catch (error) {
+      console.error('Error updating viaje:', error);
+      throw new Error('Failed to update viaje');
+    }
+  }
+
+  validateViajeData(viajeData){
+    const requieredFields = ['origenv', 'detinov','pasajeros'];
+    for (const field of requieredFields){
+      if(!(field in viajeData)){
+        throw new Error(`Field ${field} is required`);
+      }
+    }
   }
 
   async getViajesByDriver(rut) {
