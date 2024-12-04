@@ -151,18 +151,39 @@ export class AuthService {
         throw AuthError.InvalidSession();
       }
 
+      // First verify the session
       const { session, user } = await this.auth.verifySession(sessionId);
       
-      // Get full user details including roles and permissions
-      const fullUser = await this.userService.getUserWithAuth(user.correo);
-      if (!fullUser) {
-        throw AuthError.UserNotFound();
+      if (!user || !user.correo) {
+        throw AuthError.InvalidSession('Invalid user data in session');
       }
 
-      return { session, user: fullUser };
+      // Check if userService is available
+      if (!this.userService) {
+        console.error('UserService not initialized in AuthService');
+        throw AuthError.DatabaseError('Service configuration error');
+      }
+
+      try {
+        // Get full user details including roles and permissions
+        console.log('Validating session for user:', user.correo);
+        const fullUser = await this.userService.getUserWithAuth(user.correo);
+        
+        if (!fullUser) {
+          throw AuthError.UserNotFound();
+        }
+
+        return { session, user: fullUser };
+      } catch (error) {
+        console.error('Error fetching user details:', error);
+        throw AuthError.DatabaseError('Failed to fetch user details');
+      }
     } catch (error) {
       console.error('Session validation error:', error);
-      throw error instanceof AuthError ? error : AuthError.InvalidSession();
+      if (error instanceof AuthError) {
+        throw error;
+      }
+      throw AuthError.InvalidSession('Session validation failed');
     }
   }
 
@@ -182,11 +203,17 @@ export class AuthService {
 
   async createSession(user) {
     try {
-      // Make sure we're using the rut as the user ID
+      if (!user || !user.rut) {
+        throw new AuthError("Invalid user data", "INVALID_USER_DATA");
+      }
       const session = await this.auth.createSession(user.rut.toString());
       return session;
     } catch (error) {
-      throw new AuthError("Failed to create session", "SESSION_CREATION_FAILED");
+      console.error('Session creation error:', error);
+      throw new AuthError(
+        error.message || "Failed to create session",
+        "SESSION_CREATION_FAILED"
+      );
     }
   }
 } 

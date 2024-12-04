@@ -2,6 +2,7 @@ import { BaseService } from '../core/BaseService.js';
 import { ReservaRepository } from '../repository/ReservaRepository.js';
 import { HistorialRepository } from '../repository/HistorialRepository.js';
 import { ViajeRepository } from '../repository/ViajeRepository.js';
+import { GeneraRepository } from '../repository/GeneraRepository.js';
 
 export class TaxiBookingService extends BaseService {
   constructor() {
@@ -9,6 +10,7 @@ export class TaxiBookingService extends BaseService {
     super(reservaRepository);
     this.historialRepository = new HistorialRepository();
     this.viajeRepository = new ViajeRepository();
+    this.generaRepository = new GeneraRepository();
   }
 
   /**
@@ -22,17 +24,16 @@ export class TaxiBookingService extends BaseService {
     try {
       // Create historial record first
       const historial = await this.historialRepository.create({
-        rut: userId,
-        accion: 'CREAR_RESERVA',
-        descripcion: 'Nueva reserva creada',
-        fecha: new Date()
+        estadoh: 'RESERVA_CREADA',
+        fcambio: new Date()
       });
 
-      // Create the booking with historial reference
+      // Create the booking with historial reference and service code
       const booking = await this.repository.create({
         ...bookingData,
         idhistorial: historial.idhistorial,
-        estados: 'EN_REVISION'
+        estados: 'EN_REVISION',
+        codigos: bookingData.codigos
       });
 
       return booking;
@@ -171,6 +172,14 @@ export class TaxiBookingService extends BaseService {
         duracionv: duracion,
         observacionv: observacion,
         fechav: new Date()
+      });
+
+      // Create genera record (junction table)
+      await this.generaRepository.create({
+        codigo: viaje.codigo,
+        codigoreserva: bookingId,
+        codigoboleta: null, // This will be set when boleta is generated
+        fechagenerada: new Date()
       });
 
       // Update booking status

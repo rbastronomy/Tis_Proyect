@@ -27,7 +27,9 @@ export class ReservaModel extends BaseModel {
     historial: null,
     servicio: null,
     viaje: null,
-    cliente: null
+    cliente: null,
+    codigos: null,
+    genera: []
   };
 
   constructor(data = {}) {
@@ -63,6 +65,9 @@ export class ReservaModel extends BaseModel {
     if (data.cliente && !(data.cliente instanceof UserModel)) {
       this._data.cliente = new UserModel(data.cliente);
     }
+
+    // Add genera handling if needed
+    this._data.genera = Array.isArray(data.genera) ? data.genera : [];
   }
 
   // Basic getters
@@ -97,6 +102,9 @@ export class ReservaModel extends BaseModel {
 
   get cliente() { return this._data.cliente; }
   set cliente(value) { this._data.cliente = value instanceof UserModel ? value : new UserModel(value); }
+
+  get codigos() { return this._data.codigos; }
+  get genera() { return this._data.genera; }
 
   // Domain methods
   isActive() {
@@ -187,7 +195,9 @@ export class ReservaModel extends BaseModel {
       frealizado: this._data.frealizado,
       tipo: this._data.tipo,
       observacion: this._data.observacion,
-      estados: this._data.estados
+      estados: this._data.estados,
+      codigos: this._data.codigos,
+      genera: this._data.genera
     };
 
     if (this._data.conductor) {
@@ -220,5 +230,16 @@ export class ReservaModel extends BaseModel {
   static fromDB(data) {
     if (!data) return null;
     return new ReservaModel(data);
+  }
+
+  addGenera(viaje, boleta = null) {
+    const generaRecord = {
+      codigo: viaje.codigo,
+      codigoreserva: this.codigoreserva,
+      codigoboleta: boleta?.codigoboleta || null,
+      fechagenerada: new Date()
+    };
+    this._data.genera.push(generaRecord);
+    return generaRecord;
   }
 } 
