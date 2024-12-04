@@ -20,7 +20,13 @@ export default {
       extension: 'cjs',
     },
     seeds: {
-      directory: './src/db/seeds'
+      directory: './src/db/seeds',
+      seedOrder: [
+        '00_roles_permissions.cjs',
+        '01_admin_user.cjs',
+        '02_tarifas.cjs',
+        '03_services.cjs'
+      ]
     }
   },
 };
