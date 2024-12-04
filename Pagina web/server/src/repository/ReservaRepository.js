@@ -57,24 +57,65 @@ export class ReservaRepository extends BaseRepository {
    * @returns {Promise<Array>} Filtered reservas
    */
   async findWithFilters(filters) {
-    const query = this.db(this.tableName)
-      .select('*')
-      .whereNull('deletedatre');
+    try {
+      // First get the reservas with service info
+      const query = this.db(this.tableName)
+        .distinct('reserva.*', 'servicio.tipo as servicio_tipo', 'servicio.descripciont as servicio_descripcion')
+        .leftJoin('solicita', 'reserva.codigoreserva', 'solicita.codigoreserva')
+        .leftJoin('servicio', 'solicita.codigos', 'servicio.codigos')
+        .whereNull('reserva.deletedatre');
 
-    if (filters.estados) {
-      query.where('estados', filters.estados);
+      if (filters.estados) {
+        query.where('reserva.estados', filters.estados);
+      }
+
+      if (filters.fecha) {
+        query.where('reserva.freserva', filters.fecha);
+      }
+
+      if (filters.userId) {
+        query.where('reserva.rut_conductor', filters.userId);
+      }
+
+      const reservas = await query;
+
+      // Get tariffs for each reserva
+      const reservasWithTariffs = await Promise.all(
+        reservas.map(async (reserva) => {
+          // Get the tariff for this specific reserva
+          const tariffQuery = await this.db('tarifa')
+            .select('tarifa.precio', 'tarifa.descripciont', 'tarifa.tipo')
+            .join('servicio_tarifa', 'tarifa.id', 'servicio_tarifa.tarifa_id')
+            .join('solicita', 'servicio_tarifa.servicio_id', 'solicita.codigos')
+            .where('solicita.codigoreserva', reserva.codigoreserva)
+            .first();
+
+          // Transform the flat result into a structured object
+          const reservaData = {
+            ...reserva,
+            servicio: reserva.servicio_tipo ? {
+              tipo: reserva.servicio_tipo,
+              descripciont: reserva.servicio_descripcion
+            } : null,
+            tarifa: tariffQuery ? {
+              precio: tariffQuery.precio,
+              descripciont: tariffQuery.descripciont,
+              tipo: tariffQuery.tipo
+            } : null
+          };
+
+          // Remove the flattened fields
+          delete reservaData.servicio_tipo;
+          delete reservaData.servicio_descripcion;
+
+          return ReservaModel.fromDB(reservaData);
+        })
+      );
+
+      return reservasWithTariffs;
+    } catch (error) {
+      throw new Error(`Error finding reservas with filters: ${error.message}`);
     }
-
-    if (filters.fecha) {
-      query.where('freserva', filters.fecha);
-    }
-
-    if (filters.userId) {
-      query.where('rut_conductor', filters.userId);
-    }
-
-    const results = await query;
-    return results.map(result => new this.modelClass(result));
   }
 
   /**
@@ -83,12 +124,7 @@ export class ReservaRepository extends BaseRepository {
    * @returns {Promise<Array>} Filtered reservas
    */
   async findByStatus(status) {
-    const results = await this.db(this.tableName)
-      .select('*')
-      .where('estados', status)
-      .whereNull('deletedatre');
-
-    return results.map(result => new this.modelClass(result));
+    return this.findWithFilters({ estados: status });
   }
 
   /**

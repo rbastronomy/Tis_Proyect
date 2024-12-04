@@ -58,7 +58,7 @@ export class TaxiBookingController {
       
       return reply.send({
         message: 'Reservas recuperadas exitosamente',
-        bookings: bookings.map(booking => booking.toJSON())
+        reservas: bookings
       });
     } catch (error) {
       request.log.error(error);

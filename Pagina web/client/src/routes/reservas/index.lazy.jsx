@@ -11,7 +11,6 @@ import {
   TableCell,
   Button,
   Chip,
-  ButtonGroup,
 } from '@nextui-org/react'
 
 export const Route = createLazyFileRoute('/reservas/')({
@@ -38,7 +37,7 @@ function BookingList() {
       const endpoint =
         user?.role?.nombrerol === 'CONDUCTOR'
           ? '/api/reservas/pending' // For drivers, show pending trips
-          : '/api/reservas' // For users/admin, show all bookings
+          : '/api/reservas/' // For users/admin, show all bookings
 
       const response = await fetch(endpoint, {
         credentials: 'include',
@@ -46,10 +45,12 @@ function BookingList() {
 
       if (response.ok) {
         const data = await response.json()
-        setBookings(data.reservas)
+        console.log(data)
+        setBookings(data.reservas || [])
       }
     } catch (error) {
       console.error('Error fetching bookings:', error)
+      setBookings([])
     } finally {
       setLoading(false)
     }
@@ -187,30 +188,57 @@ function BookingList() {
           <TableColumn>ORIGEN</TableColumn>
           <TableColumn>DESTINO</TableColumn>
           <TableColumn>FECHA</TableColumn>
+          <TableColumn>SERVICIO</TableColumn>
+          <TableColumn>TARIFA</TableColumn>
           <TableColumn>ESTADO</TableColumn>
-          <TableColumn>TIPO</TableColumn>
           <TableColumn>ACCIONES</TableColumn>
         </TableHeader>
         <TableBody>
-          {bookings.map((booking) => (
+          {(bookings || []).map((booking) => (
             <TableRow key={booking.codigoreserva}>
               <TableCell>{booking.codigoreserva}</TableCell>
               <TableCell>{booking.origenv}</TableCell>
               <TableCell>{booking.destinov}</TableCell>
               <TableCell>
-                {new Date(booking.freserva).toLocaleString()}
+                {booking.freserva ? new Date(booking.freserva).toLocaleString() : '-'}
+              </TableCell>
+              <TableCell>
+                <div className="flex flex-col">
+                  <span>{booking.servicio?.tipo || '-'}</span>
+                  <span className="text-xs text-gray-500">
+                    {booking.servicio?.descripciont || ''}
+                  </span>
+                </div>
+              </TableCell>
+              <TableCell>
+                <div className="flex flex-col">
+                  <span className="font-medium">
+                    {booking.tarifa?.precio 
+                      ? `$${booking.tarifa.precio.toLocaleString()}`
+                      : '-'
+                    }
+                  </span>
+                  <span className="text-xs text-gray-500">
+                    {booking.tarifa?.descripciont || ''}
+                  </span>
+                </div>
               </TableCell>
               <TableCell>
                 <Chip color={getStatusColor(booking.estados)} variant="flat">
-                  {booking.estados}
+                  {booking.estados || 'DESCONOCIDO'}
                 </Chip>
               </TableCell>
-              <TableCell>{booking.tipo}</TableCell>
               <TableCell>{renderActions(booking)}</TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
+
+      {(!bookings || bookings.length === 0) && (
+        <div className="text-center py-8 text-gray-500">
+          No hay reservas para mostrar
+        </div>
+      )}
     </div>
   )
 }

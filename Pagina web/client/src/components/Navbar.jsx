@@ -13,7 +13,6 @@ function Navbar() {
   });
 
   const isUserValid = user && typeof user === 'object' && 'nombre' in user;
-  const userName = isUserValid ? user.nombre : 'Usuario';
 
   const handleNavigation = (path) => {
     navigate({ to: path });
@@ -29,7 +28,7 @@ function Navbar() {
   const menuItems = [
     { key: "/", label: "Inicio" },
     ...(isAuthenticated ? [
-      { key: "/reservas/list", label: "Mis Reservas" },
+      { key: "/reservas", label: "Mis Reservas" },
       { key: "/reservas/create", label: "Nueva Reserva" }
     ] : []),
     { key: "/taxi", label: "Capturar posición" },

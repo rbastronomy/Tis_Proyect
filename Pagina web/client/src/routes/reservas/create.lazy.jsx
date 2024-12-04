@@ -154,7 +154,7 @@ function CreateBooking() {
       })
 
       if (response.ok) {
-        navigate({ to: '/reservas/list' })
+        navigate({ to: '/reservas' })
       } else {
         const errorData = await response.json()
         setSubmitError(errorData.message || 'Error al crear la reserva')
