@@ -36,7 +36,7 @@ function Ruta() {
       console.log(`Calculando ruta desde ${origin} hasta ${destination}`)
       
       const response = await fetch(
-        `/api/directions?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}`,
+        `/api/maps/directions?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}`,
         {
           method: 'GET',
           headers: {

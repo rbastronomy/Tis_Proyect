@@ -18,13 +18,14 @@ const useDebounce = (value, delay) => {
   return debouncedValue;
 };
 
-function AddressAutocomplete({ onSelect }) {
+function AddressAutocomplete({ onSelect, error, isInvalid, defaultValue }) {
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedValue, setSelectedValue] = useState(null);
   const debouncedQuery = useDebounce(query, 1000);
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+  const [value, setValue] = useState(defaultValue || '');
 
   const fetchSuggestions = useCallback(async (input) => {
     if (!input) return;
@@ -100,16 +101,31 @@ function AddressAutocomplete({ onSelect }) {
   }, [debouncedQuery, fetchSuggestions]);
 
   const handleSelectionChange = (key) => {
+    console.log('Selection changed in Autocomplete:', key);
     const selected = suggestions.find(item => item.id === key);
+    console.log('Found selected item:', selected);
     if (selected) {
       setSelectedValue(selected.id);
       setQuery(selected.label);
-      onSelect(selected.value);
+      console.log('Calling onSelect with:', selected.value);
+      onSelect({
+        ...selected.value,
+        label: selected.label
+      });
       setTimeout(() => {
         setQuery(selected.label);
+        console.log('Query updated to:', selected.label);
       }, 0);
     }
   };
+
+  useEffect(() => {
+    console.log('AddressAutocomplete defaultValue:', defaultValue);
+    if (defaultValue) {
+      setQuery(defaultValue);
+      console.log('Query set to defaultValue:', defaultValue);
+    }
+  }, [defaultValue]);
 
   return (
     <Autocomplete
@@ -122,6 +138,7 @@ function AddressAutocomplete({ onSelect }) {
       defaultSelectedKey={selectedValue}
       isLoading={isLoading}
       onInputChange={(value) => {
+        console.log('Input changed:', value);
         setQuery(value);
         if (!value) {
           setSelectedValue(null);
@@ -129,6 +146,7 @@ function AddressAutocomplete({ onSelect }) {
       }}
       onSelectionChange={handleSelectionChange}
       onClear={() => {
+        console.log('Input cleared');
         setQuery('');
         setSelectedValue(null);
       }}
@@ -150,6 +168,9 @@ function AddressAutocomplete({ onSelect }) {
 
 AddressAutocomplete.propTypes = {
   onSelect: PropTypes.func.isRequired,
+  error: PropTypes.string,
+  isInvalid: PropTypes.bool,
+  defaultValue: PropTypes.string
 };
 
 export default AddressAutocomplete;
