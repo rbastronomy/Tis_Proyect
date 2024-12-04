@@ -12,7 +12,41 @@ export class ServicioRepository extends BaseRepository {
    * @returns {Promise<Object>} Created service
    */
   async create(data) {
-    return await this.db(this.tableName).insert(data).returning('*');
+    const [result] = await this.db(this.tableName)
+      .insert(data)
+      .returning('*');
+    return this._toModel(result);
+  }
+
+  /**
+   * Associates tariffs with a service
+   * @param {number} servicioId - Service ID
+   * @param {Array<number>} tarifaIds - Array of tariff IDs
+   * @returns {Promise<void>}
+   */
+  async associateTariffs(servicioId, tarifaIds) {
+    const relations = tarifaIds.map(tarifaId => ({
+      servicio_id: servicioId,
+      tarifa_id: tarifaId
+    }));
+
+    await this.db('servicio_tarifa')
+      .where({ servicio_id: servicioId })
+      .del();
+
+    if (relations.length > 0) {
+      await this.db('servicio_tarifa').insert(relations);
+    }
+  }
+
+  /**
+   * Updates tariffs for a service
+   * @param {number} servicioId - Service ID
+   * @param {Array<number>} tarifaIds - Array of tariff IDs
+   * @returns {Promise<void>}
+   */
+  async updateTariffs(servicioId, tarifaIds) {
+    return this.associateTariffs(servicioId, tarifaIds);
   }
 
   /**
@@ -21,9 +55,10 @@ export class ServicioRepository extends BaseRepository {
    * @returns {Promise<Object>} Found service
    */
   async findById(codigos) {
-    return await this.db(this.tableName)
+    const result = await this.db(this.tableName)
       .where({ codigos })
       .first();
+    return result ? this._toModel(result) : null;
   }
 
   /**
@@ -31,16 +66,12 @@ export class ServicioRepository extends BaseRepository {
    * @returns {Promise<Array>} List of active services
    */
   async findActive() {
-    return await this.db(this.tableName)
-      .select(
-        'servicio.*',
-        'tarifa.precio',
-        'tarifa.descripciont as tarifa_descripcion'
-      )
-      .leftJoin('tarifa', 'servicio.id', 'tarifa.id')
+    const results = await this.db(this.tableName)
+      .select('servicio.*')
       .where('servicio.estados', 'ACTIVO')
-      .whereNull('servicio.deleteats')
-      .whereNull('tarifa.deletedatt');
+      .whereNull('servicio.deleteats');
+
+    return results.map(result => this._toModel(result));
   }
 
   /**
@@ -50,10 +81,11 @@ export class ServicioRepository extends BaseRepository {
    * @returns {Promise<Object>} Updated service
    */
   async update(codigos, data) {
-    return await this.db(this.tableName)
+    const [result] = await this.db(this.tableName)
       .where({ codigos })
       .update(data)
       .returning('*');
+    return this._toModel(result);
   }
 
   /**
@@ -62,12 +94,13 @@ export class ServicioRepository extends BaseRepository {
    * @returns {Promise<Object>} Deleted service
    */
   async delete(codigos) {
-    return await this.db(this.tableName)
+    const [result] = await this.db(this.tableName)
       .where({ codigos })
       .update({
         estados: 'INACTIVO',
         deleteats: new Date()
       })
       .returning('*');
+    return this._toModel(result);
   }
 } 
