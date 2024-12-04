@@ -3,6 +3,9 @@ import { ReservaRepository } from '../repository/ReservaRepository.js';
 import { HistorialRepository } from '../repository/HistorialRepository.js';
 import { ViajeRepository } from '../repository/ViajeRepository.js';
 import { GeneraRepository } from '../repository/GeneraRepository.js';
+import { SolicitaRepository } from '../repository/SolicitaRepository.js';
+import { ServiceService } from './ServiceService.js';
+import { TarifaService } from './TarifaService.js';
 
 export class TaxiBookingService extends BaseService {
   constructor() {
@@ -11,6 +14,9 @@ export class TaxiBookingService extends BaseService {
     this.historialRepository = new HistorialRepository();
     this.viajeRepository = new ViajeRepository();
     this.generaRepository = new GeneraRepository();
+    this.solicitaRepository = new SolicitaRepository();
+    this.serviceService = new ServiceService();
+    this.tarifaService = new TarifaService();
   }
 
   /**
@@ -22,24 +28,52 @@ export class TaxiBookingService extends BaseService {
    */
   async createBooking(bookingData, userId) {
     try {
+      // Validate service and tariff relationship
+      const serviceTariffs = await this.serviceService.getTariffsByType(bookingData.codigos, bookingData.rideType);
+      const isValidTariff = serviceTariffs.some(tariff => tariff.id === bookingData.tarifa_id);
+      
+      if (!isValidTariff) {
+        throw new Error('La tarifa seleccionada no es válida para este servicio');
+      }
+
       // Create historial record first
       const historial = await this.historialRepository.create({
         estadoh: 'RESERVA_CREADA',
         fcambio: new Date()
       });
 
-      // Create the booking with historial reference and service code
+      // Extract service code and tariff id from booking data
+      const { codigos, tarifa_id, rideType, ...reservaData } = bookingData;
+
+      // Create the booking with historial reference
       const booking = await this.repository.create({
-        ...bookingData,
+        ...reservaData,
         idhistorial: historial.idhistorial,
-        estados: 'EN_REVISION',
-        codigos: bookingData.codigos
+        estados: 'EN_REVISION'
       });
 
-      return booking;
+      // Create solicita record (junction table for service)
+      await this.solicitaRepository.create({
+        rut: userId,
+        codigoreserva: booking.codigoreserva,
+        codigos: codigos,
+        fechasolicitud: new Date()
+      });
+
+      // Get service and tariff details
+      const [service, tariff] = await Promise.all([
+        this.serviceService.findByCodigos(codigos),
+        this.tarifaService.findById(tarifa_id)
+      ]);
+
+      return {
+        ...booking,
+        servicio: service,
+        tarifa: tariff
+      };
     } catch (error) {
       console.error('Error creating booking:', error);
-      throw new Error('Error al crear la reserva');
+      throw new Error(`Error al crear la reserva: ${error.message}`);
     }
   }
 
