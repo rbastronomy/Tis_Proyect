@@ -16,25 +16,23 @@ export class TaxiBookingController {
     try {
       const userId = request.user.rut; // From auth middleware
       const bookingData = {
-        origenv: request.body.pickupLocation,
-        destinov: request.body.dropoffLocation,
-        freserva: request.body.pickupTime,
+        origenv: request.body.origenv,
+        destinov: request.body.destinov,
+        freserva: request.body.freserva,
         tipo: request.body.tipo || 'NORMAL',
-        observacion: request.body.notes || '',
-        codigos: request.body.serviceCode // For 'solicita' junction table
+        observacion: request.body.observacion || '',
+        codigos: request.body.codigos, // For solicita table
+        tarifa_id: request.body.tarifa_id // For reserva_tarifa table
       };
 
       const booking = await this.taxiBookingService.createBooking(bookingData, userId);
       
       return reply.code(201).send({
         message: 'Reserva creada exitosamente',
-        booking: booking.toJSON()
+        booking
       });
     } catch (error) {
       request.log.error(error);
-      if (error.message.includes('Campo requerido')) {
-        return reply.code(400).send({ error: error.message });
-      }
       return reply.code(500).send({ 
         error: 'Error al crear la reserva',
         details: error.message 

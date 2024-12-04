@@ -2,8 +2,8 @@ import { UserService } from '../services/UserService.js';
 import { AuthService } from '../services/AuthService.js';
 import { AuthError } from '../auth/auth.js';
 import dotenv from 'dotenv';
-import { setCookie, clearCookie } from '../utils/cookieUtils.js';
-import process from 'process';
+import { clearCookie } from '../utils/cookieUtils.js';
+
 
 dotenv.config();
 
