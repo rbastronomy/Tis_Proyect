@@ -16,7 +16,6 @@ exports.up = function(knex) {
         table.date('deleteats');
 
         // Unique constraints
-        table.unique('estados');
         table.unique('tipo');
 
         table.timestamps(true, true);
