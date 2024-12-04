@@ -4,7 +4,7 @@ import { RoleRouter } from './RoleRouter.js';
 import { PermissionRouter } from './PermissionRouter.js';
 import { MapRouter } from './MapRouter.js';
 import { TaxiBookingRouter } from './TaxiBookingRouter.js';
-import { ServicioRouter } from './ServicioRouter.js';
+import { ServiceRouter } from './ServiceRouter.js';
 
 export function setupRoutes(fastify) {
   // Initialize and register all routers
@@ -15,7 +15,7 @@ export function setupRoutes(fastify) {
     new PermissionRouter(fastify),
     new MapRouter(fastify),
     new TaxiBookingRouter(fastify),
-    new ServicioRouter(fastify)
+    new ServiceRouter(fastify)
   ];
 
   // Register all routes

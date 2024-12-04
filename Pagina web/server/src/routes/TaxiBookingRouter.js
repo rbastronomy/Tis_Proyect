@@ -22,7 +22,7 @@ export class TaxiBookingRouter extends BaseRouter {
       schema: {
         body: {
           type: 'object',
-          required: ['origenv', 'destinov', 'freserva', 'codigos'],
+          required: ['origenv', 'destinov', 'freserva', 'codigos', 'tarifa_id'],
           properties: {
             origenv: { 
               type: 'string',
@@ -50,6 +50,10 @@ export class TaxiBookingRouter extends BaseRouter {
             codigos: {
               type: 'integer',
               description: 'Código del servicio solicitado'
+            },
+            tarifa_id: {
+              type: 'integer',
+              description: 'ID de la tarifa seleccionada'
             }
           }
         },
@@ -67,7 +71,16 @@ export class TaxiBookingRouter extends BaseRouter {
                   freserva: { type: 'string' },
                   tipo: { type: 'string' },
                   observacion: { type: 'string' },
-                  estados: { type: 'string', enum: ['EN_REVISION'] }
+                  estados: { type: 'string', enum: ['EN_REVISION'] },
+                  tarifa: {
+                    type: 'object',
+                    properties: {
+                      id: { type: 'integer' },
+                      tipo: { type: 'string' },
+                      descripciont: { type: 'string' },
+                      precio: { type: 'number' }
+                    }
+                  }
                 }
               }
             }
