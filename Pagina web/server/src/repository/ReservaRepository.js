@@ -6,6 +6,40 @@ export class ReservaRepository extends BaseRepository {
     super('reserva', ReservaModel, 'codigoreserva');
   }
 
+  async createReserva(reserva) {
+    try {
+      const[created] = await this.db(this.tableName)
+        .insert(reserva)
+        .returning('*');
+      return created;
+    } catch (error) {
+      throw new Error(`Error creando reserva: ${error.message}`);
+    }
+  }
+
+  async updateReserva(codigoreserva, reserva) {
+    try {
+      const [updated] = await this.db(this.tableName)
+        .where('codigoreserva', codigoreserva)
+        .update(reserva)
+        .returning('*');
+      return updated;
+    } catch (error) {
+      throw new Error(`Error actualizando reserva: ${error.message}`);
+    }
+  }
+
+  async findById(codigoreserva) {
+    try {
+      const result = await this.db(this.tableName)
+        .where('codigoreserva', codigoreserva)
+        .first();
+      return ReservaModel.fromDB(result);
+    } catch (error) {
+      throw new Error(`Error buscando reserva por ID: ${error.message}`);
+    }
+  }
+
   async findByViaje(codigo) {
     try {
       const result = await this.db(this.tableName)
@@ -111,6 +145,7 @@ export class ReservaRepository extends BaseRepository {
         .leftJoin('boleta', 'reserva.codigoboleta', 'boleta.codigoboleta')
         .where('reserva.codigoreserva', codigoreserva)
         .first();
+        return result ? new this.modelClass(result) : null;
     } catch (error) {
       throw new Error(`Error buscando reserva con detalles: ${error.message}`);
     }

@@ -7,6 +7,40 @@ export class ViajeRepository extends BaseRepository {
     super('viaje', ViajeModel, 'codigo');
   }
 
+  async findById(codigo) {
+    try {
+      const result = await this.db(this.tableName)
+        .where('codigo', codigo)
+        .first();
+      return ViajeModel.fromDB(result);
+    } catch (error) {
+      throw new Error(`Error buscando viaje por ID: ${error.message}`);
+    }
+  }
+
+  async createViaje(viaje) {
+    try {
+      const [created] = await this.db(this.tableName)
+        .insert(viaje)
+        .returning('*');
+      return created;
+    } catch (error) {
+      throw new Error(`Error creando viaje: ${error.message}`);
+    }
+  }
+
+  async updateViaje(codigo, viaje) {
+    try {
+      const [updated] = await this.db(this.tableName)
+        .where('codigo', codigo)
+        .update(viaje)
+        .returning('*');
+      return updated;
+    } catch (error) {
+      throw new Error(`Error actualizando viaje: ${error.message}`);
+    }
+  }
+
   /**
    * Find viajes by driver RUT
    * @param {number} rutConductor - Driver's RUT

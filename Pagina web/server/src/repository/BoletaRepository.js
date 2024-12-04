@@ -7,6 +7,40 @@ export class BoletaRepository extends BaseRepository {
       super('boleta', BoletaModel, 'codigoboleta');
     }
 
+    async findById(codigoboleta){
+      try {
+        const result = await this.db(this.tableName)
+          .where('codigoboleta', codigoboleta)
+          .first();
+        return BoletaModel.fromDB(result);
+      } catch (error) {
+        throw new error('Error buscando boleta por ID: ${error.message}');
+      }
+    }
+
+    async createBoleta(boleta){
+      try {
+        const [created] = await this.db(this.tableName)
+          .insert(boleta)
+          .returning('*');
+        return created;
+      } catch (error) {
+        throw new error('Error creando boleta: ${error.message}');
+      }
+    }
+
+    async updateBoleta(codigoboleta, boleta){
+      try {
+        const [updated] = await this.db(this.tableName)
+          .where('codigoboleta', codigoboleta)
+          .update(boleta)
+          .returning('*');
+        return updated;
+      } catch (error) {
+        throw new error('Error actualizando boleta: ${error.message}');
+      }
+    }
+
     async findByViaje(codigo){
       try{
         const resut = await this.db(this.tableName)
@@ -29,7 +63,7 @@ export class BoletaRepository extends BaseRepository {
       }
     }
 
-    async findWithDetails(codigoreserva){
+    async findWithDetails(codigoboleta){
       try {
         const resut = await this.db(this.tableName)
           .select( 'boleta.*',
@@ -56,7 +90,4 @@ export class BoletaRepository extends BaseRepository {
   
       return results.map(result => new this.modelClass(result));
     }
-
-    
-
 }  
