@@ -1,6 +1,6 @@
 exports.up = function(knex) {
     return knex.schema.createTable('reserva', function(table) {
-        table.integer('codigoreserva').primary();
+        table.increments('codigoreserva').primary();
         
         // Foreign key to historial
         table.integer('idhistorial')
@@ -17,13 +17,6 @@ exports.up = function(knex) {
         table.string('observacion', 256);
         table.string('estados', 256);
         table.date('deletedatre');
-
-        // Unique constraints
-        table.unique('origenv');
-        table.unique('destinov');
-        table.unique('freserva');
-        table.unique('frealizado');
-        table.unique('estados');
 
         table.timestamps(true, true);
     });

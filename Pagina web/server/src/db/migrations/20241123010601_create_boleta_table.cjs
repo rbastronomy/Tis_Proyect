@@ -8,11 +8,6 @@ exports.up = function(knex) {
         table.string('estadob', 256);
         table.date('deletedatbo');
 
-        // Unique constraints
-        table.unique('femision');
-        table.unique('estadob');
-        table.unique('metodopago');
-
         table.timestamps(true, true);
     });
 };
