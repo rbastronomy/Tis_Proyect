@@ -1,5 +1,5 @@
 import { BaseRouter } from '../core/BaseRouter.js';
-import { TaxiBookingController } from '../controllers/TaxiBookingController.js';
+import BookingController from '../controllers/BookingController.js';
 
 /**
  * Router for booking related endpoints
@@ -12,7 +12,7 @@ export class BookingRouter extends BaseRouter {
    */
   constructor(provider) {
     super(provider, '/api/reservas');
-    this.controller = new TaxiBookingController();
+    this.controller = new BookingController();
     this.setupRoutes();
   }
 
