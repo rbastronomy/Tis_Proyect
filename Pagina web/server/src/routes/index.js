@@ -3,8 +3,11 @@ import { UserRouter } from './UserRouter.js';
 import { RoleRouter } from './RoleRouter.js';
 import { PermissionRouter } from './PermissionRouter.js';
 import { MapRouter } from './MapRouter.js';
-import { TaxiBookingRouter } from './TaxiBookingRouter.js';
+import { BookingRouter } from './BookingRouter.js';
 import { ServiceRouter } from './ServiceRouter.js';
+import { ReservaTarifaRouter } from './ReservaTarifaRouter.js';
+import { ServicioTarifaRouter } from './ServicioTarifaRouter.js';
+import { SolicitaRouter } from './SolicitaRouter.js';
 
 export function setupRoutes(fastify) {
   // Initialize and register all routers
@@ -14,8 +17,11 @@ export function setupRoutes(fastify) {
     new RoleRouter(fastify),
     new PermissionRouter(fastify),
     new MapRouter(fastify),
-    new TaxiBookingRouter(fastify),
-    new ServiceRouter(fastify)
+    new BookingRouter(fastify),
+    new ServiceRouter(fastify),
+    new ReservaTarifaRouter(fastify),
+    new ServicioTarifaRouter(fastify),
+    new SolicitaRouter(fastify)
   ];
 
   // Register all routes

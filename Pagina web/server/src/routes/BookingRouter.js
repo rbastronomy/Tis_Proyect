@@ -2,11 +2,11 @@ import { BaseRouter } from '../core/BaseRouter.js';
 import { TaxiBookingController } from '../controllers/TaxiBookingController.js';
 
 /**
- * Router for taxi booking related endpoints
- * @class TaxiBookingRouter
+ * Router for booking related endpoints
+ * @class BookingRouter
  * @extends BaseRouter
  */
-export class TaxiBookingRouter extends BaseRouter {
+export class BookingRouter extends BaseRouter {
   /**
    * @param {Object} provider - The HTTP server provider instance
    */
