@@ -3,14 +3,13 @@ import { useAuth } from '../../hooks/useAuth'
 import { useNavigate } from '@tanstack/react-router'
 import { useState, useEffect } from 'react'
 import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableColumn,
-  TableRow,
-  TableCell,
+  Card,
+  CardHeader,
+  CardBody,
+  CardFooter,
   Button,
   Chip,
+  Divider
 } from '@nextui-org/react'
 
 export const Route = createLazyFileRoute('/reservas/')({
@@ -119,49 +118,8 @@ function BookingList() {
     return colors[status] || 'default'
   }
 
-  const renderActions = (booking) => {
-    const role = user?.role?.nombrerol
-
-    if (role === 'CONDUCTOR' && booking.estados === 'PENDIENTE') {
-      return (
-        <Button
-          color="primary"
-          size="sm"
-          onClick={() => handleStartTrip(booking.codigoreserva)}
-        >
-          Iniciar Viaje
-        </Button>
-      )
-    }
-
-    if (role === 'CONDUCTOR' && booking.estados === 'EN_CAMINO') {
-      return (
-        <Button
-          color="success"
-          size="sm"
-          onClick={() => handleCompleteTrip(booking.codigoreserva)}
-        >
-          Completar Viaje
-        </Button>
-      )
-    }
-
-    if (
-      ['USUARIO', 'ADMINISTRADOR'].includes(role) &&
-      booking.estados === 'EN_REVISION'
-    ) {
-      return (
-        <Button
-          color="danger"
-          size="sm"
-          onClick={() => handleCancelBooking(booking.codigoreserva)}
-        >
-          Cancelar
-        </Button>
-      )
-    }
-
-    return null
+  const handleCardClick = (codigoreserva) => {
+    navigate({ to: `/reservas/${codigoreserva}` })
   }
 
   if (loading) {
@@ -182,57 +140,73 @@ function BookingList() {
         )}
       </div>
 
-      <Table aria-label="Tabla de reservas">
-        <TableHeader>
-          <TableColumn>CÓDIGO</TableColumn>
-          <TableColumn>ORIGEN</TableColumn>
-          <TableColumn>DESTINO</TableColumn>
-          <TableColumn>FECHA</TableColumn>
-          <TableColumn>SERVICIO</TableColumn>
-          <TableColumn>TARIFA</TableColumn>
-          <TableColumn>ESTADO</TableColumn>
-          <TableColumn>ACCIONES</TableColumn>
-        </TableHeader>
-        <TableBody>
-          {(bookings || []).map((booking) => (
-            <TableRow key={booking.codigoreserva}>
-              <TableCell>{booking.codigoreserva}</TableCell>
-              <TableCell>{booking.origenv}</TableCell>
-              <TableCell>{booking.destinov}</TableCell>
-              <TableCell>
-                {booking.freserva ? new Date(booking.freserva).toLocaleString() : '-'}
-              </TableCell>
-              <TableCell>
-                <div className="flex flex-col">
-                  <span>{booking.servicio?.tipo || '-'}</span>
-                  <span className="text-xs text-gray-500">
-                    {booking.servicio?.descripciont || ''}
-                  </span>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {bookings.map((booking) => (
+          <Card 
+            key={booking.codigoreserva}
+            isPressable
+            onPress={() => handleCardClick(booking.codigoreserva)}
+            className="w-full"
+          >
+            <CardHeader className="flex justify-between">
+              <div>
+                <p className="text-small text-default-500">
+                  Reserva #{booking.codigoreserva}
+                </p>
+                <p className="text-md font-semibold">
+                  {booking.servicio?.tipo || 'Servicio no especificado'}
+                </p>
+              </div>
+              <Chip color={getStatusColor(booking.estados)} variant="flat">
+                {booking.estados}
+              </Chip>
+            </CardHeader>
+            <Divider/>
+            <CardBody>
+              <div className="space-y-2">
+                <div>
+                  <p className="text-small font-medium">Desde</p>
+                  <p className="text-small text-default-500">{booking.origenv}</p>
                 </div>
-              </TableCell>
-              <TableCell>
-                <div className="flex flex-col">
-                  <span className="font-medium">
-                    {booking.tarifa?.precio 
-                      ? `$${booking.tarifa.precio.toLocaleString()}`
-                      : '-'
-                    }
-                  </span>
-                  <span className="text-xs text-gray-500">
-                    {booking.tarifa?.descripciont || ''}
-                  </span>
+                <div>
+                  <p className="text-small font-medium">Hasta</p>
+                  <p className="text-small text-default-500">{booking.destinov}</p>
                 </div>
-              </TableCell>
-              <TableCell>
-                <Chip color={getStatusColor(booking.estados)} variant="flat">
-                  {booking.estados || 'DESCONOCIDO'}
-                </Chip>
-              </TableCell>
-              <TableCell>{renderActions(booking)}</TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+                <div>
+                  <p className="text-small font-medium">Fecha</p>
+                  <p className="text-small text-default-500">
+                    {booking.freserva ? new Date(booking.freserva).toLocaleString() : '-'}
+                  </p>
+                </div>
+              </div>
+            </CardBody>
+            {user?.role?.nombrerol === 'ADMINISTRADOR' && booking.estados === 'EN_REVISION' && (
+              <CardFooter className="gap-2">
+                <Button 
+                  color="success" 
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    // Add approval logic here
+                  }}
+                >
+                  Aprobar
+                </Button>
+                <Button 
+                  color="danger" 
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleCancelBooking(booking.codigoreserva)
+                  }}
+                >
+                  Rechazar
+                </Button>
+              </CardFooter>
+            )}
+          </Card>
+        ))}
+      </div>
 
       {(!bookings || bookings.length === 0) && (
         <div className="text-center py-8 text-gray-500">
