@@ -1,6 +1,6 @@
 import { BaseRepository } from "../core/BaseRepository";
 import { BoletaModel } from "../models/BoletaModel";
-import { ReservaModel } from "../models/ReservaModel";
+import { BookingModel } from "../models/BookingModel";
 
 export class BoletaRepository extends BaseRepository {
     constructor() {

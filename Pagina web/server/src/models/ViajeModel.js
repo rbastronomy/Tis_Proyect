@@ -48,12 +48,12 @@ export class ViajeModel extends BaseModel {
     return !!this._data.taxi_modelo;
   }
 
-  associateReserva(reservaModel) {
-    this._datacodigoreserva = reservaModel.codigoreserva;
-    this._data.origenv = reservaModel.origen;
-    this._data.destinov = reservaModel.destino;
-    this._data.tipo = reservaModel.tipo;
-    this._data.reserva_observacion = reservaModel.observacion;
+  associateReserva(BookingModel) {
+    this._datacodigoreserva = BookingModel.codigoreserva;
+    this._data.origenv = BookingModel.origen;
+    this._data.destinov = BookingModel.destino;
+    this._data.tipo = BookingModel.tipo;
+    this._data.reserva_observacion = BookingModel.observacion;
   }
 
   associateBoleta (BoletaModel){

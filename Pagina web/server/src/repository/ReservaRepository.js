@@ -1,9 +1,9 @@
 import { BaseRepository } from '../core/BaseRepository.js';
-import { ReservaModel } from '../models/ReservaModel.js';
+import { BookingModel } from '../models/BookingModel.js';
 
 export class ReservaRepository extends BaseRepository {
   constructor() {
-    super('reserva', ReservaModel, 'codigoreserva');
+    super('reserva', BookingModel, 'codigoreserva');
   }
 
   async createReserva(reserva) {
@@ -34,7 +34,7 @@ export class ReservaRepository extends BaseRepository {
       const result = await this.db(this.tableName)
         .where('codigoreserva', codigoreserva)
         .first();
-      return ReservaModel.fromDB(result);
+      return BookingModel.fromDB(result);
     } catch (error) {
       throw new Error(`Error buscando reserva por ID: ${error.message}`);
     }
@@ -45,7 +45,7 @@ export class ReservaRepository extends BaseRepository {
       const result = await this.db(this.tableName)
       .where('codigo', codigo)
       .first();
-    return  ReservaModel.fromDB(result);
+    return  BookingModel.fromDB(result);
     } catch (error) {
       throw new Error(`Error buscando reserva por viaje: ${error.message}`);
     }
@@ -108,7 +108,7 @@ export class ReservaRepository extends BaseRepository {
           delete reservaData.servicio_tipo;
           delete reservaData.servicio_descripcion;
 
-          return ReservaModel.fromDB(reservaData);
+          return BookingModel.fromDB(reservaData);
         })
       );
 
@@ -145,7 +145,7 @@ export class ReservaRepository extends BaseRepository {
   /**
    * Find reserva by ID with related data
    * @param {number} id - Reserva ID
-   * @returns {Promise<ReservaModel|null>} Reserva with related data
+   * @returns {Promise<BookingModel|null>} Reserva with related data
    */
   async findByIdWithRelations(id) {
     const result = await this.db(this.tableName)

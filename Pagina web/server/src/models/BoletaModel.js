@@ -45,14 +45,14 @@ export class BoletaModel extends BaseModel {
         };
     }
 
-    associateReserva (reservaModel){
-        this._data.codigoreserva = reservaModel.codigoreserva;
+    associateReserva (BookingModel){
+        this._data.codigoreserva = BookingModel.codigoreserva;
         this._data.reserva_info = {
-            origen: reservaModel.origenv,
-            destino: reservaModel.destinov,
-            freserva: reservaModel.freserva,
-            tipo: reservaModel.tipo,
-            observacion: reservaModel.observacion
+            origen: BookingModel.origenv,
+            destino: BookingModel.destinov,
+            freserva: BookingModel.freserva,
+            tipo: BookingModel.tipo,
+            observacion: BookingModel.observacion
         };
     }
 
