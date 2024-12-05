@@ -24,8 +24,8 @@ export default {
       seedOrder: [
         '00_roles_permissions.cjs',
         '01_admin_user.cjs',
-        '02_tarifas.cjs',
-        '03_services.cjs'
+        '02_services.cjs',
+        '03_tarifas.cjs'
       ]
     }
   },
