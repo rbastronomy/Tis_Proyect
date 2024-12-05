@@ -15,11 +15,11 @@ exports.up = function(knex) {
         table.string('marco', 256);
         table.float('ano');
         table.string('color', 256);
-        table.date('revisiontecnica');
-        table.date('permisocirculacion');
+        table.timestamp('revisiontecnica');
+        table.timestamp('permisocirculacion');
         table.integer('codigotaxi').notNullable();
         table.string('estadotx', 256);
-        table.string('deletedattx', 256);
+        table.timestamp('deletedattx', 256);
 
         // Unique constraints
         table.unique('modelo');

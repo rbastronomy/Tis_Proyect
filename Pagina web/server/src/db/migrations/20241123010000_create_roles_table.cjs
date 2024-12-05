@@ -3,7 +3,7 @@ exports.up = function(knex) {
         table.integer('idroles').primary();
         table.string('nombrerol', 256);
         table.string('descripcionrol', 256);
-        table.date('fechacreadarol');
+        table.timestamp('fechacreadarol');
         table.string('estadorol', 256);
         
         table.unique('idroles');

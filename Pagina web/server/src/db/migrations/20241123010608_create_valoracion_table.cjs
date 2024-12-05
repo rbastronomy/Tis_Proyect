@@ -3,14 +3,9 @@ exports.up = function(knex) {
         table.integer('idvaloracion').primary();
         table.string('comentario', 256);
         table.integer('calificacion');
-        table.date('fvaloracion');
+        table.timestamp('fvaloracion');
         table.string('estadov', 256);
-        table.date('deletedatvj');
-
-        // Unique constraints
-        table.unique('calificacion');
-        table.unique('fvaloracion');
-        table.unique('estadov');
+        table.timestamp('deletedatvj');
 
         table.timestamps(true, true);
     });

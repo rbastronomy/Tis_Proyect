@@ -7,7 +7,7 @@ exports.up = function(knex) {
         table.integer('pasajeros');
         table.string('observacion', 256);
         table.string('estadov', 256);
-        table.date('deletedatvj');
+        table.timestamp('deletedatvj');
 
         // Unique constraints
         table.unique('origenv');

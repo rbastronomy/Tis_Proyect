@@ -3,7 +3,7 @@ exports.up = function(knex) {
         table.integer('idpermisos').primary();
         table.string('nombrepermiso', 256);
         table.string('descripcionpermiso', 256);
-        table.date('fechacreacion');
+        table.timestamp('fechacreacion');
         table.unique('idpermisos');
         table.unique('nombrepermiso');
         table.timestamps(true, true);

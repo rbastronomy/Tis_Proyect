@@ -11,12 +11,12 @@ exports.up = function(knex) {
 
         table.string('origenv', 256);
         table.string('destinov', 256);
-        table.date('freserva');
-        table.date('frealizado');
+        table.timestamp('freserva');
+        table.timestamp('frealizado');
         table.string('tipo', 256);
         table.string('observacion', 256);
         table.string('estados', 256);
-        table.date('deletedatre');
+        table.timestamp('deletedatre');
 
         table.timestamps(true, true);
     });
