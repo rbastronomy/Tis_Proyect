@@ -7,7 +7,6 @@ exports.up = function(knex) {
             .onDelete('RESTRICT')
             .onUpdate('CASCADE')
             .nullable()
-            .after('idhistorial'); // Places column after idhistorial
 
         table.string('patente_taxi')
             .references('patente')
@@ -15,7 +14,6 @@ exports.up = function(knex) {
             .onDelete('RESTRICT')
             .onUpdate('CASCADE')
             .nullable()
-            .after('rut_conductor'); // Places column after rut_conductor
     });
 };
 

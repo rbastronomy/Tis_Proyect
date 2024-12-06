@@ -3,7 +3,6 @@ import { UserModel } from './UserModel.js';
 import { TaxiModel } from './TaxiModel.js';
 import { ServiceModel } from './ServiceModel.js';
 import { TripModel } from './TripModel.js';
-import { HistoryModel } from './HistoryModel.js';
 import { RateModel } from './RateModel.js';
 
 export class BookingModel extends BaseModel {
@@ -12,7 +11,6 @@ export class BookingModel extends BaseModel {
         codigoreserva: null,    // ID de la reserva
         codigo: null,           // ID del código
         codigoboleta: null,     // ID de la boleta
-        idhistorial: null,      // ID del historial
         rut_conductor: null,    // RUT del conductor
         patente_taxi: null,     // Patente del taxi
         origenv: '',            // Origen
@@ -24,25 +22,18 @@ export class BookingModel extends BaseModel {
         estados: 'EN_REVISION', // Estado
         deletedatre: null,      // Soft delete
         costo_estimado: 0,      // Costo estimado
-        tarifa_id: null,        // ID de la tarifa
+        oferta_id: null,        // ID de la oferta
 
         // Modelos relacionados
         driver: null,           // Conductor (UserModel)
         taxi: null,             // Taxi (TaxiModel)
-        history: null,          // Historial (HistoryModel)
-        service: null,          // Servicio (ServiceModel)
-        trip: null,             // Viaje (TripModel)
+        //service: null,          // Servicio (ServiceModel)
+        //trip: null,             // Viaje (TripModel)
         client: null,           // Cliente (UserModel)
-        rate: null,             // Tarifa (RateModel)
-        codigos: null,          // ID del servicio
+        offering: null,         // oferta (OfferingModel)
 
         // Relaciones ternarias
         generates: [],          // Relación viaje-reserva-boleta
-        service_rate: null,     // Relación servicio-tarifa
-        requests: null,         // Relación usuario-reserva-servicio
-        booking_rate: null,     // Relación reserva-tarifa
-        trip_info: null,        // Información adicional del viaje
-        invoice_info: null      // Información adicional de la boleta
     };
 
     constructor(data = {}) {

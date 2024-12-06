@@ -7,7 +7,9 @@ exports.up = function(knex) {
             .inTable('persona')
             .onDelete('CASCADE')
             .onUpdate('CASCADE');
-        //fk for tarifa
+
+
+        //fk for oferta
         table.integer('id_combinacion')
             .unsigned()
             .references('id_combinacion')
