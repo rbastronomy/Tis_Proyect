@@ -83,24 +83,7 @@ class RateRepository extends BaseRepository{
     return results.map(result => this._toModel(result));
   }
 
-  /**
-   * Finds active tariffs for a specific service
-   * @param {number} servicioId - Service ID
-   * @returns {Promise<Array>} List of active tariffs for the service
-   */
-  async findActiveByService(servicioId) {
-    const results = await this.db(this.tableName)
-      .select('tarifa.*')
-      .join('servicio_tarifa', 'tarifa.id_tarifa', 'servicio_tarifa.tarifa_id')
-      .where({
-        'servicio_tarifa.servicio_id': servicioId,
-        'tarifa.estadot': 'ACTIVO'
-      })
-      .whereNull('tarifa.deletedatt');
-
-    return results.map(result => this._toModel(result));
-  }
-
+  
   /**
    * Finds tariffs for a service filtered by ride type
    * @param {number} servicioId - Service ID

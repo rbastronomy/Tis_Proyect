@@ -7,7 +7,7 @@ export class OfferingService extends BaseService {
     }
 
     /**
-     * Obtiene ofertas filtradas por servicio y tipo de viaje
+     * Obtiene ofertas filtradas por servicio y tarifa activa y tipo 
      * @param {number} codigos - ID del servicio
      * @param {string} rideType - Tipo de viaje (CITY o AIRPORT)
      * @returns {Promise<Array>} Lista de tarifas filtradas
