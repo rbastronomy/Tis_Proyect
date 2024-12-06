@@ -1,7 +1,7 @@
-import { BaseRepository } from "../core/BaseRepository";
-import { BookingModel } from "../models/BookingModel";
+import { BaseRepository } from "../core/BaseRepository.js";
+import { BookingModel } from "../models/BookingModel.js";
 
-class BookingRepository extends BaseRepository {
+export class BookingRepository extends BaseRepository {
     constructor() {
         super("reserva");
     }
@@ -76,3 +76,5 @@ class BookingRepository extends BaseRepository {
     }
     
 }
+
+export default BookingRepository;

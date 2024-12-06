@@ -1,4 +1,4 @@
-import { BaseModel } from "../core/BaseModel";
+import { BaseModel } from "../core/BaseModel.js";
 import { UserModel } from './UserModel.js';
 import { TaxiModel } from './TaxiModel.js';
 import { ServiceModel } from './ServiceModel.js';
