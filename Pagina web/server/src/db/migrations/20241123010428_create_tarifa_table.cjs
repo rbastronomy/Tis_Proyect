@@ -1,6 +1,6 @@
 exports.up = function(knex) {
     return knex.schema.createTable('tarifa', function(table) {
-        table.increments('id').primary();
+        table.increments('id_tarifa').primary();
         table.integer('rut')
             .unsigned()
             .references('rut')

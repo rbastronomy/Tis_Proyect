@@ -1,7 +1,7 @@
 exports.up = function(knex) {
     return knex.schema.createTable('oferta', function(table) {     
                 table.integer('idtarifa')
-                    .references('id')
+                    .references('id_tarifa')
                     .inTable('tarifa')
                     .onDelete('RESTRICT')
                     .onUpdate('CASCADE');

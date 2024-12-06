@@ -3,7 +3,7 @@ import { BaseModel } from "../core/BaseModel.js";
 export class RateModel extends BaseModel{
 
     static rateData = {
-        id: null,
+        id_tarifa: null,
         rut: null,
         descripciont: '',
         precio: 0,

@@ -5,7 +5,7 @@ module.exports.seed = async function(knex) {
   // Insert seed data
   const tarifas = [
     {
-      id: 1,
+      id_tarifa: 1,
       rut: 1,
       descripciont: 'Viaje al aeropuerto - Ida',
       precio: 15000,
@@ -14,7 +14,7 @@ module.exports.seed = async function(knex) {
       estadot: 'ACTIVO'
     },
     {
-      id: 2,
+      id_tarifa: 2,
       rut: 1,
       descripciont: 'Viaje al aeropuerto - Ida y Vuelta',
       precio: 28000,
@@ -23,7 +23,7 @@ module.exports.seed = async function(knex) {
       estadot: 'ACTIVO'
     },
     {
-      id: 3,
+      id_tarifa: 3,
       rut: 1,
       descripciont: 'Viaje al aeropuerto - Nocturno Ida (22:00 - 06:00)',
       precio: 18000,
@@ -32,7 +32,7 @@ module.exports.seed = async function(knex) {
       estadot: 'ACTIVO'
     },
     {
-      id: 4,
+      id_tarifa: 4,
       rut: 1,
       descripciont: 'Viaje al aeropuerto - Nocturno Ida y Vuelta',
       precio: 34000,
@@ -41,7 +41,7 @@ module.exports.seed = async function(knex) {
       estadot: 'ACTIVO'
     },
     {
-      id: 7,
+      id_tarifa: 7,
       rut: 1,
       descripciont: 'Traslado dentro de Iquique',
       precio: 5000,
@@ -50,7 +50,7 @@ module.exports.seed = async function(knex) {
       estadot: 'ACTIVO'
     },
     {
-      id: 5,
+      id_tarifa: 5,
       rut: 1,
       descripciont: 'Viaje al aeropuerto - Programado Anticipado - Ida',
       precio: 14000,
@@ -59,7 +59,7 @@ module.exports.seed = async function(knex) {
       estadot: 'ACTIVO'
     },
     {
-      id: 6,
+      id_tarifa: 6,
       rut: 1,
       descripciont: 'Viaje al aeropuerto - Programado Anticipado - Ida y Vuelta',
       precio: 26000,
