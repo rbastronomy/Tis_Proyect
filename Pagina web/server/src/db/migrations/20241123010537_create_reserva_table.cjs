@@ -10,9 +10,9 @@ exports.up = function(knex) {
 
 
         //fk for oferta
-        table.integer('id_combinacion')
+        table.integer('oferta_id')
             .unsigned()
-            .references('id_combinacion')
+            .references('oferta_id')
             .inTable('oferta')
             .onDelete('RESTRICT')
             .onUpdate('CASCADE');

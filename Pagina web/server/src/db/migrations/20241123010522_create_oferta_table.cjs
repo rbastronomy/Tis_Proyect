@@ -13,7 +13,7 @@ exports.up = function(knex) {
                     .onUpdate('CASCADE');
                     
                 table.timestamps(true, true);
-        table.increments('id_combinacion').primary();
+        table.increments('oferta_id').primary();
     });
 };
 
