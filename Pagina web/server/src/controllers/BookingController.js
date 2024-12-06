@@ -1,5 +1,5 @@
-import { BaseController } from "../core/BaseController";
-import { BookingService } from "../services/BookingService";
+import { BaseController } from "../core/BaseController.js";
+import { BookingService } from "../services/BookingService.js";
 
 class BookingController extends BaseController {
     constructor() {

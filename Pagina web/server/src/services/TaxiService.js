@@ -1,6 +1,5 @@
-import { BaseService } from "../core/BaseService";
-import TaxiRepository from "../repository/TaxiRepository";
-import { TaxiModel } from "../models/TaxiModel";
+import { BaseService } from "../core/BaseService.js"
+import TaxiRepository from "../repository/TaxiRepository.js";
 
 export class TaxiService extends BaseService {
     constructor() {

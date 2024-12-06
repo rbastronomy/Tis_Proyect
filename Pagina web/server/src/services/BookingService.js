@@ -1,15 +1,10 @@
 import { BaseService } from "../core/BaseService.js";
 import BookingRepository from "../repository/BookingRepository.js";
 import { TaxiService } from "./TaxiService.js";
-import { BookingModel } from "../models/BookingModel.js";
-import { ReservaRepository } from '../repository/ReservaRepository.js';
 import { HistorialRepository } from '../repository/HistorialRepository.js';
-import { ViajeRepository } from '../repository/ViajeRepository.js';
 import { GeneraRepository } from '../repository/GeneraRepository.js';
-import { SolicitaRepository } from '../repository/SolicitaRepository.js';
 import { ServiceService } from './ServiceService.js';
 import { TarifaService } from './TarifaService.js';
-import { SolicitaService } from './SolicitaService.js';
 
 export class BookingService extends BaseService {
     constructor() {
@@ -18,10 +13,8 @@ export class BookingService extends BaseService {
         this.taxiService = new TaxiService();
         this.historialRepository = new HistorialRepository();
         this.generaRepository = new GeneraRepository();
-        this.solicitaRepository = new SolicitaRepository();
         this.serviceService = new ServiceService();
         this.tarifaService = new TarifaService();
-        this.solicitaService = new SolicitaService();
     }
 
     /**
@@ -406,4 +399,6 @@ export class BookingService extends BaseService {
             .returning('*');
         return historial;
     }
-} 
+}
+
+export default BookingService;
