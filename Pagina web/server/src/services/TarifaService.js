@@ -1,12 +1,12 @@
 import { BaseService } from '../core/BaseService.js';
 import { RateModel } from '../models/RateModel.js';
-import { TarifaRepository } from '../repository/TarifaRepository.js';
+import { RateRepository } from '../repository/RateRepository.js';
 
 export class TarifaService extends BaseService {
     constructor() {
         const rateModel = new RateModel();
         super(rateModel);
-        this.repository = new TarifaRepository();
+        this.repository = new RateRepository();
     }
 
     /**

@@ -103,26 +103,18 @@ export class BookingModel extends BaseModel {
         return generateRecord;
     }
 
-    addRequest(serviceId) {
-        this._data.requests = {
-            codigoreserva: this.codigoreserva,
-            codigos: serviceId,
-            fechasolicitud: new Date()
-        };
-    }
 
-    addBookingRate(rateId) {
-        this._data.booking_rate = {
-            codigoreserva: this.codigoreserva,
-            id: rateId,
-            fechaseleccion: new Date()
+    addBookingOffering(offeringId) {
+        this._data.offering = {
+            codigos: this.codigos,
+            idtarifa: id_tarifa,
         };
     }
 
     // Método para calcular costo estimado
     calculateEstimatedCost() {
-        if (this._data.rate) {
-            this._data.costo_estimado = this._data.rate.precio;
+        if (this._data.offering) {
+            this._data.costo_estimado = this._data.offering.rate.precio;
         }
         return this._data.costo_estimado;
     }
@@ -130,9 +122,6 @@ export class BookingModel extends BaseModel {
     toJSON() {
         const json = {
             codigoreserva: this._data.codigoreserva,
-            codigo: this._data.codigo,
-            codigoboleta: this._data.codigoboleta,
-            idhistorial: this._data.idhistorial,
             rut_conductor: this._data.rut_conductor,
             patente_taxi: this._data.patente_taxi,
             origenv: this._data.origenv,
@@ -142,25 +131,16 @@ export class BookingModel extends BaseModel {
             tipo: this._data.tipo,
             observacion: this._data.observacion,
             estados: this._data.estados,
-            codigos: this._data.codigos,
             generates: this._data.generates,
             costo_estimado: this._data.costo_estimado,
-            tarifa_id: this._data.tarifa_id,
-            service_rate: this._data.service_rate,
-            requests: this._data.requests,
-            booking_rate: this._data.booking_rate,
-            trip_info: this._data.trip_info,
-            invoice_info: this._data.invoice_info
+            offering: this._data.offering
         };
 
         // Add related models
         if (this._data.driver) json.driver = this._data.driver.toJSON();
         if (this._data.taxi) json.taxi = this._data.taxi.toJSON();
-        if (this._data.history) json.history = this._data.history.toJSON();
-        if (this._data.service) json.service = this._data.service.toJSON();
-        if (this._data.trip) json.trip = this._data.trip.toJSON();
         if (this._data.client) json.client = this._data.client.toJSON();
-        if (this._data.rate) json.rate = this._data.rate.toJSON();
+        if (this._data.offering) json.offering = this._data.offering.toJSON();
 
         return json;
     }
@@ -171,7 +151,6 @@ export class BookingModel extends BaseModel {
     }
 
     // Add missing getters
-    get idhistorial() { return this._data.idhistorial; }
     get rut_conductor() { return this._data.rut_conductor; }
     get patente_taxi() { return this._data.patente_taxi; }
     get tipo() { return this._data.tipo; }
@@ -180,8 +159,6 @@ export class BookingModel extends BaseModel {
     get codigos() { return this._data.codigos; }
     get generates() { return this._data.generates; }
     get costo_estimado() { return this._data.costo_estimado; }
-    get tarifa_id() { return this._data.tarifa_id; }
-    get rate() { return this._data.rate; }
 
     // Add missing setters for model relationships
     set driver(value) { 
@@ -192,17 +169,6 @@ export class BookingModel extends BaseModel {
         this._data.taxi = value instanceof TaxiModel ? value : new TaxiModel(value); 
     }
 
-    set history(value) { 
-        this._data.history = value instanceof HistoryModel ? value : new HistoryModel(value); 
-    }
-
-    set service(value) { 
-        this._data.service = value instanceof ServiceModel ? value : new ServiceModel(value); 
-    }
-
-    set trip(value) { 
-        this._data.trip = value instanceof TripModel ? value : new TripModel(value); 
-    }
 
     set client(value) { 
         this._data.client = value instanceof UserModel ? value : new UserModel(value); 

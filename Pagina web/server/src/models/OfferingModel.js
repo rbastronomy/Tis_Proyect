@@ -7,8 +7,6 @@ export class OfferingModel extends BaseModel {
         oferta_id: null,      // ID de la oferta
         idtarifa: null,       // ID de la tarifa
         codigos: null,        // ID del servicio
-        created_at: null,     // Fecha de creación
-        updated_at: null,     // Fecha de actualización
         
         // Modelos relacionados
         service: null,        // Servicio (ServiceModel)
@@ -45,8 +43,6 @@ export class OfferingModel extends BaseModel {
             oferta_id: this._data.oferta_id,
             idtarifa: this._data.idtarifa,
             codigos: this._data.codigos,
-            created_at: this._data.created_at,
-            updated_at: this._data.updated_at
         };
 
         if (this._data.service) json.service = this._data.service.toJSON();

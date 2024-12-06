@@ -2,7 +2,7 @@ import { BaseRepository } from '../core/BaseRepository.js';
 import { RateModel } from '../models/RateModel.js'
 
 
-class RateRepository extends BaseRepository{
+export class RateRepository extends BaseRepository{
     constructor(){
         super('tarifa', RateModel, 'id_tarifa');
     }
