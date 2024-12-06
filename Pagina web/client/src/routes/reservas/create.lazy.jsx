@@ -56,7 +56,7 @@ function CreateBooking() {
       destinov: '',
       freserva: new Date(Date.now() + 30 * 60000).toISOString(),
       codigos: '',
-      tarifa_id: '',
+      oferta_id: '',
       observacion: ''
     }
   });
@@ -95,12 +95,13 @@ function CreateBooking() {
       const fetchTariffs = async () => {
         setLoadingTariffs(true);
         try {
-          const response = await fetch(`/api/servicios/${selectedServiceId}/tarifas/${rideType}`);
+          const response = await fetch(
+            `/api/ofertas/by-service/${selectedServiceId}/${rideType}`
+          );
           if (response.ok) {
             const data = await response.json();
             setAvailableTariffs(data);
-            // Reset tariff selection when service changes
-            setValue('tarifa_id', '');
+            setValue('oferta_id', '');
           }
         } catch (error) {
           console.error('Error fetching tariffs:', error);
@@ -147,8 +148,8 @@ function CreateBooking() {
         credentials: 'include',
         body: JSON.stringify({
           ...data,
-          codigos: parseInt(data.codigos),
-          tarifa_id: parseInt(data.tarifa_id),
+          codigos: parseInt(data.codigos),                  //quiza innecesario
+          oferta_id: parseInt(data.oferta_id),
           freserva: new Date(data.freserva).toISOString()
         })
       })
@@ -374,7 +375,7 @@ function CreateBooking() {
             {/* Tariff Selection */}
             {selectedService && (
               <Controller
-                name="tarifa_id"
+                name="oferta_id"
                 control={control}
                 rules={{ required: "La tarifa es requerida" }}
                 render={({ field, fieldState: { error } }) => (
@@ -408,7 +409,7 @@ function CreateBooking() {
             )}
 
             {/* Rest of the form (addresses, time, observations) only show if tariff is selected */}
-            {watch('tarifa_id') && (
+            {watch('oferta_id') && (
               <>
                 {/* Origin Address */}
                 <Controller
@@ -539,7 +540,7 @@ function CreateBooking() {
               className="w-full"
               size="lg"
               isLoading={loading}
-              isDisabled={!watch('tarifa_id') || Object.keys(errors).length > 0}
+              isDisabled={!watch('oferta_id') || Object.keys(errors).length > 0}
             >
               {loading ? "Procesando..." : "Solicitar Servicio"}
             </Button>

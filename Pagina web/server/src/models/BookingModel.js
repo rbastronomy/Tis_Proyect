@@ -3,14 +3,12 @@ import { UserModel } from './UserModel.js';
 import { TaxiModel } from './TaxiModel.js';
 import { ServiceModel } from './ServiceModel.js';
 import { TripModel } from './TripModel.js';
-import { RateModel } from './RateModel.js';
+import { OfferingModel } from './OfferingModel.js';
 
 export class BookingModel extends BaseModel {
     static defaultData = {
         // Campos de la tabla 'reserva'
         codigoreserva: null,    // ID de la reserva
-        codigo: null,           // ID del código
-        codigoboleta: null,     // ID de la boleta
         rut_conductor: null,    // RUT del conductor
         patente_taxi: null,     // Patente del taxi
         origenv: '',            // Origen
@@ -27,7 +25,6 @@ export class BookingModel extends BaseModel {
         // Modelos relacionados
         driver: null,           // Conductor (UserModel)
         taxi: null,             // Taxi (TaxiModel)
-        //service: null,          // Servicio (ServiceModel)
         //trip: null,             // Viaje (TripModel)
         client: null,           // Cliente (UserModel)
         offering: null,         // oferta (OfferingModel)
@@ -42,11 +39,9 @@ export class BookingModel extends BaseModel {
             ...data,
             driver: data.driver instanceof UserModel ? data.driver : null,
             taxi: data.taxi instanceof TaxiModel ? data.taxi : null,
-            history: data.history instanceof HistoryModel ? data.history : null,
-            service: data.service instanceof ServiceModel ? data.service : null,
             trip: data.trip instanceof TripModel ? data.trip : null,
             client: data.client instanceof UserModel ? data.client : null,
-            rate: data.rate instanceof RateModel ? data.rate : null
+            offering: data.rate instanceof OfferingModel ? data.offering : null
         };
 
         super(modelData, BookingModel.defaultData);
@@ -58,29 +53,20 @@ export class BookingModel extends BaseModel {
         if (data.taxi && !(data.taxi instanceof TaxiModel)) {
             this._data.taxi = new TaxiModel(data.taxi);
         }
-        if (data.history && !(data.history instanceof HistoryModel)) {
-            this._data.history = new HistoryModel(data.history);
-        }
-        if (data.service && !(data.service instanceof ServiceModel)) {
-            this._data.service = new ServiceModel(data.service);
-        }
         if (data.trip && !(data.trip instanceof TripModel)) {
             this._data.trip = new TripModel(data.trip);
         }
         if (data.client && !(data.client instanceof UserModel)) {
             this._data.client = new UserModel(data.client);
         }
-        if (data.rate && !(data.rate instanceof RateModel)) {
-            this._data.rate = new RateModel(data.rate);
+        if (data.offering && !(data.offering instanceof OfferingModel)) {
+            this._data.offering = new OfferingModel(data.offering);
         }
 
         // Initialize arrays and relationships
         this._data.generates = Array.isArray(data.generates) ? data.generates : [];
         this._data.trip_info = data.trip_info || null;
-        this._data.invoice_info = data.invoice_info || null;
-        this._data.service_rate = data.service_rate || null;
         this._data.requests = data.requests || null;
-        this._data.booking_rate = data.booking_rate || null;
     }
 
     // Getters básicos (mantienen nombres de BD)
@@ -91,8 +77,8 @@ export class BookingModel extends BaseModel {
     // Getters de relaciones (nombres en inglés)
     get driver() { return this._data.driver; }
     get taxi() { return this._data.taxi; }
-    get history() { return this._data.history; }
     // ... (resto de getters de relaciones)
+    
 
     // Métodos de estado
     isPending() { return this._data.estados === 'PENDIENTE'; }
