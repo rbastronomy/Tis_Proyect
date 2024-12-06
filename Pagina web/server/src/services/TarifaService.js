@@ -4,8 +4,8 @@ import { TarifaRepository } from '../repository/TarifaRepository.js';
 
 export class TarifaService extends BaseService {
     constructor() {
-        const RateModel = new RateModel();
-        super(RateModel);
+        const rateModel = new RateModel();
+        super(rateModel);
         this.repository = new TarifaRepository();
     }
 
