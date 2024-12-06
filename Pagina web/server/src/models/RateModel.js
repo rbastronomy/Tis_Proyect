@@ -1,4 +1,4 @@
-import { BaseModel } from "../core/BaseModel";
+import { BaseModel } from "../core/BaseModel.js";
 
 export class RateModel extends BaseModel{
 
@@ -32,8 +32,8 @@ export class RateModel extends BaseModel{
         return this._data.estadot === 'ACTIVO';
     }
 
-    calculateTotal(){
-        return this._data.precio * cantidad;
+    getPrecio(){
+        return this._data.precio;
     }
 
     toJSON(){
