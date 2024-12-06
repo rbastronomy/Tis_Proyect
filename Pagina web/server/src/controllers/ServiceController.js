@@ -1,12 +1,68 @@
 import { BaseController } from '../core/BaseController.js';
 import { ServiceService } from '../services/ServiceService.js';
 
-
-const serviceService = new ServiceService();
-
 export class ServiceController extends BaseController {
     constructor() {
-        super(serviceService);
+        super(new ServiceService());
+    }
+
+    /**
+     * Get services filtered by ride type (CITY or AIRPORT)
+     * @param {Object} request - Fastify request object
+     * @param {Object} reply - Fastify reply object
+     * @returns {Promise<Array>} Array of services for the specified ride type
+     */
+    async getServicesByRideType(request, reply) {
+        const { rideType } = request.params;
+        
+        try {
+            // Only get ACTIVE services for the specified ride type
+            const services = await this.service.findByRideType(rideType);
+            
+            // Filter out inactive services
+            const activeServices = services.filter(service => 
+                service.estados === 'ACTIVO'
+            );
+            
+            return reply.send(activeServices);
+        } catch (error) {
+            request.log.error(error);
+            return reply.status(500).send({ 
+                error: 'Failed to retrieve services by ride type',
+                details: error.message 
+            });
+        }
+    }
+
+    /**
+     * Get service tariffs filtered by ride type
+     * @param {Object} request - Fastify request object
+     * @param {Object} reply - Fastify reply object
+     * @returns {Promise<Array>} Array of tariffs filtered by ride type
+     */
+    async getServiceTariffsByType(request, reply) {
+        const { codigos, rideType } = request.params;
+
+        try {
+            // Get active tariffs for the service and ride type
+            const tariffs = await this.service.getTariffsByType(
+                parseInt(codigos), 
+                rideType
+            );
+            
+            // Filter out inactive tariffs
+            const activeTariffs = tariffs.filter(tariff => 
+                tariff.estadot === 'ACTIVO'
+            );
+            
+            return reply.send(activeTariffs);
+        } catch (error) {
+            request.log.error(error);
+            return reply.status(500).send({ 
+                error: 'Failed to retrieve service tariffs by type',
+                details: error.message 
+            });
+        }
     }
 
     /**
@@ -17,7 +73,7 @@ export class ServiceController extends BaseController {
      */
     async getActiveServices(request, reply) {
         try {
-            const services = await serviceService.findActiveWithTariffs();
+            const services = await this.service.findActiveWithTariffs();
             return reply.send({ services });
         } catch (error) {
             request.log.error(error);
@@ -35,7 +91,7 @@ export class ServiceController extends BaseController {
         const { codigos } = request.params;
 
         try {
-            const tariffs = await serviceService.getServiceTariffs(codigos);
+            const tariffs = await this.service.getServiceTariffs(codigos);
             return reply.send(tariffs);
         } catch (error) {
             request.log.error(error);
@@ -56,7 +112,7 @@ export class ServiceController extends BaseController {
         const { tipo, descripciont, estados, tarifas } = request.body;
 
         try {
-            const newService = await serviceService.createWithTariffs({ 
+            const newService = await this.service.createWithTariffs({ 
                 tipo, 
                 descripciont, 
                 estados,
@@ -86,7 +142,7 @@ export class ServiceController extends BaseController {
         const { tarifas } = request.body;
 
         try {
-            const updatedService = await serviceService.updateTariffs(codigos, tarifas);
+            const updatedService = await this.service.updateTariffs(codigos, tarifas);
             return reply.send({
                 message: 'Service tariffs updated successfully',
                 service: updatedService
@@ -109,7 +165,7 @@ export class ServiceController extends BaseController {
         const { rut, codigoreserva, codigos } = request.body;
 
         try {
-            const serviceRequest = await serviceService.requestService({
+            const serviceRequest = await this.service.requestService({
                 rut, 
                 codigoreserva, 
                 codigos,
@@ -134,7 +190,7 @@ export class ServiceController extends BaseController {
         const { rut } = request.params;
 
         try {
-            const services = await serviceService.getPersonServices(rut);
+            const services = await this.service.getPersonServices(rut);
             return reply.send({ services });
         } catch (error) {
             request.log.error(error);
@@ -152,7 +208,7 @@ export class ServiceController extends BaseController {
         const updateData = request.body;
 
         try {
-            const updatedService = await serviceService.update(codigos, updateData);
+            const updatedService = await this.service.update(codigos, updateData);
             return reply.send({ 
                 message: 'Service updated successfully', 
                 service: updatedService 
@@ -172,7 +228,7 @@ export class ServiceController extends BaseController {
         const { codigos } = request.params;
 
         try {
-            await serviceService.delete(codigos);
+            await this.service.delete(codigos);
             return reply.send({ message: 'Service deleted successfully' });
         } catch (error) {
             request.log.error(error);
@@ -187,53 +243,11 @@ export class ServiceController extends BaseController {
      */
     async getAll(request, reply) {
         try {
-            const services = await serviceService.getAll();
+            const services = await this.service.getAll();
             return reply.send({ services });
         } catch (error) {
             request.log.error(error);
             return reply.status(500).send({ error: 'Failed to retrieve services' });
-        }
-    }
-
-    /**
-     * Get services filtered by ride type
-     * @param {Object} request - Fastify request object
-     * @param {Object} reply - Fastify reply object
-     * @returns {Promise<Array>} Array of services for the specified ride type
-     */
-    async getServicesByRideType(request, reply) {
-        const { rideType } = request.params;
-        
-        try {
-            const services = await serviceService.findByRideType(rideType);
-            return reply.send(services);
-        } catch (error) {
-            request.log.error(error);
-            return reply.status(500).send({ 
-                error: 'Failed to retrieve services by ride type',
-                details: error.message 
-            });
-        }
-    }
-
-    /**
-     * Get service tariffs filtered by ride type
-     * @param {Object} request - Fastify request object
-     * @param {Object} reply - Fastify reply object
-     * @returns {Promise<Array>} Array of tariffs filtered by ride type
-     */
-    async getServiceTariffsByType(request, reply) {
-        const { codigos, rideType } = request.params;
-
-        try {
-            const tariffs = await serviceService.getTariffsByType(codigos, rideType);
-            return reply.send(tariffs);
-        } catch (error) {
-            request.log.error(error);
-            return reply.status(500).send({ 
-                error: 'Failed to retrieve service tariffs by type',
-                details: error.message 
-            });
         }
     }
 }

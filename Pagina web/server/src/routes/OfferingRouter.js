@@ -3,7 +3,7 @@ import { OfferingController } from '../controllers/OfferingController.js';
 
 export class OfferingRouter extends BaseRouter {
     constructor(provider) {
-        super(provider, '/api/ofertas');
+        super(provider, '/api/offerings');
         this.controller = new OfferingController();
         this.setupRoutes();
     }

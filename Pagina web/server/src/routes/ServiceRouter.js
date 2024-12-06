@@ -3,38 +3,12 @@ import { ServiceController } from '../controllers/ServiceController.js';
 
 export class ServiceRouter extends BaseRouter {
   constructor(provider) {
-    super(provider, '/api/servicios');
+    super(provider, '/api/services');
     this.controller = new ServiceController();
     this.setupRoutes();
   }
 
   setupRoutes() {
-    // Get all services (used in frontend initial load)
-    this.addRoute('GET', '/', {
-      schema: {
-        response: {
-          200: {
-            type: 'object',
-            properties: {
-              services: {
-                type: 'array',
-                items: {
-                  type: 'object',
-                  properties: {
-                    codigos: { type: 'integer' },
-                    tipo: { type: 'string' },
-                    descripciont: { type: 'string' },
-                    estados: { type: 'string' }
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      handler: this.controller.getAll.bind(this.controller)
-    });
-
     // Get services by ride type (CITY or AIRPORT)
     this.addRoute('GET', '/by-type/:rideType', {
       schema: {
@@ -64,6 +38,32 @@ export class ServiceRouter extends BaseRouter {
         }
       },
       handler: this.controller.getServicesByRideType.bind(this.controller)
+    });
+
+    // Get all services (used in frontend initial load)
+    this.addRoute('GET', '/', {
+      schema: {
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              services: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    codigos: { type: 'integer' },
+                    tipo: { type: 'string' },
+                    descripciont: { type: 'string' },
+                    estados: { type: 'string' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      handler: this.controller.getAll.bind(this.controller)
     });
 
     // Get active services with their tariffs

@@ -11,7 +11,7 @@ export class BookingRouter extends BaseRouter {
    * @param {Object} provider - The HTTP server provider instance
    */
   constructor(provider) {
-    super(provider, '/api/reservas');
+    super(provider, '/api/bookings');
     this.controller = new BookingController();
     this.setupRoutes();
   }

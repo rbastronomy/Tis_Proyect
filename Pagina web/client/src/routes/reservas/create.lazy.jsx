@@ -3,7 +3,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { useNavigate } from '@tanstack/react-router'
 import { useState, useEffect } from 'react'
 import { useForm, Controller } from "react-hook-form"
-import { MapPin, Calendar } from 'lucide-react'
+import { MapPin, Calendar, Plane } from 'lucide-react'
 import {
   Card,
   CardBody,
@@ -70,7 +70,7 @@ function CreateBooking() {
       const fetchServices = async () => {
         setLoadingServices(true);
         try {
-          const response = await fetch(`/api/servicios/by-type/${rideType}`);
+          const response = await fetch(`/api/services/by-type/${rideType}`);
           if (response.ok) {
             const data = await response.json();
             setServices(data);
@@ -96,7 +96,7 @@ function CreateBooking() {
         setLoadingTariffs(true);
         try {
           const response = await fetch(
-            `/api/ofertas/by-service/${selectedServiceId}/${rideType}`
+            `/api/offerings/by-service/${selectedServiceId}/${rideType}`
           );
           if (response.ok) {
             const data = await response.json();
@@ -148,7 +148,7 @@ function CreateBooking() {
         credentials: 'include',
         body: JSON.stringify({
           ...data,
-          codigos: parseInt(data.codigos),                  //quiza innecesario
+          codigos: parseInt(data.codigos),
           oferta_id: parseInt(data.oferta_id),
           freserva: new Date(data.freserva).toISOString()
         })
@@ -455,7 +455,7 @@ function CreateBooking() {
                       {rideType === 'AIRPORT' ? (
                         // Read-only airport address display
                         <div className="relative">
-                          <MapPin className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                          <Plane />
                           <Input
                             value={AIRPORT_ADDRESS.label}
                             isReadOnly
