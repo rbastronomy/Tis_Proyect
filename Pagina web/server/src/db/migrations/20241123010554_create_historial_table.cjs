@@ -1,13 +1,13 @@
 exports.up = function(knex) {
     return knex.schema.createTable('historial', function(table) {
-        table.increments('idhistorial').primary();
-        table.string('estadoh', 256).notNullable();
-        table.text('observacion', 256).notNullable();
-        table.timestamp('fcambio').defaultTo(knex.fn.now());
+        table.increments('id_historial').primary();
+        table.string('estado_historial', 256).notNullable();
+        table.text('observacion_historial', 256).notNullable();
+        table.timestamp('fecha_cambio').defaultTo(knex.fn.now());
         //fk to reserva
-        table.integer('codigoreserva')
+        table.integer('codigo_reserva')
             .unsigned()
-            .references('codigoreserva')
+            .references('codigo_reserva')
             .inTable('reserva')
             .onDelete('RESTRICT')
             .onUpdate('CASCADE');

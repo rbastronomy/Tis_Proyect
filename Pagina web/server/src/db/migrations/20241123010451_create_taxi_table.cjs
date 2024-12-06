@@ -3,7 +3,7 @@ exports.up = function(knex) {
         table.string('patente', 256).primary();
         
         // Foreign key to persona (driver)
-        table.integer('rut')
+        table.integer('rut_conductor')
             .unsigned()
             .references('rut')
             .inTable('persona')
@@ -12,21 +12,18 @@ exports.up = function(knex) {
 
         // Taxi information
         table.string('modelo', 256);
-        table.string('marco', 256);
+        table.string('marca', 256);
         table.float('ano');
         table.string('color', 256);
-        table.timestamp('revisiontecnica');
-        table.timestamp('permisocirculacion');
-        table.integer('codigotaxi').notNullable();
-        table.string('estadotx', 256);
-        table.timestamp('deletedattx', 256);
+        table.timestamp('vencimiento_revision_tecnica');
+        table.timestamp('vencimiento_permiso_circulacion');
+        table.integer('codigo_taxi').notNullable();
+        table.string('estado_taxi', 256);
+        table.timestamp('deleted_at_taxi');
 
         // Unique constraints
-        table.unique('modelo');
-        table.unique('ano');
-        table.unique('revisiontecnica');
-        table.unique('codigotaxi');
-        table.unique('estadotx');
+        table.unique('codigo_taxi');
+        table.unique('estado_taxi');
 
         table.timestamps(true, true);
     });

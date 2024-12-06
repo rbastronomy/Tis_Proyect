@@ -1,13 +1,13 @@
 exports.up = function(knex) {
     return knex.schema.createTable('viaje', function(table) {
-        table.integer('codigo').primary();
-        table.string('origenv', 256);
-        table.string('destinov', 256);
+        table.integer('codigo_viaje').primary();
+        table.string('origen_viaje', 256);
+        table.string('destino_viaje', 256);
         table.float('duracion');
         table.integer('pasajeros');
-        table.string('observacion', 256);
-        table.string('estadov', 256);
-        table.timestamp('deletedatvj');
+        table.string('observacion_viaje', 256);
+        table.string('estado_viaje', 256);
+        table.timestamp('deleted_at_viaje');
 
         // Unique constraints
         table.unique('origenv');

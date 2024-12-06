@@ -1,12 +1,12 @@
 exports.up = function(knex) {
     return knex.schema.createTable('boleta', function(table) {
-        table.integer('codigoboleta').primary();
+        table.integer('codigo_boleta').primary();
         table.float('total');
-        table.timestamp('femision');
-        table.string('metodopago', 256);
-        table.string('descripciont', 256);
-        table.string('estadob', 256);
-        table.timestamp('deletedatbo');
+        table.timestamp('fecha_emision');
+        table.string('metodo_pago', 256);
+        table.string('descripcion_boleta', 256);
+        table.string('estado_boleta', 256);
+        table.timestamp('deleted_at_boleta');
 
         table.timestamps(true, true);
     });

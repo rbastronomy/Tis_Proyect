@@ -35,9 +35,9 @@ export class TripController extends BaseController {
      */
     async updateTrip(request, reply) {
         try {
-            const { code } = request.params;
+            const { codigo_viaje } = request.params;
             const tripData = request.body;
-            const trip = await this.service.updateTrip(code, tripData);
+            const trip = await this.service.updateTrip(codigo_viaje, tripData);
             return reply.code(200).send(trip);
         } catch (error) {
             request.log.error(error);

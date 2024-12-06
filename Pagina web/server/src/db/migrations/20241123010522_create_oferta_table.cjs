@@ -1,19 +1,19 @@
 exports.up = function(knex) {
     return knex.schema.createTable('oferta', function(table) {     
-                table.integer('idtarifa')
+                table.integer('id_tarifa')
                     .references('id_tarifa')
                     .inTable('tarifa')
                     .onDelete('RESTRICT')
                     .onUpdate('CASCADE');
                     
-                table.integer('codigos')
-                    .references('codigos')
+                table.integer('codigo_servicio')
+                    .references('codigo_servicio')
                     .inTable('servicio')
                     .onDelete('RESTRICT')
                     .onUpdate('CASCADE');
                     
-                table.timestamps(true, true);
-        table.increments('oferta_id').primary();
+        table.timestamps(true, true);
+        table.increments('id_oferta').primary();
     });
 };
 

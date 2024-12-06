@@ -1,11 +1,11 @@
 exports.up = function(knex) {
     return knex.schema.createTable('permiso', function(table) {
-        table.integer('idpermisos').primary();
-        table.string('nombrepermiso', 256);
-        table.string('descripcionpermiso', 256);
-        table.timestamp('fechacreacion');
-        table.unique('idpermisos');
-        table.unique('nombrepermiso');
+        table.integer('id_permisos').primary();
+        table.string('nombre_permiso', 256);
+        table.string('descripcion_permiso', 256);
+        table.timestamp('fecha_creacion');
+        table.unique('id_permisos');
+        table.unique('nombre_permiso');
         table.timestamps(true, true);
     });
 };

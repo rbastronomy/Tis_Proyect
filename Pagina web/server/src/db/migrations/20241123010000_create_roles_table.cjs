@@ -1,13 +1,13 @@
 exports.up = function(knex) {
     return knex.schema.createTable('roles', function(table) {
-        table.integer('idroles').primary();
-        table.string('nombrerol', 256);
-        table.string('descripcionrol', 256);
-        table.timestamp('fechacreadarol');
-        table.string('estadorol', 256);
+        table.integer('id_roles').primary();
+        table.string('nombre_rol', 256);
+        table.string('descripcion_rol', 256);
+        table.timestamp('fecha_creada_rol');
+        table.string('estado_rol', 256);
         
-        table.unique('idroles');
-        table.unique('nombrerol');
+        table.unique('id_roles');
+        table.unique('nombre_rol');
         
         table.timestamps(true, true);
     });

@@ -2,50 +2,50 @@ exports.up = function(knex) {
     return knex.schema
         // GENERA table (viaje-reserva-boleta)
         .createTable('genera', function(table) {
-            table.integer('codigo')
-                .references('codigo')
+            table.integer('codigo_viaje')
+                .references('codigo_viaje')
                 .inTable('viaje')
                 .onDelete('RESTRICT')
                 .onUpdate('CASCADE');
                 
-            table.integer('codigoreserva')
-                .references('codigoreserva')
+            table.integer('codigo_reserva')
+                .references('codigo_reserva')
                 .inTable('reserva')
                 .onDelete('RESTRICT')
                 .onUpdate('CASCADE');
                 
-            table.integer('codigoboleta')
-                .references('codigoboleta')
+            table.integer('codigo_boleta')
+                .references('codigo_boleta')
                 .inTable('boleta')
                 .onDelete('RESTRICT')
                 .onUpdate('CASCADE');
                 
-            table.date('fechagenerada');
-            table.primary(['codigo', 'codigoreserva']);
+            table.date('fecha_generada');
+            table.increments('id_genera').primary();
         })
         
         // VALORA table (persona-viaje-valoracion)
         .createTable('valora', function(table) {
-            table.integer('rut')
-                .references('rut')
+            table.integer('rut_persona')
+                .references('rut_persona')
                 .inTable('persona')
                 .onDelete('RESTRICT')
                 .onUpdate('CASCADE');
                 
-            table.integer('codigo')
-                .references('codigo')
+            table.integer('codigo_viaje')
+                .references('codigo_viaje')
                 .inTable('viaje')
                 .onDelete('RESTRICT')
                 .onUpdate('CASCADE');
                 
-            table.integer('idvaloracion')
-                .references('idvaloracion')
+            table.integer('id_valoracion')
+                .references('id_valoracion')
                 .inTable('valoracion')
                 .onDelete('RESTRICT')
                 .onUpdate('CASCADE');
                 
-            table.date('fechavaloracion');
-            table.primary(['rut', 'codigo', 'idvaloracion']);
+            table.date('fecha_valoracion');
+            table.increments('id_valora').primary();
         });
 };
 

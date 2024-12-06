@@ -1,6 +1,6 @@
 exports.up = function(knex) {
     return knex.schema.createTable('reserva', function(table) {
-        table.increments('codigoreserva').primary();
+        table.increments('codigo_reserva').primary();
         table.integer('rut_cliente')
             .unsigned()
             .references('rut')
@@ -10,21 +10,21 @@ exports.up = function(knex) {
 
 
         //fk for oferta
-        table.integer('oferta_id')
+        table.integer('id_oferta')
             .unsigned()
-            .references('oferta_id')
+            .references('id_oferta')
             .inTable('oferta')
             .onDelete('RESTRICT')
             .onUpdate('CASCADE');
 
-        table.string('origenv', 256);
-        table.string('destinov', 256);
-        table.timestamp('freserva');
-        table.timestamp('frealizado');
-        table.string('tipo', 256);
-        table.text('observacion', 256);
-        table.string('estados', 256);
-        table.timestamp('deletedatre');
+        table.string('origen_reserva', 256);
+        table.string('destino_reserva', 256);
+        table.timestamp('fecha_reserva');
+        table.timestamp('fecha_realizado');
+        table.string('tipo_reserva', 256);
+        table.text('observacion_reserva', 256);
+        table.string('estado_reserva', 256);
+        table.timestamp('deleted_at_reserva');
 
         table.timestamps(true, true);
     });

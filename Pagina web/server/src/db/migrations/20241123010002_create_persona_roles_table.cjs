@@ -1,22 +1,22 @@
 exports.up = function(knex) {
     return knex.schema.createTable('posee', function(table) {
         // Foreign keys
-        table.integer('idpermisos')
+        table.integer('id_permisos')
             .unsigned()
-            .references('idpermisos')
+            .references('id_permisos')
             .inTable('permiso')
             .onDelete('CASCADE')
             .onUpdate('CASCADE');
             
-        table.integer('idroles')
+        table.integer('id_roles')
             .unsigned()
-            .references('idroles')
+            .references('id_roles')
             .inTable('roles')
             .onDelete('CASCADE')
             .onUpdate('CASCADE');
 
         // Additional fields
-        table.date('fcambio');
+        table.date('fecha_cambio_permiso');
 
         // Timestamps for record keeping
         table.timestamps(true, true);

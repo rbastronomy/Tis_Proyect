@@ -5,30 +5,28 @@ exports.up = function(knex) {
         
         // Personal information
         table.string('nombre', 256).notNullable();
-        table.string('apellidop', 256);
-        table.string('apellidom', 256);
-        table.date('fnacimiento');
+        table.string('apellido_paterno', 256);
+        table.string('apellido_materno', 256);
+        table.date('fecha_nacimiento');
         table.string('correo', 256).notNullable();
-        table.string('ntelefono', 20);
+        table.string('telefono', 20);
         table.string('nacionalidad', 256);
         table.string('genero', 256);
         table.string('contrasena', 256).notNullable();
-        table.string('estadop', 256).defaultTo('ACTIVO');
+        table.string('estado_persona', 256).defaultTo('ACTIVO');
         
         // Role reference
-        table.integer('idroles')
+        table.integer('id_roles')
             .unsigned()
-            .references('idroles')
+            .references('id_roles')
             .inTable('roles')
             .onDelete('RESTRICT')
             .onUpdate('CASCADE')
             .defaultTo(2);
         
         // Employment information
-        table.date('fcontratacion');
-        table.date('licenciaconducir');
-        table.date('adm_fcontratacion');
-        table.integer('cviajes').defaultTo(0);
+        table.timestamp('fecha_contratacion');
+        table.timestamp('licencia_conducir');
 
         table.timestamps(true, true);
     }).then(function() {
