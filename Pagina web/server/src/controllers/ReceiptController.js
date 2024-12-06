@@ -1,9 +1,10 @@
-import { BaseController } from "../core/BaseController";
-import { BoletaService } from "../services/BoletaService";
+import { BaseController } from '../core/BaseController.js';
+import { BoletaService } from '../services/BoletaService.js';
 
-export default class BoletaController extends BaseController {
-    constructor(boletaService) {
-      this.boletaService = boletaService;
+export default class ReceiptController extends BaseController {
+    constructor() {
+        const boletaService = new BoletaService();
+        super(boletaService);
     }
   
     // Route handler for getting a specific boleta
