@@ -1,6 +1,6 @@
 import { BaseModel } from "../core/BaseModel.js";
 import { ServiceModel } from './ServiceModel.js';
-import { TarifaModel } from './TarifaModel.js';
+import { RateModel } from './RateModel.js';
 
 export class OfferingModel extends BaseModel {
     static defaultData = {
@@ -12,14 +12,14 @@ export class OfferingModel extends BaseModel {
         
         // Modelos relacionados
         service: null,        // Servicio (ServiceModel)
-        rate: null,          // Tarifa (TarifaModel)
+        rate: null,          // Tarifa (RateModel)
     };
 
     constructor(data = {}) {
         const modelData = {
             ...data,
             service: data.service instanceof ServiceModel ? data.service : null,
-            rate: data.rate instanceof TarifaModel ? data.rate : null
+            rate: data.rate instanceof RateModel ? data.rate : null
         };
 
         super(modelData, OfferingModel.defaultData);
@@ -28,8 +28,8 @@ export class OfferingModel extends BaseModel {
         if (data.service && !(data.service instanceof ServiceModel)) {
             this._data.service = new ServiceModel(data.service);
         }
-        if (data.rate && !(data.rate instanceof TarifaModel)) {
-            this._data.rate = new TarifaModel(data.rate);
+        if (data.rate && !(data.rate instanceof RateModel)) {
+            this._data.rate = new RateModel(data.rate);
         }
     }
 

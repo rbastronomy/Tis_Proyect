@@ -1,6 +1,6 @@
 import { BaseModel } from "../core/BaseModel.js";
 
-export class TarifaModel extends BaseModel{
+export class RateModel extends BaseModel{
 
     static tarifaData = {
         id: null,
@@ -15,7 +15,7 @@ export class TarifaModel extends BaseModel{
     }
 
     constructor(data = {}){
-        super(data, TarifaModel.tarifaData);
+        super(data, RateModel.tarifaData);
     }
 
     get id() { return this._data.id; }
@@ -45,6 +45,6 @@ export class TarifaModel extends BaseModel{
     }
 
     static fromDB(data){
-        return new TarifaModel(data);
+        return new RateModel(data);
     }
 }

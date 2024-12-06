@@ -1,5 +1,5 @@
 import { BaseModel } from '../core/BaseModel.js';
-import { TarifaModel } from './TarifaModel.js';
+import { RateModel } from './RateModel.js';
 
 export class ServiceModel extends BaseModel {
   static defaultData = {
@@ -15,13 +15,13 @@ export class ServiceModel extends BaseModel {
   constructor(data = {}) {
     const modelData = {
       ...data,
-      tarifa: data.tarifa instanceof TarifaModel ? data.tarifa : null
+      tarifa: data.tarifa instanceof RateModel ? data.tarifa : null
     };
 
     super(modelData, ServiceModel.defaultData);
 
-    if (data.tarifa && !(data.tarifa instanceof TarifaModel)) {
-      this._data.tarifa = new TarifaModel(data.tarifa);
+    if (data.tarifa && !(data.tarifa instanceof RateModel)) {
+      this._data.tarifa = new RateModel(data.tarifa);
     }
   }
 
@@ -36,7 +36,7 @@ export class ServiceModel extends BaseModel {
 
   // Setters
   set tarifa(value) {
-    this._data.tarifa = value instanceof TarifaModel ? value : new TarifaModel(value);
+    this._data.tarifa = value instanceof RateModel ? value : new RateModel(value);
   }
 
   // Methods

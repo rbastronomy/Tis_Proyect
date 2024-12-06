@@ -1,9 +1,9 @@
 import { BaseRepository } from '../core/BaseRepository.js';
-import { TarifaModel } from '../models/TarifaModel.js';
+import { RateModel } from '../models/RateModel.js';
 
 export class TarifaRepository extends BaseRepository {
   constructor() {
-    super('tarifa', TarifaModel, 'id');
+    super('tarifa', RateModel, 'id');
   }
 
   /**
