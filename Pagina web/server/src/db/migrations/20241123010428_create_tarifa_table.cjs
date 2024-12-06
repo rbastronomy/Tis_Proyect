@@ -7,12 +7,6 @@ exports.up = function(knex) {
             .inTable('persona')
             .onDelete('RESTRICT')
             .onUpdate('CASCADE');
-        table.integer('servicio_id')
-            .notNullable()
-            .references('codigos')
-            .inTable('servicio')
-            .onDelete('RESTRICT')
-            .onUpdate('CASCADE');
         table.string('descripciont', 256);
         table.float('precio').notNullable();
         table.string('tipo', 256).notNullable();

@@ -24,30 +24,6 @@ exports.up = function(knex) {
             table.primary(['codigo', 'codigoreserva']);
         })
         
-        // SOLICITA table (persona-reserva-servicio)
-        .createTable('solicita', function(table) {
-            table.integer('rut')
-                .references('rut')
-                .inTable('persona')
-                .onDelete('RESTRICT')
-                .onUpdate('CASCADE');
-                
-            table.integer('codigoreserva')
-                .references('codigoreserva')
-                .inTable('reserva')
-                .onDelete('RESTRICT')
-                .onUpdate('CASCADE');
-                
-            table.integer('codigos')
-                .references('codigos')
-                .inTable('servicio')
-                .onDelete('RESTRICT')
-                .onUpdate('CASCADE');
-                
-            table.date('fechasolicitud');
-            table.primary(['rut', 'codigoreserva', 'codigos']);
-        })
-        
         // VALORA table (persona-viaje-valoracion)
         .createTable('valora', function(table) {
             table.integer('rut')
@@ -76,6 +52,6 @@ exports.up = function(knex) {
 exports.down = function(knex) {
     return knex.schema
         .dropTable('valora')
-        .dropTable('solicita')
+        .dropTable('oferta')
         .dropTable('genera');
 }; 
