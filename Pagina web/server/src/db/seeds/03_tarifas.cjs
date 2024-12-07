@@ -6,66 +6,80 @@ module.exports.seed = async function(knex) {
   const tarifas = [
     {
       id_tarifa: 1,
-      rut: 1,
-      descripciont: 'Viaje al aeropuerto - Ida',
+      rut_admin: 1,
+      descripcion_tarifa: 'Viaje al aeropuerto - Ida',
       precio: 15000,
-      tipo: 'IDA',
-      fcreada: new Date(),
-      estadot: 'ACTIVO'
+      tipo_tarifa: 'IDA',
+      fecha_creacion_tarifa: new Date(),
+      estado_tarifa: 'ACTIVO',
+      created_at: new Date(),
+      updated_at: new Date()
     },
     {
       id_tarifa: 2,
-      rut: 1,
-      descripciont: 'Viaje al aeropuerto - Ida y Vuelta',
+      rut_admin: 1,
+      descripcion_tarifa: 'Viaje al aeropuerto - Ida y Vuelta',
       precio: 28000,
-      tipo: 'IDA_VUELTA',
-      fcreada: new Date(),
-      estadot: 'ACTIVO'
+      tipo_tarifa: 'IDA_VUELTA',
+      fecha_creacion_tarifa: new Date(),
+      estado_tarifa: 'ACTIVO',
+      created_at: new Date(),
+      updated_at: new Date()
     },
     {
       id_tarifa: 3,
-      rut: 1,
-      descripciont: 'Viaje al aeropuerto - Nocturno Ida (22:00 - 06:00)',
+      rut_admin: 1,
+      descripcion_tarifa: 'Viaje al aeropuerto - Nocturno Ida (22:00 - 06:00)',
       precio: 18000,
-      tipo: 'NOCTURNO_IDA',
-      fcreada: new Date(),
-      estadot: 'ACTIVO'
+      tipo_tarifa: 'NOCTURNO_IDA',
+      fecha_creacion_tarifa: new Date(),
+      estado_tarifa: 'ACTIVO',
+      created_at: new Date(),
+      updated_at: new Date()
     },
     {
       id_tarifa: 4,
-      rut: 1,
-      descripciont: 'Viaje al aeropuerto - Nocturno Ida y Vuelta',
+      rut_admin: 1,
+      descripcion_tarifa: 'Viaje al aeropuerto - Nocturno Ida y Vuelta',
       precio: 34000,
-      tipo: 'NOCTURNO_IDA_VUELTA',
-      fcreada: new Date(),
-      estadot: 'ACTIVO'
+      tipo_tarifa: 'NOCTURNO_IDA_VUELTA',
+      fecha_creacion_tarifa: new Date(),
+      estado_tarifa: 'ACTIVO',
+      created_at: new Date(),
+      updated_at: new Date()
     },
     {
       id_tarifa: 7,
-      rut: 1,
-      descripciont: 'Traslado dentro de Iquique',
+      rut_admin: 1,
+      descripcion_tarifa: 'Traslado dentro de Iquique',
       precio: 5000,
-      tipo: 'TRASLADO_CIUDAD',
-      fcreada: new Date(),
-      estadot: 'ACTIVO'
+      tipo_tarifa: 'TRASLADO_CIUDAD',
+      fecha_creacion_tarifa: new Date(),
+      estado_tarifa: 'ACTIVO',
+      created_at: new Date(),
+      updated_at: new Date()
     },
     {
       id_tarifa: 5,
-      rut: 1,
-      descripciont: 'Viaje al aeropuerto - Programado Anticipado - Ida',
+      rut_admin: 1,
+      descripcion_tarifa: 'Viaje al aeropuerto - Programado Anticipado - Ida',
       precio: 14000,
-      tipo: 'PROGRAMADO_IDA',
-      fcreada: new Date(),
-      estadot: 'ACTIVO'
+      tipo_tarifa: 'PROGRAMADO_IDA',
+      fecha_creacion_tarifa: new Date(),
+      estado_tarifa: 'ACTIVO',
+      created_at: new Date(),
+      updated_at: new Date()
     },
     {
       id_tarifa: 6,
-      rut: 1,
-      descripciont: 'Viaje al aeropuerto - Programado Anticipado - Ida y Vuelta',
+      rut_admin: 1,
+      descripcion_tarifa: 'Viaje al aeropuerto - Programado Anticipado - Ida y Vuelta',
       precio: 26000,
-      tipo: 'PROGRAMADO_IDA_VUELTA',
-      fcreada: new Date(),
-      estadot: 'ACTIVO'
+      tipo_tarifa: 'PROGRAMADO_IDA_VUELTA',
+      fecha_creacion_tarifa: new Date(),
+      estado_tarifa: 'ACTIVO',
+      created_at: new Date(),
+      updated_at: new Date()
     }
   ];
 

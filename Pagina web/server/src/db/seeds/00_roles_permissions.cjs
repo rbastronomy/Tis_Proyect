@@ -8,92 +8,92 @@
     // Insert roles
     await knex('roles').insert([
       { 
-        idroles: 1,
-        nombrerol: 'ADMINISTRADOR',
-        descripcionrol: 'Administrador con acceso completo al sistema',
-        fechacreadarol: new Date(),
-        estadorol: 'ACTIVO'
+        id_roles: 1,
+        nombre_rol: 'ADMINISTRADOR',
+        descripcion_rol: 'Administrador con acceso completo al sistema',
+        fecha_creada_rol: new Date(),
+        estado_rol: 'ACTIVO'
       },
       { 
-        idroles: 2,
-        nombrerol: 'USUARIO',
-        descripcionrol: 'Usuario regular del sistema',
-        fechacreadarol: new Date(),
-        estadorol: 'ACTIVO'
+        id_roles: 2,
+        nombre_rol: 'USUARIO',
+        descripcion_rol: 'Usuario regular del sistema',
+        fecha_creada_rol: new Date(),
+        estado_rol: 'ACTIVO'
       },
       { 
-        idroles: 3,
-        nombrerol: 'CONDUCTOR',
-        descripcionrol: 'Conductor de taxi con acceso a viajes',
-        fechacreadarol: new Date(),
-        estadorol: 'ACTIVO'
+        id_roles: 3,
+        nombre_rol: 'CONDUCTOR',
+        descripcion_rol: 'Conductor de taxi con acceso a viajes',
+        fecha_creada_rol: new Date(),
+        estado_rol: 'ACTIVO'
       }
     ]);
 
     // Insert permissions
     await knex('permiso').insert([
       {
-        idpermisos: 1,
-        nombrepermiso: 'crear_usuario',
-        descripcionpermiso: 'Crear nuevos usuarios en el sistema',
+        id_permisos: 1,
+        nombre_permiso: 'crear_usuario',
+        descripcion_permiso: 'Crear nuevos usuarios en el sistema',
+        fecha_creacion: new Date()
+      },
+      {
+        id_permisos: 2,
+        nombre_permiso: 'eliminar_usuario',
+        descripcion_permiso: 'Eliminar usuarios existentes',
         fechacreacion: new Date()
       },
       {
-        idpermisos: 2,
-        nombrepermiso: 'eliminar_usuario',
-        descripcionpermiso: 'Eliminar usuarios existentes',
-        fechacreacion: new Date()
-      },
-      {
-        idpermisos: 3,
+        id_permisos: 3,
         nombrepermiso: 'asignar_rol',
         descripcionpermiso: 'Asignar roles a usuarios',
         fechacreacion: new Date()
       },
       {
-        idpermisos: 4,
+        id_permisos: 4,
         nombrepermiso: 'gestionar_viajes',
         descripcionpermiso: 'Gestionar viajes en el sistema',
         fechacreacion: new Date()
       },
       {
-        idpermisos: 5,
+        id_permisos: 5,
         nombrepermiso: 'crear_reserva',
         descripcionpermiso: 'Crear nuevas reservas de taxi',
         fechacreacion: new Date()
       },
       {
-        idpermisos: 6,
+        id_permisos: 6,
         nombrepermiso: 'cancelar_reserva',
         descripcionpermiso: 'Cancelar reservas existentes',
         fechacreacion: new Date()
       },
       {
-        idpermisos: 7,
+        id_permisos: 7,
         nombrepermiso: 'ver_reservas',
         descripcionpermiso: 'Ver listado de reservas',
         fechacreacion: new Date()
       },
       {
-        idpermisos: 8,
+        id_permisos: 8,
         nombrepermiso: 'validar_reserva',
         descripcionpermiso: 'Validar nuevas reservas de taxi',
         fechacreacion: new Date()
       },
       {
-        idpermisos: 9,
+        id_permisos: 9,
         nombrepermiso: 'iniciar_viaje',
         descripcionpermiso: 'Iniciar un viaje asignado',
         fechacreacion: new Date()
       },
       {
-        idpermisos: 10,
+        id_permisos: 10,
         nombrepermiso: 'completar_viaje',
         descripcionpermiso: 'Marcar un viaje como completado',
         fechacreacion: new Date()
       },
       {
-        idpermisos: 11,
+        id_permisos: 11,
         nombrepermiso: 'ver_historial',
         descripcionpermiso: 'Ver historial de reservas y viajes',
         fechacreacion: new Date()
@@ -104,52 +104,52 @@
     const rolePermissions = [
       // Admin has all permissions
       ...Array.from({ length: 11 }, (_, i) => ({
-        idroles: 1,
-        idpermisos: i + 1,
+        id_roles: 1,
+        id_permisos: i + 1,
         fcambio: new Date()
       })),
       
       // Regular user permissions
       { 
-        idroles: 2, 
-        idpermisos: 5, // crear_reserva
+        id_roles: 2, 
+        id_permisos: 5,
         fcambio: new Date()
       },
       { 
-        idroles: 2, 
-        idpermisos: 6, // cancelar_reserva
+        id_roles: 2, 
+        id_permisos: 6,
         fcambio: new Date()
       },
       { 
-        idroles: 2, 
-        idpermisos: 7, // ver_reservas (solo las propias)
+        id_roles: 2, 
+        id_permisos: 7,
         fcambio: new Date()
       },
       { 
-        idroles: 2, 
-        idpermisos: 11, // ver_historial (solo el propio)
+        id_roles: 2, 
+        id_permisos: 11,
         fcambio: new Date()
       },
       
       // Driver permissions
       { 
-        idroles: 3, 
-        idpermisos: 7, // ver_reservas (asignadas)
+        id_roles: 3, 
+        id_permisos: 7,
         fcambio: new Date()
       },
       { 
-        idroles: 3, 
-        idpermisos: 9, // iniciar_viaje
+        id_roles: 3, 
+        id_permisos: 9,
         fcambio: new Date()
       },
       { 
-        idroles: 3, 
-        idpermisos: 10, // completar_viaje
+        id_roles: 3, 
+        id_permisos: 10,
         fcambio: new Date()
       },
       { 
-        idroles: 3, 
-        idpermisos: 11, // ver_historial (de sus viajes)
+        id_roles: 3, 
+        id_permisos: 11,
         fcambio: new Date()
       }
     ];

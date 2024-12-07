@@ -1,46 +1,103 @@
 import { BaseRepository } from '../core/BaseRepository.js';
 import { TaxiModel } from '../models/TaxiModel.js';
 
-class TaxiRepository extends BaseRepository{
-  constructor(){
-    super('taxi')
+export class TaxiRepository extends BaseRepository {
+  constructor() {
+    super('taxi', TaxiModel, 'patente');
   }
 
-  async create(taxiData){
-    try{
-      const[createdTaxi] = await this.db(this.table)
+  /**
+   * Create new taxi
+   * @param {Object} taxiData - Taxi data
+   * @returns {Promise<Object>} Created taxi
+   */
+  async create(taxiData) {
+    try {
+      const [createdTaxi] = await this.db(this.tableName)
         .insert(taxiData)
         .returning('*');
-      return TaxiModel.fromDB(createdTaxi)
-    } catch (error){
+      return TaxiModel.fromDB(createdTaxi);
+    } catch (error) {
       throw new Error(`Error creating taxi: ${error.message}`);
     }
   }
 
-  async update(patente, updateData){
+  /**
+   * Update taxi
+   * @param {string} patente - Taxi license plate
+   * @param {Object} updateData - Updated taxi data
+   * @returns {Promise<Object|null>} Updated taxi or null
+   */
+  async update(patente, updateData) {
     try {
-      const[updatedTaxi] = await this.db(this.table)
-        .where({patente})
+      const [updatedTaxi] = await this.db(this.tableName)
+        .where({ patente })
         .update(updateData)
         .returning('*');
-      return updatedTaxi ? TaxiModel.fromDB(updatedTaxi) : null
+      return updatedTaxi ? TaxiModel.fromDB(updatedTaxi) : null;
     } catch (error) {
-      throw new Error(`Error updating taxi: ${error.message}`);    
+      throw new Error(`Error updating taxi: ${error.message}`);
     }
   }
 
-  async softDelete(patente){
+  /**
+   * Soft delete taxi
+   * @param {string} patente - Taxi license plate
+   * @returns {Promise<Object|null>} Deleted taxi or null
+   */
+  async softDelete(patente) {
     try {
-      const[deletedTaxi] = await this.db(this.table)
-        .where({patente})
+      const [deletedTaxi] = await this.db(this.tableName)
+        .where({ patente })
         .update({
-          estadotx: 'eliminado',
-          deleted_at: new Date()
+          estado_taxi: 'ELIMINADO',
+          deleted_at_taxi: new Date()
         })
         .returning('*');
-      return deletedTaxi ? TaxiModel.fromDB(deletedTaxi) : null
+      return deletedTaxi ? TaxiModel.fromDB(deletedTaxi) : null;
     } catch (error) {
-      throw new Error(`Error softdeleting data: ${error.message}`);     
+      throw new Error(`Error soft deleting taxi: ${error.message}`);
+    }
+  }
+
+  /**
+   * Find taxi by driver
+   * @param {number} rut_conductor - Driver's RUT
+   * @returns {Promise<Array>} List of taxis
+   */
+  async findByDriver(rut_conductor) {
+    try {
+      const results = await this.db(this.tableName)
+        .select('*')
+        .where({ rut_conductor })
+        .whereNull('deleted_at_taxi');
+      return results.map(result => TaxiModel.fromDB(result));
+    } catch (error) {
+      throw new Error(`Error finding taxi by driver: ${error.message}`);
+    }
+  }
+
+  /**
+   * Find taxi with details
+   * @param {string} patente - Taxi license plate
+   * @returns {Promise<Object|null>} Taxi with details or null
+   */
+  async findWithDetails(patente) {
+    try {
+      const result = await this.db(this.tableName)
+        .select(
+          'taxi.*',
+          'persona.nombre as conductor_nombre',
+          'persona.apellido as conductor_apellido'
+        )
+        .leftJoin('persona', 'taxi.rut_conductor', 'persona.rut')
+        .where('taxi.patente', patente)
+        .whereNull('taxi.deleted_at_taxi')
+        .first();
+
+      return result ? TaxiModel.fromDB(result) : null;
+    } catch (error) {
+      throw new Error(`Error finding taxi with details: ${error.message}`);
     }
   }
 }

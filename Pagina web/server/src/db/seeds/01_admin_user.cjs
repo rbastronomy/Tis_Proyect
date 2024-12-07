@@ -8,19 +8,19 @@ exports.seed = async function(knex) {
   const hashedPassword = await argon2.hash('admin123');
 
   // Insert admin user with direct role reference
-  const [adminUser] = await knex('persona').insert([
+  await knex('persona').insert([
     {
       rut: 1,
       nombre: 'Admin',
       correo: 'admin@taxiapp.com',
       contrasena: hashedPassword,
-      ntelefono: '123456789',
-      estadop: 'ACTIVO',
-      idroles: 1, // Direct reference to ADMINISTRADOR role
+      telefono: '123456789',
+      estado_persona: 'ACTIVO',
+      id_roles: 1, // Reference to ADMINISTRADOR role
       created_at: new Date(),
       updated_at: new Date()
     }
-  ]).returning('*');
+  ]);
 
   console.log('Admin user seeded:', {
     email: 'admin@taxiapp.com',

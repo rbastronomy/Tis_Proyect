@@ -1,9 +1,9 @@
 import { BaseRepository } from '../core/BaseRepository.js';
 import { PermissionModel } from '../models/PermissionModel.js';
 
-class PermissionRepository extends BaseRepository {
+export class PermissionRepository extends BaseRepository {
     constructor() {
-        super('permiso', PermissionModel, 'idpermisos');
+        super('permiso', PermissionModel, 'id_permisos');
     }
 
     _toModel(data) {
@@ -11,10 +11,15 @@ class PermissionRepository extends BaseRepository {
         return new PermissionModel(data);
     }
 
-    async findById(permissionId) {
+    /**
+     * Find permission by ID
+     * @param {number} id_permisos - Permission ID
+     * @returns {Promise<PermissionModel|null>} Permission instance or null
+     */
+    async findById(id_permisos) {
         try {
             const permission = await this.db(this.tableName)
-                .where('idpermisos', permissionId)
+                .where('id_permisos', id_permisos)
                 .first();
             return this._toModel(permission);
         } catch (error) {
@@ -22,10 +27,15 @@ class PermissionRepository extends BaseRepository {
         }
     }
 
-    async findByName(name) {
+    /**
+     * Find permission by name
+     * @param {string} nombre_permiso - Permission name
+     * @returns {Promise<PermissionModel|null>} Permission instance or null
+     */
+    async findByName(nombre_permiso) {
         try {
             const permission = await this.db(this.tableName)
-                .where('nombrepermiso', name)
+                .where('nombre_permiso', nombre_permiso)
                 .first();
             return this._toModel(permission);
         } catch (error) {
@@ -33,18 +43,82 @@ class PermissionRepository extends BaseRepository {
         }
     }
 
+    /**
+     * Create new permission
+     * @param {Object} permissionData - Permission data
+     * @returns {Promise<PermissionModel>} Created permission
+     */
     async create(permissionData) {
         try {
             const [permissionId] = await this.db(this.tableName)
                 .insert({
                     ...permissionData,
-                    fechacreacion: new Date(),
+                    fecha_creacion: new Date(),
+                    created_at: new Date(),
+                    updated_at: new Date()
                 })
-                .returning('idpermisos');
+                .returning('id_permisos');
 
             return this.findById(permissionId);
         } catch (error) {
             throw new Error(`Error creating permission: ${error.message}`);
+        }
+    }
+
+    /**
+     * Update permission
+     * @param {number} id_permisos - Permission ID
+     * @param {Object} updateData - Updated permission data
+     * @returns {Promise<PermissionModel|null>} Updated permission or null
+     */
+    async update(id_permisos, updateData) {
+        try {
+            const [updated] = await this.db(this.tableName)
+                .where('id_permisos', id_permisos)
+                .update({
+                    ...updateData,
+                    updated_at: new Date()
+                })
+                .returning('*');
+
+            return updated ? this._toModel(updated) : null;
+        } catch (error) {
+            throw new Error(`Error updating permission: ${error.message}`);
+        }
+    }
+
+    /**
+     * Find all permissions
+     * @returns {Promise<PermissionModel[]>} Array of permissions
+     */
+    async findAll() {
+        try {
+            const permissions = await this.db(this.tableName)
+                .select('*')
+                .orderBy('nombre_permiso');
+
+            return permissions.map(permission => this._toModel(permission));
+        } catch (error) {
+            throw new Error(`Error finding all permissions: ${error.message}`);
+        }
+    }
+
+    /**
+     * Find permissions by role
+     * @param {number} id_roles - Role ID
+     * @returns {Promise<PermissionModel[]>} Array of permissions
+     */
+    async findByRole(id_roles) {
+        try {
+            const permissions = await this.db(this.tableName)
+                .select('permiso.*')
+                .join('posee', 'permiso.id_permisos', 'posee.id_permisos')
+                .where('posee.id_roles', id_roles)
+                .orderBy('permiso.nombre_permiso');
+
+            return permissions.map(permission => this._toModel(permission));
+        } catch (error) {
+            throw new Error(`Error finding permissions by role: ${error.message}`);
         }
     }
 }

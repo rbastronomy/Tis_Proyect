@@ -1,20 +1,22 @@
 import { BaseService } from "../core/BaseService.js";
 import BookingRepository from "../repository/BookingRepository.js";
 import { TaxiService } from "./TaxiService.js";
-import { HistorialRepository } from '../repository/HistorialRepository.js';
+import { HistoryRepository } from '../repository/HistoryRepository.js';
 import { GeneraRepository } from '../repository/GeneraRepository.js';
 import { ServiceService } from './ServiceService.js';
 import { TarifaService } from './TarifaService.js';
+import { TripRepository } from '../repository/TripRepository.js';
 
 export class BookingService extends BaseService {
     constructor() {
         const bookingRepository = new BookingRepository();
         super(bookingRepository);
         this.taxiService = new TaxiService();
-        this.historialRepository = new HistorialRepository();
+        this.HistoryRepository = new HistoryRepository();
         this.generaRepository = new GeneraRepository();
         this.serviceService = new ServiceService();
         this.tarifaService = new TarifaService();
+        this.tripRepository = new TripRepository();
     }
 
     /**
@@ -58,7 +60,7 @@ export class BookingService extends BaseService {
                 throw new Error('La tarifa seleccionada no es válida para este servicio');
             }
 
-            const historial = await this.historialRepository.create({
+            const historial = await this.HistoryRepository.create({
                 estadoh: 'RESERVA_CREADA',
                 fcambio: new Date()
             });
@@ -138,7 +140,7 @@ export class BookingService extends BaseService {
                 throw new Error('La reserva no está en estado de revisión');
             }
 
-            const historial = await this.historialRepository.create({
+            const historial = await this.HistoryRepository.create({
                 rut: rutConductor,
                 accion: action === 'APROBAR' ? 'APROBAR_RESERVA' : 'RECHAZAR_RESERVA',
                 descripcion: motivo || (action === 'APROBAR' ? 'Reserva aprobada' : 'Reserva rechazada'),
@@ -209,7 +211,7 @@ export class BookingService extends BaseService {
                 throw new Error('La reserva no puede ser cancelada en su estado actual');
             }
 
-            const historial = await this.historialRepository.create({
+            const historial = await this.HistoryRepository.create({
                 rut: userId,
                 accion: 'CANCELAR_RESERVA',
                 descripcion: 'Reserva cancelada por el usuario',
@@ -251,7 +253,7 @@ export class BookingService extends BaseService {
                 throw new Error('No autorizado para iniciar este viaje');
             }
 
-            const historial = await this.historialRepository.create({
+            const historial = await this.HistoryRepository.create({
                 rut: driverId,
                 accion: 'INICIAR_VIAJE',
                 descripcion: 'Viaje iniciado',
@@ -294,14 +296,14 @@ export class BookingService extends BaseService {
                 throw new Error('No autorizado para completar este viaje');
             }
 
-            const historial = await this.historialRepository.create({
+            const historial = await this.HistoryRepository.create({
                 rut: driverId,
                 accion: 'COMPLETAR_VIAJE',
                 descripcion: 'Viaje completado',
                 fecha: new Date()
             });
 
-            const viaje = await this.viajeRepository.create({
+            const viaje = await this.tripRepository.create({
                 codigoreserva: bookingId,
                 duracionv: duracion,
                 observacionv: observacion,

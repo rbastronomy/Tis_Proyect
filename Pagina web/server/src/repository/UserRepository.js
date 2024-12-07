@@ -1,7 +1,7 @@
 import { BaseRepository } from '../core/BaseRepository.js';
 import { UserModel } from '../models/UserModel.js';
 
-class UserRepository extends BaseRepository {
+export class UserRepository extends BaseRepository {
   constructor() {
     super('persona', UserModel, 'rut');
   }
@@ -15,24 +15,16 @@ class UserRepository extends BaseRepository {
   _formatRut(rut) {
     if (!rut) throw new Error('Invalid RUT format: RUT is empty');
     
-    // Convert to string if number
     let rutStr = rut.toString();
-    
-    // Remove any existing dots and dashes
     rutStr = rutStr.replace(/\./g, '').replace(/-/g, '');
     
-    // If it's a session ID or already formatted, return as is
     if (rutStr.length > 12) return parseInt(rutStr, 10);
     
-    // Validate basic RUT format
     if (!/^\d{7,9}[\dkK]$/.test(rutStr)) {
       throw new Error(`Invalid RUT format: ${rut}`);
     }
     
-    // Remove the verification digit
     const numbers = rutStr.slice(0, -1);
-    
-    // Convert to integer
     return parseInt(numbers, 10);
   }
 
@@ -78,7 +70,6 @@ class UserRepository extends BaseRepository {
     } catch (error) {
       console.error('Error in findByRut:', error);
       if (error.message.includes('Invalid RUT format')) {
-        // If it's a session ID, try searching without formatting
         const result = await this.db.select('*')
           .from(this.tableName)
           .where({ rut: rut.toString() })
@@ -96,20 +87,25 @@ class UserRepository extends BaseRepository {
    */
   async create(userData) {
     try {
-      // Verify database connection
-      await this.db.raw('SELECT 1');
-      
-      // Format RUT before insertion
       const formattedRut = this._formatRut(userData.rut);
       
       const dbData = {
-        rut: formattedRut, // Use the formatted RUT here
+        rut: formattedRut,
         nombre: userData.nombre,
+        apellido_paterno: userData.apellido_paterno,
+        apellido_materno: userData.apellido_materno,
+        fecha_nacimiento: userData.fecha_nacimiento,
         correo: userData.correo,
-        ntelefono: userData.ntelefono,
+        telefono: userData.telefono,
+        nacionalidad: userData.nacionalidad,
+        genero: userData.genero,
         contrasena: userData.contrasena,
-        estadop: userData.estadop || 'ACTIVO',
-        idroles: userData.idroles || 2
+        estado_persona: userData.estado_persona || 'ACTIVO',
+        id_roles: userData.id_roles || 2,
+        fecha_contratacion: userData.fecha_contratacion,
+        licencia_conducir: userData.licencia_conducir,
+        created_at: new Date(),
+        updated_at: new Date()
       };
 
       console.log('Formatted data for DB:', dbData);
@@ -120,7 +116,6 @@ class UserRepository extends BaseRepository {
 
       console.log('Inserted RUT:', insertedId.rut);
 
-      // Query using the same formatted RUT we just inserted
       const result = await this.db.select('*')
         .from(this.tableName)
         .where({ rut: formattedRut })
@@ -145,10 +140,11 @@ class UserRepository extends BaseRepository {
    */
   async update(rut, userData) {
     try {
-      // If updating RUT, format it
       if (userData.rut) {
         userData.rut = this._formatRut(userData.rut);
       }
+
+      userData.updated_at = new Date();
 
       const [updatedUser] = await this.db(this.tableName)
         .where({ rut })
@@ -163,19 +159,73 @@ class UserRepository extends BaseRepository {
   }
 
   /**
+   * Soft deletes a user
+   * @param {string} rut - User RUT
+   * @returns {Promise<UserModel|null>} Deleted user or null
+   */
+  async softDelete(rut) {
+    try {
+      const [deletedUser] = await this.db(this.tableName)
+        .where({ rut })
+        .update({
+          estado_persona: 'ELIMINADO',
+          updated_at: new Date()
+        })
+        .returning('*');
+
+      return deletedUser ? this._toModel(deletedUser) : null;
+    } catch (error) {
+      console.error('Error soft deleting user:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Finds all users with optional filters
    * @param {Object} filters - Optional filters to apply
    * @returns {Promise<UserModel[]>} Array of users
    */
   async findAll(filters = {}) {
     try {
-      const results = await this.db.select('*')
-        .from(this.tableName)
-        .where(filters);
+      const query = this.db.select('*')
+        .from(this.tableName);
 
+      if (filters.estado_persona) {
+        query.where('estado_persona', filters.estado_persona);
+      }
+
+      if (filters.id_roles) {
+        query.where('id_roles', filters.id_roles);
+      }
+
+      const results = await query;
       return results.map(row => this._toModel(row));
     } catch (error) {
       console.error('Error finding all users:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Finds user with full details including role
+   * @param {string} rut - User RUT
+   * @returns {Promise<UserModel|null>} User with details or null
+   */
+  async findWithDetails(rut) {
+    try {
+      const result = await this.db(this.tableName)
+        .select(
+          'persona.*',
+          'roles.nombre_rol',
+          'roles.descripcion_rol'
+        )
+        .leftJoin('roles', 'persona.id_roles', 'roles.id_roles')
+        .where('persona.rut', rut)
+        .first();
+
+      return result ? this._toModel(result) : null;
+    } catch (error) {
+      console.error('Error finding user with details:', error);
       throw error;
     }
   }

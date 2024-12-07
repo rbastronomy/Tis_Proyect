@@ -135,53 +135,6 @@ export class OfferingRepository extends BaseRepository {
     }
 
     /**
-     * Find offerings for a specific service filtered by ride type
-     * @param {number} codigos - Service ID
-     * @param {string} rideType - Type of ride (CITY or AIRPORT)
-     * @returns {Promise<Array>} List of filtered offerings
-     */
-    async findByServiceAndType(codigos, rideType) {
-        const query = this.db(this.tableName)
-            .select(
-                'oferta.*',
-                'tarifa.id',
-                'tarifa.tipo',
-                'tarifa.descripciont',
-                'tarifa.precio',
-                'tarifa.estadot',
-                'tarifa.fcreada',
-                'tarifa.deletedatt'
-            )
-            .join('tarifa', 'oferta.idtarifa', 'tarifa.id')
-            .where({
-                'oferta.codigos': codigos,
-                'tarifa.estadot': 'ACTIVO'
-            })
-            .whereNull('tarifa.deletedatt');
-
-        if (rideType === 'CITY') {
-            query.where('tarifa.tipo', 'TRASLADO_CIUDAD');
-        } else if (rideType === 'AIRPORT') {
-            query.whereNot('tarifa.tipo', 'TRASLADO_CIUDAD');
-        }
-
-        const results = await query;
-
-        // Transform results to RateModel instances and return their JSON representation
-        return results.map(result => 
-            RateModel.fromDB({
-                id: result.id,
-                tipo: result.tipo,
-                descripciont: result.descripciont,
-                precio: result.precio,
-                estadot: result.estadot,
-                fcreada: result.fcreada,
-                deletedatt: result.deletedatt
-            }).toJSON()
-        );
-    }
-
-    /**
      * Create a new offering
      * @param {Object} data - Offering data
      * @returns {Promise<Object>} Created offering

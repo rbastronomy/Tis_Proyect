@@ -1,7 +1,7 @@
 import { BaseModel } from '../core/BaseModel.js';
 
-export class InvoiceModel extends BaseModel {
-    static invoiceData = {
+export class ReceiptModel extends BaseModel {
+    static receiptData = {
         codigoboleta: null,
         total: 0,
         femision: new Date(),
@@ -12,7 +12,7 @@ export class InvoiceModel extends BaseModel {
     };
 
     constructor(data = {}) {
-        super(data, InvoiceModel.invoiceData);
+        super(data, ReceiptModel.receiptData);
     }
 
     // Getters
@@ -50,7 +50,7 @@ export class InvoiceModel extends BaseModel {
     }
 
     static fromDB(data) {
-        return new InvoiceModel(data);
+        return new ReceiptModel(data);
     }
 }
 

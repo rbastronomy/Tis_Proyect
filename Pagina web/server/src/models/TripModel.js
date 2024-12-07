@@ -2,7 +2,7 @@ import { BaseModel } from '../core/BaseModel.js';
 import { BookingModel } from './BookingModel.js';
 import { UserModel } from './UserModel.js';
 import { TaxiModel } from './TaxiModel.js';
-import { InvoiceModel } from './InvoiceModel.js';
+import { InvoiceModel } from './ReceiptModel.js';
 
 export class TripModel extends BaseModel {
     static defaultData = {

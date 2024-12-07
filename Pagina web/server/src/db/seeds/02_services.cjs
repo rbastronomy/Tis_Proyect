@@ -5,16 +5,20 @@ exports.seed = async function(knex) {
   // Insert services
   const services = [
     {
-      codigos: 1,
-      tipo: 'NORMAL',
-      descripciont: 'Servicio normal de transporte al aeropuerto y dentro de la ciudad',
-      estados: 'ACTIVO'
+      codigo_servicio: 1,
+      tipo_servicio: 'NORMAL',
+      descripcion_servicio: 'Servicio normal de transporte al aeropuerto y dentro de la ciudad',
+      estado_servicio: 'ACTIVO',
+      created_at: new Date(),
+      updated_at: new Date()
     },
     {
-      codigos: 2,
-      tipo: 'PROGRAMADO',
-      descripciont: 'Servicio programado - Reserve con anticipación para obtener mejores tarifas',
-      estados: 'ACTIVO'
+      codigo_servicio: 2,
+      tipo_servicio: 'PROGRAMADO',
+      descripcion_servicio: 'Servicio programado - Reserve con anticipación para obtener mejores tarifas',
+      estado_servicio: 'ACTIVO',
+      created_at: new Date(),
+      updated_at: new Date()
     }
   ];
 
