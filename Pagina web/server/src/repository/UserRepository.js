@@ -40,11 +40,11 @@ export class UserRepository extends BaseRepository {
    */
   async findByEmail(email) {
     try {
-      const result = await this.db.select('*')
+      const entity = await this.db.select('*')
         .from(this.tableName)
         .where('correo', '=', email)
         .first();
-      return this._toModel(result);
+      return entity
     } catch (error) {
       console.error('Error finding user by email:', error);
       throw error;

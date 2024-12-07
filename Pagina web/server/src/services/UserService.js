@@ -1,7 +1,7 @@
 import { BaseService } from '../core/BaseService.js';
 import UserRepository from '../repository/UserRepository.js';
 import { RoleService } from './RoleService.js';
-import { PermissionService } from './PermissionService.js';
+import { UserModel } from '../models/UserModel.js';
 import { RoleModel } from '../models/RoleModel.js';
 
 export class UserService extends BaseService {
@@ -9,41 +9,30 @@ export class UserService extends BaseService {
     const userRepository = new UserRepository();
     super(userRepository);
     this.roleService = new RoleService();
-    this.permissionService = new PermissionService();
   }
 
   /**
    * Gets user with auth details
-   * @param {string} email - User email
+   * @param {string} correo - User email
    * @returns {Promise<UserModel|null>} User with role and permissions
    */
-  async getUserWithAuth(email) {
+  async getUserWithAuth(correo) {
     try {
       // Get base user data
-      const user = await this.repository.findByEmail(email);
-      if (!user) return null;
+      const UserData = await this.repository.findByEmail(correo);
+      if (!UserData) return null;
 
       // Get user's role with permissions already loaded
-      const role = await this.roleService.findById(user.idroles);
-      if (!role) {
-        user.role = null;
-        user.permissions = [];
-        return user;
+      const roleData = await this.roleService.findById(UserData.id_roles);
+      if (!roleData) {
+        return null;
       }
 
-      // Create a proper RoleModel instance
-      const roleModel = new RoleModel({
-        idroles: role._data.idroles,
-        nombrerol: role._data.nombrerol,
-        descripcionrol: role._data.descripcionrol,
-        permissions: role._data.permissions
-      });
+      //creamos el modelo de usuario
+      const user = UserModel.toModel(UserData);
+      const role = RoleModel.toModel(roleData);
 
-      // Attach role model to user
-      user.role = roleModel;
-
-      // For backwards compatibility, also attach flat permissions array
-      user.permissions = role.permissions.map(p => p.nombrepermiso);
+      user.role = role;
 
       return user;
     } catch (error) {

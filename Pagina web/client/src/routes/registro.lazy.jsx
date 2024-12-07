@@ -19,7 +19,7 @@ function Registro() {
     defaultValues: {
       nombre: '',
       correo: '',
-      ntelefono: '',
+      telefono: '',
       contrasena: '',
       confirmPassword: ''
     }
@@ -48,9 +48,9 @@ function Registro() {
           rut: rut.raw,
           nombre: data.nombre,
           correo: data.correo,
-          ntelefono: data.ntelefono,
+          telefono: data.telefono,
           contrasena: data.contrasena,
-          estadop: 'ACTIVO',
+          estado_persona: 'ACTIVO',
         }),
       });
 

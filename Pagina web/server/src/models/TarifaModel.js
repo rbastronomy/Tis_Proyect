@@ -10,7 +10,7 @@ export class RateModel extends BaseModel{
         tipo: '',
         fcreada: new Date(),
         estadot: 'ACTIVO',
-        deletedatt: null,
+        deleted_at_tarifa: null,
         persona: null  
     }
 

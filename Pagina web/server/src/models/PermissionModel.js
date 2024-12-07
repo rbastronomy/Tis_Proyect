@@ -2,11 +2,11 @@ import { BaseModel } from '../core/BaseModel.js';
 
 export class PermissionModel extends BaseModel {
     static defaultData = {
-        idpermiso: null,
-        nombrepermiso: '',
-        descripcionpermiso: '',
-        fechacreacion: new Date(),
-        deleteatp: null
+        id_permiso: null,
+        nombre_permiso: '',
+        descripcion_permiso: '',
+        fecha_creacion: new Date(),
+        deleted_at_permiso: null
     };
 
     constructor(data = {}) {
@@ -14,24 +14,24 @@ export class PermissionModel extends BaseModel {
     }
 
     // Getters for common properties
-    get idpermiso() { return this._data.idpermiso; }
-    get nombrepermiso() { return this._data.nombrepermiso; }
-    get descripcionpermiso() { return this._data.descripcionpermiso; }
-    get fechacreacion() { return this._data.fechacreacion; }
-    get deleteatp() { return this._data.deleteatp; }
+    get id_permiso() { return this._data.id_permiso; }
+    get nombre_permiso() { return this._data.nombre_permiso; }
+    get descripcion_permiso() { return this._data.descripcion_permiso; }
+    get fecha_creacion() { return this._data.fecha_creacion; }
+    get deleted_at_permiso() { return this._data.deleted_at_permiso; }
 
     // Domain methods
     isDeleted() {
-        return this._data.deleteatp !== null;
+        return this._data.deleted_at_permiso !== null;
     }
 
     toJSON() {
         return {
             idpermiso: this._data.idpermiso,
-            nombrepermiso: this._data.nombrepermiso,
-            descripcionpermiso: this._data.descripcionpermiso,
-            fechacreacion: this._data.fechacreacion,
-            deleteatp: this._data.deleteatp,
+            nombre_permiso: this._data.nombre_permiso,
+            descripcion_permiso: this._data.descripcion_permiso,
+            fecha_creacion: this._data.fecha_creacion,
+            deleted_at_permiso: this._data.deleted_at_permiso,
         };
     }
 }

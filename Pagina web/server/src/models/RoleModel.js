@@ -1,12 +1,14 @@
 import { BaseModel } from '../core/BaseModel.js';
 
+
+
 export class RoleModel extends BaseModel {
   static defaultData = {
-    idroles: null,
-    nombrerol: '',
-    descripcionrol: '',
-    fechacreadarol: new Date(),
-    estadorol: 'ACTIVO',
+    id_roles: null,
+    nombre_rol: '',
+    descripcion_rol: '',
+    fecha_creada_rol: new Date(),
+    estado_rol: 'ACTIVO',
     permissions: []
   };
 
@@ -20,10 +22,10 @@ export class RoleModel extends BaseModel {
 
   // Getters for common properties
   get idroles() { return this._data.idroles; }
-  get nombrerol() { return this._data.nombrerol; }
-  get descripcionrol() { return this._data.descripcionrol; }
-  get fechacreadarol() { return this._data.fechacreadarol; }
-  get estadorol() { return this._data.estadorol; }
+  get nombre_rol() { return this._data.nombre_rol; }
+  get descripcion_rol() { return this._data.descripcion_rol; }
+  get fecha_creada_rol() { return this._data.fecha_creada_rol; }
+  get estado_rol() { return this._data.estado_rol; }
   get permissions() { return this._data.permissions; }
 
   hasPermission(permissionName) {

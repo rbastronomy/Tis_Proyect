@@ -6,7 +6,7 @@ export class ServiceModel extends BaseModel {
     tipo: '',
     descripciont: '',
     estados: 'ACTIVO',
-    deleteats: null,
+    deleted_at_service: null,
   };
 
   constructor(data = {}) {

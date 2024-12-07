@@ -80,10 +80,10 @@ export class AuthService {
    * @returns {Promise<{user: UserModel, session: Session}>}
    * @throws {AuthError} When credentials are invalid
    */
-  async login(email, password) {
+  async login(correo, contrasena) {
     try {
       // Use userService to get user data
-      const user = await this.userService.getUserWithAuth(email);
+      const user = await this.userService.getUserWithAuth(correo);
       if (!user) {
         throw AuthError.UserNotFound();
       }
@@ -93,13 +93,13 @@ export class AuthService {
       
       console.log('Validating password:', {
         hashedPassword: hashedPassword ? 'exists' : 'missing',
-        password: password ? 'exists' : 'missing'
+        contrasena: contrasena ? 'exists' : 'missing'
       });
 
       // Validate password
       const isValidPassword = await this._validatePassword(
         hashedPassword,
-        password
+        contrasena
       );
 
       if (!isValidPassword) {
@@ -110,7 +110,7 @@ export class AuthService {
       const session = await this.auth.createSession(user.rut.toString());
 
       //log successful login
-      console.log('Login successful for user:', email);
+      console.log('Login successful for user:', correo);
       return { user, session };
     } catch (error) {
       console.error('Login error:', error);

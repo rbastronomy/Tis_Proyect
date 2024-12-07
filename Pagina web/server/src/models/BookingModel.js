@@ -1,36 +1,48 @@
 import { BaseModel } from "../core/BaseModel.js";
 import { UserModel } from './UserModel.js';
 import { TaxiModel } from './TaxiModel.js';
-import { ServiceModel } from './ServiceModel.js';
 import { TripModel } from './TripModel.js';
-import { OfferingModel } from './OfferingModel.js';
+import { ServiceModel } from './ServiceModel.js';
+import { HistoryModel } from './HistoryModel.js';
+
+/**
+ * @typedef {Object} BookingData
+ * @property {number} codigo_reserva - The unique identifier for the booking.
+ * @property {string} rut_cliente - The RUT of the client.
+ * @property {number} id_oferta - The ID of the offering.
+ * @property {number} id_asignacion_taxis - The ID of the offering.
+ * @property {string} origen_reserva - The origin of the reservation.
+ * @property {string} destino_reserva - The destination of the reservation.
+ * @property {Date} fecha_reserva - The date of the reservation.
+ * @property {Date} fecha_realizado - The date of the reservation.
+ * @property {string} tipo_reserva - The type of the reservation.
+ * @property {string} observacion_reserva - The observation of the reservation.
+ * @property {string} estado_reserva - The state of the reservation.
+ * @property {Date} deleted_at_reserva - The date of the reservation.
+ * @property {number} createdAt - The date of the reservation(Knex timestamps).
+ * @property {number} updatedAt - The date of the reservation(Knex timestamps).
+ */
 
 export class BookingModel extends BaseModel {
     static defaultData = {
         // Campos de la tabla 'reserva'
-        codigoreserva: null,    // ID de la reserva
-        rut_conductor: null,    // RUT del conductor
-        patente_taxi: null,     // Patente del taxi
-        origenv: '',            // Origen
-        destinov: '',           // Destino
-        freserva: null,         // Fecha de reserva
-        frealizado: null,       // Fecha de realización
-        tipo: 'NORMAL',         // Tipo de reserva
-        observacion: '',        // Observaciones
-        estados: 'EN_REVISION', // Estado
-        deletedatre: null,      // Soft delete
-        costo_estimado: 0,      // Costo estimado
-        oferta_id: null,        // ID de la oferta
+        codigo_reserva: null,    // ID de la reserva
+        origen_reserva: '',            // Origen
+        destino_reserva: '',           // Destino
+        fecha_reserva: null,         // Fecha de reserva
+        fecha_realizado: null,       // Fecha de realización
+        tipo_reserva: 'NORMAL',         // Tipo de reserva
+        observacion_reserva: '',        // Observaciones
+        estado_reserva: 'EN_REVISION', // Estado
+        deleted_at_reserva: null,      // Soft delete
 
         // Modelos relacionados
         driver: null,           // Conductor (UserModel)
         taxi: null,             // Taxi (TaxiModel)
-        //trip: null,             // Viaje (TripModel)
+        trip: null,             //viaje (TripModel)
         client: null,           // Cliente (UserModel)
-        offering: null,         // oferta (OfferingModel)
-
-        // Relaciones ternarias
-        generates: [],          // Relación viaje-reserva-boleta
+        service: null,          // Servicio (ServiceModel)
+        history: [],          // Historial de reservas (BookingHistoryModel)    
     };
 
     constructor(data = {}) {
@@ -41,7 +53,8 @@ export class BookingModel extends BaseModel {
             taxi: data.taxi instanceof TaxiModel ? data.taxi : null,
             trip: data.trip instanceof TripModel ? data.trip : null,
             client: data.client instanceof UserModel ? data.client : null,
-            offering: data.rate instanceof OfferingModel ? data.offering : null
+            service: data.service instanceof ServiceModel ? data.service : null,
+            history: data.history instanceof HistoryModel ? data.history : [],
         };
 
         super(modelData, BookingModel.defaultData);
@@ -59,14 +72,11 @@ export class BookingModel extends BaseModel {
         if (data.client && !(data.client instanceof UserModel)) {
             this._data.client = new UserModel(data.client);
         }
-        if (data.offering && !(data.offering instanceof OfferingModel)) {
-            this._data.offering = new OfferingModel(data.offering);
+        if (data.service && !(data.service instanceof ServiceModel)) {
+            this._data.service = new ServiceModel(data.service);
         }
+        this._data.history = Array.isArray(data.history) ? data.history : []; 
 
-        // Initialize arrays and relationships
-        this._data.generates = Array.isArray(data.generates) ? data.generates : [];
-        this._data.trip_info = data.trip_info || null;
-        this._data.requests = data.requests || null;
     }
 
     // Getters básicos (mantienen nombres de BD)
@@ -77,7 +87,10 @@ export class BookingModel extends BaseModel {
     // Getters de relaciones (nombres en inglés)
     get driver() { return this._data.driver; }
     get taxi() { return this._data.taxi; }
-    // ... (resto de getters de relaciones)
+    get trip() { return this._data.trip; }
+    get client() { return this._data.client; }
+    get service() { return this._data.service; }
+    get history() { return this._data.history; }
     
 
     // Métodos de estado
@@ -91,56 +104,78 @@ export class BookingModel extends BaseModel {
     hasTaxi() { return !!this._data.taxi; }
     hasTrip() { return !!this._data.trip; }
 
+    /**
+     * Creates a BookingModel instance from a database entity
+     * @param {BookingData} entity - Database entity object
+     * @returns {BookingModel|null} - Returns null if entity is null/undefined
+     */
+    static fromEntity(entity) {
+        if (!entity) return null;
+        
+        const booking = new BookingModel({
+            codigo_reserva: entity.codigo_reserva,
+            rut_cliente: entity.rut_cliente,
+            id_oferta: entity.id_oferta,
+            id_asignacion_taxis: entity.id_asignacion_taxis,
+            origen_reserva: entity.origen_reserva,
+            destino_reserva: entity.destino_reserva,
+            fecha_reserva: entity.fecha_reserva,
+            fecha_realizado: entity.fecha_realizado,
+            tipo_reserva: entity.tipo_reserva,
+            observacion_reserva: entity.observacion_reserva,
+            estado_reserva: entity.estado_reserva,
+            deleted_at_reserva: entity.deleted_at_reserva,
+            createdAt: entity.createdAt,
+            updatedAt: entity.updatedAt
+        });
+        
+        return booking;
+    }
+
     // Métodos para relaciones ternarias
-    addGenerate(trip, invoice = null) {
+    addGenerate(trip, Receipt = null) {
         const generateRecord = {
             codigo: trip.codigo,
             codigoreserva: this.codigoreserva,
-            codigoboleta: invoice?.codigoboleta || null,
+            codigoboleta: Receipt?.codigoboleta || null,
             fechagenerada: new Date()
         };
-        this._data.generates.push(generateRecord);
+        this._data.genera.push(generateRecord);
         return generateRecord;
-    }
-
-
-    addBookingOffering(offeringId) {
-        this._data.offering = {
-            codigos: this.codigos,
-            idtarifa: id_tarifa,
-        };
     }
 
     // Método para calcular costo estimado
     calculateEstimatedCost() {
-        if (this._data.offering) {
-            this._data.costo_estimado = this._data.offering.rate.precio;
+        if (this._data.service.rate) {
+            this._data.costo_estimado = this._data.service.rate.precio;
         }
         return this._data.costo_estimado;
     }
 
     toJSON() {
         const json = {
-            codigoreserva: this._data.codigoreserva,
+            codigo_reserva: this._data.codigoreserva,
             rut_conductor: this._data.rut_conductor,
             patente_taxi: this._data.patente_taxi,
-            origenv: this._data.origenv,
-            destinov: this._data.destinov,
-            freserva: this._data.freserva,
-            frealizado: this._data.frealizado,
-            tipo: this._data.tipo,
-            observacion: this._data.observacion,
-            estados: this._data.estados,
-            generates: this._data.generates,
+            origen_reserva: this._data.origen_reserva,
+            destino_reserva: this._data.destino_reserva,
+            fecha_reserva: this._data.fecha_reserva,
+            fecha_realizado: this._data.fecha_realizado,
+            tipo_reserva: this._data.tipo_reserva,
+            observacion_reserva: this._data.observacion_reserva,
+            estado_reserva: this._data.estado_reserva,
+            deleted_at_reserva: this._data.deleted_at_reserva,
+            genera: this._data.genera,
             costo_estimado: this._data.costo_estimado,
-            offering: this._data.offering
         };
 
         // Add related models
         if (this._data.driver) json.driver = this._data.driver.toJSON();
         if (this._data.taxi) json.taxi = this._data.taxi.toJSON();
         if (this._data.client) json.client = this._data.client.toJSON();
-        if (this._data.offering) json.offering = this._data.offering.toJSON();
+        if (this._data.service) json.service = this._data.service.toJSON();
+        if (this._data.trip) json.trip = this._data.trip.toJSON();
+        if (this._data.history) json.history = this._data.history.map(history => history.toJSON());
 
         return json;
     }
@@ -153,11 +188,11 @@ export class BookingModel extends BaseModel {
     // Add missing getters
     get rut_conductor() { return this._data.rut_conductor; }
     get patente_taxi() { return this._data.patente_taxi; }
-    get tipo() { return this._data.tipo; }
-    get estados() { return this._data.estados; }
-    get frealizado() { return this._data.frealizado; }
-    get codigos() { return this._data.codigos; }
-    get generates() { return this._data.generates; }
+    get tipo_reserva() { return this._data.tipo_reserva; }
+    get estado_reserva() { return this._data.estado_reserva; }
+    get fecha_realizado() { return this._data.fecha_realizado; }
+    get codigo_servicio() { return this._data.codigos; }
+    get genera() { return this._data.genera; }
     get costo_estimado() { return this._data.costo_estimado; }
 
     // Add missing setters for model relationships
@@ -176,15 +211,15 @@ export class BookingModel extends BaseModel {
 
     // Add missing domain methods
     isActive() {
-        return !this._data.deletedatre;
+        return !this._data.deleted_at_reserva;
     }
 
     canBeStarted() {
-        return this._data.estados === 'PENDIENTE' && this.hasDriver();
+        return this._data.estado_reserva === 'PENDIENTE' && this.hasDriver();
     }
 
     canBeCompleted() {
-        return this._data.estados === 'EN_CAMINO';
+        return this._data.estado_reserva === 'EN_CAMINO';
     }
 
     // Add missing model-specific methods
@@ -198,57 +233,33 @@ export class BookingModel extends BaseModel {
     }
 
     getServiceType() {
-        return this._data.service?.tipo;
+        return this._data.service?.tipo_servicio;
     }
 
     associateTrip(tripModel) {
         this._data.trip = tripModel;
         this._data.trip_info = {
-            duration: tripModel.duracionv,
-            observation: tripModel.observacionv,
-            date: tripModel.fechav
+            duracion_viaje: tripModel.duracion_viaje,
+            observacion_viaje: tripModel.observacion_viaje,
+            fecha_viaje: tripModel.fecha_viaje
         };
     }
 
-    associateInvoice(invoiceModel) {
-        this._data.invoice = invoiceModel;
-        this._data.invoice_info = {
-            total: invoiceModel.total,
-            date: invoiceModel.femision,
-            payment_method: invoiceModel.metodopago,
-            description: invoiceModel.descripciont
+    associateReceipt(receiptModel) {
+        this._data.boleta = receiptModel;
+        this._data.boleta_info = {
+            total: receiptModel.total,
+            fecha_emision: receiptModel.fecha_emision,
+            metodo_pago: receiptModel.metodo_pago,
+            descripcion_tarifa: receiptModel.descripcion_tarifa
         };
-    }
-
-    // Update toJSON to include new fields
-    toJSON() {
-        const json = {
-            ...super.toJSON(),
-            idhistorial: this._data.idhistorial,
-            rut_conductor: this._data.rut_conductor,
-            patente_taxi: this._data.patente_taxi,
-            tipo: this._data.tipo,
-            estados: this._data.estados,
-            codigos: this._data.codigos,
-            generates: this._data.generates,
-            costo_estimado: this._data.costo_estimado,
-            tarifa_id: this._data.tarifa_id
-        };
-
-        // Add related models
-        if (this._data.rate) json.rate = this._data.rate.toJSON();
-        if (this._data.trip_info) json.trip_info = this._data.trip_info;
-        if (this._data.invoice_info) json.invoice_info = this._data.invoice_info;
-
-        return json;
     }
 
     // Método para agregar relación servicio-tarifa
     addServiceRate(serviceId, rateId) {
         this._data.service_rate = {
-            codigos: serviceId,
-            id: rateId,
-            fechaseleccion: new Date()
+            codigo_servicio: serviceId,
+            id_tarifa: rateId,
         };
     }
 }
