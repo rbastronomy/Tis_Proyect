@@ -9,11 +9,6 @@ exports.up = function(knex) {
         table.string('estado_viaje', 256);
         table.timestamp('deleted_at_viaje');
 
-        // Unique constraints
-        table.unique('origenv');
-        table.unique('destinov');
-        table.unique('estadov');
-
         table.timestamps(true, true);
     });
 };

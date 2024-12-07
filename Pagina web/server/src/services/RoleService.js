@@ -64,11 +64,11 @@ export class RoleService extends BaseService {
      * @returns {Promise<RoleModel|null>}
      */
     async findById(id) {
-        const roleData = await this.roleRepository.findById(id);
+        const roleData = await this.repository.findById(id);
         if (!roleData) return null;
 
         // Get full permission objects using PermissionService
-        const permissions = await this.permissionService.getPermissionsForRole(roleData.idroles);
+        const permissions = await this.permissionService.getPermissionsForRole(roleData.id_roles);
         
         const role = RoleModel.toModel(roleData);
         

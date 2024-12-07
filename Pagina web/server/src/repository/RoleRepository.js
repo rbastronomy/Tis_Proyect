@@ -21,7 +21,6 @@ export class RoleRepository extends BaseRepository {
       const roleData = await this.db(this.tableName)
         .where(this.primaryKey, roleId)
         .first();
-
       if (!roleData) return null;
 
       return roleData;

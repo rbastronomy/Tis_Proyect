@@ -45,7 +45,8 @@ export class UserService extends BaseService {
    * @returns {Promise<UserModel>} Created user
    */
   async create(userData) {
-    return this.repository.create(userData);
+    const userDB = await this.repository.create(userData);
+    return UserModel.toModel(userDB);
   }
 
   /**
@@ -58,6 +59,7 @@ export class UserService extends BaseService {
   }
 
   async getByEmail(email) {
-    return this.repository.findByEmail(email);
+    const userData = await this.repository.findByEmail(email);
+    return UserModel.toModel(userData);
   }
 }
