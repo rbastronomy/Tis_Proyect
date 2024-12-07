@@ -18,12 +18,12 @@ class BookingController extends BaseController {
         try {
             const userId = request.user.rut; // From auth middleware
             const bookingData = {
-                origenv: request.body.origenv,
-                destinov: request.body.destinov,
-                freserva: request.body.freserva,
-                tipo: request.body.tipo || 'NORMAL',
-                observacion: request.body.observacion || '',
-                codigos: request.body.codigos,
+                origen_reserva: request.body.origen_reserva,
+                destino_reserva: request.body.destino_reserva,
+                fecha_reserva: request.body.fecha_reserva,
+                tipo_reserva: request.body.tipo_reserva || 'NORMAL',
+                observacion_reserva: request.body.observacion_reserva || '',
+                codigo_servicio: request.body.codigo_servicio,
                 tarifa_id: request.body.tarifa_id
             };
 

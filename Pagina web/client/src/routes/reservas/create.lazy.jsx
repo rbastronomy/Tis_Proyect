@@ -45,24 +45,18 @@ function CreateBooking() {
   const [submitError, setSubmitError] = useState('')
   const [services, setServices] = useState([])
   const [loadingServices, setLoadingServices] = useState(true)
-  const [selectedService, setSelectedService] = useState('')
   const [rideType, setRideType] = useState(null) // 'CITY' or 'AIRPORT'
-  const [availableTariffs, setAvailableTariffs] = useState([])
-  const [loadingTariffs, setLoadingTariffs] = useState(false)
 
   const { control, handleSubmit, setValue, watch, formState: { errors } } = useForm({
     defaultValues: {
       origenv: '',
-      destinov: '',
-      freserva: new Date(Date.now() + 30 * 60000).toISOString(),
-      codigos: '',
+      destino_reserva: '',
+      fecha_reserva: new Date(Date.now() + 30 * 60000).toISOString(),
+      codigo_servicio: '',
       oferta_id: '',
-      observacion: ''
+      observacion_reserva: ''
     }
   });
-
-  // Watch for service changes
-  const selectedServiceId = watch('codigos');
 
   // Fetch services when ride type changes
   useEffect(() => {
@@ -75,8 +69,8 @@ function CreateBooking() {
             const data = await response.json();
             setServices(data);
             // Reset service selection when ride type changes
-            setValue('codigos', '');
-            setSelectedService('');
+            setValue('codigo_servicio', '');
+            setValue('oferta_id', '');
           }
         } catch (error) {
           console.error('Error fetching services:', error);
@@ -89,33 +83,9 @@ function CreateBooking() {
     }
   }, [rideType, setValue]);
 
-  // Fetch tariffs when service is selected
-  useEffect(() => {
-    if (selectedServiceId && rideType) {
-      const fetchTariffs = async () => {
-        setLoadingTariffs(true);
-        try {
-          const response = await fetch(
-            `/api/offerings/by-service/${selectedServiceId}/${rideType}`
-          );
-          if (response.ok) {
-            const data = await response.json();
-            setAvailableTariffs(data);
-            setValue('oferta_id', '');
-          }
-        } catch (error) {
-          console.error('Error fetching tariffs:', error);
-        } finally {
-          setLoadingTariffs(false);
-        }
-      };
-
-      fetchTariffs();
-    }
-  }, [selectedServiceId, rideType, setValue]);
-
-  const selectedServiceData = services.find(s => s.codigos.toString() === selectedService);
+  const selectedServiceData = services.find(s => s.codigo_servicio.toString() === watch('codigo_servicio'));
   const bookingType = selectedServiceData?.tipo;
+  const availableTariffs = selectedServiceData?.tarifas || [];
 
   // Set destination when ride type changes
   useEffect(() => {
@@ -148,7 +118,7 @@ function CreateBooking() {
         credentials: 'include',
         body: JSON.stringify({
           ...data,
-          codigos: parseInt(data.codigos),
+          codigo_servicio: parseInt(data.codigo_servicio),
           oferta_id: parseInt(data.oferta_id),
           freserva: new Date(data.freserva).toISOString()
         })
@@ -339,7 +309,7 @@ function CreateBooking() {
             {/* Service Selection */}
             {rideType && (
               <Controller
-                name="codigos"
+                name="codigo_servicio"
                 control={control}
                 rules={{ required: "El tipo de servicio es requerido" }}
                 render={({ field, fieldState: { error } }) => (
@@ -348,11 +318,12 @@ function CreateBooking() {
                       Tipo de Servicio
                     </label>
                     <Select
-                      selectedKeys={selectedService ? new Set([selectedService]) : new Set()}
+                      selectedKeys={field.value ? new Set([field.value]) : new Set()}
                       onSelectionChange={(keys) => {
                         const selectedKey = Array.from(keys)[0];
-                        setSelectedService(selectedKey);
                         field.onChange(selectedKey);
+                        // Reset tariff selection when service changes
+                        setValue('oferta_id', '');
                       }}
                       isLoading={loadingServices}
                       isInvalid={!!error}
@@ -360,10 +331,10 @@ function CreateBooking() {
                     >
                       {services.map((service) => (
                         <SelectItem 
-                          key={service.codigos.toString()} 
-                          value={service.codigos.toString()}
+                          key={service.codigo_servicio.toString()} 
+                          value={service.codigo_servicio.toString()}
                         >
-                          {service.tipo === 'NORMAL' ? 'Servicio Normal' : 'Servicio Programado'}
+                          {service.tipo_servicio === 'NORMAL' ? 'Servicio Normal' : 'Servicio Programado'}
                         </SelectItem>
                       ))}
                     </Select>
@@ -373,7 +344,7 @@ function CreateBooking() {
             )}
 
             {/* Tariff Selection */}
-            {selectedService && (
+            {watch('codigo_servicio') && (
               <Controller
                 name="oferta_id"
                 control={control}
@@ -389,17 +360,15 @@ function CreateBooking() {
                         const selectedKey = Array.from(keys)[0];
                         field.onChange(selectedKey);
                       }}
-                      isLoading={loadingTariffs}
                       isInvalid={!!error}
                       errorMessage={error?.message}
                     >
                       {availableTariffs.map((tariff) => (
                         <SelectItem 
-                          key={tariff.id.toString()} 
-                          value={tariff.id.toString()}
-                          description={`$${tariff.precio}`}
+                          key={tariff.id_tarifa.toString()} 
+                          value={tariff.id_tarifa.toString()}
                         >
-                          {tariff.descripciont}
+                          {tariff.descripcion_tarifa}
                         </SelectItem>
                       ))}
                     </Select>

@@ -36,12 +36,12 @@ export class ServiceController extends BaseController {
      * @returns {Promise<Array>} Array of tariffs filtered by ride type
      */
     async getServiceTariffsByType(request, reply) {
-        const { codigos, rideType } = request.params;
+        const { codigo_servicio, rideType } = request.params;
 
         try {
             // Get active tariffs for the service and ride type
             const tariffs = await this.service.getTariffsByType(
-                parseInt(codigos), 
+                parseInt(codigo_servicio), 
                 rideType
             );
             
@@ -83,10 +83,10 @@ export class ServiceController extends BaseController {
      * @returns {Promise<Array>} Array of tariffs for the service
      */
     async getServiceTariffs(request, reply) {
-        const { codigos } = request.params;
+        const { codigo_servicio } = request.params;
 
         try {
-            const tariffs = await this.service.getServiceTariffs(codigos);
+            const tariffs = await this.service.getServiceTariffs(codigo_servicio);
             return reply.send(tariffs);
         } catch (error) {
             request.log.error(error);
@@ -133,11 +133,11 @@ export class ServiceController extends BaseController {
      * @returns {Promise<Object>} Response with updated service data
      */
     async updateServiceTariffs(request, reply) {
-        const { codigos } = request.params;
+        const { codigo_servicio } = request.params;
         const { tarifas } = request.body;
 
         try {
-            const updatedService = await this.service.updateTariffs(codigos, tarifas);
+            const updatedService = await this.service.updateTariffs(codigo_servicio, tarifas);
             return reply.send({
                 message: 'Service tariffs updated successfully',
                 service: updatedService
@@ -157,13 +157,13 @@ export class ServiceController extends BaseController {
      * @param {Object} reply - Fastify reply object.
      */
     async requestService(request, reply) {
-        const { rut, codigoreserva, codigos } = request.body;
+        const { rut, codigoreserva, codigo_servicio } = request.body;
 
         try {
             const serviceRequest = await this.service.requestService({
                 rut, 
                 codigoreserva, 
-                codigos,
+                codigo_servicio,
                 fechasolicitud: new Date()
             });
             return reply.status(201).send({ 
@@ -199,11 +199,11 @@ export class ServiceController extends BaseController {
      * @param {Object} reply - Fastify reply object.
      */
     async update(request, reply) {
-        const { codigos } = request.params;
+        const { codigo_servicio } = request.params;
         const updateData = request.body;
 
         try {
-            const updatedService = await this.service.update(codigos, updateData);
+            const updatedService = await this.service.update(codigo_servicio, updateData);
             return reply.send({ 
                 message: 'Service updated successfully', 
                 service: updatedService 
@@ -220,10 +220,10 @@ export class ServiceController extends BaseController {
      * @param {Object} reply - Fastify reply object.
      */
     async delete(request, reply) {
-        const { codigos } = request.params;
+        const { codigo_servicio } = request.params;
 
         try {
-            await this.service.delete(codigos);
+            await this.service.delete(codigo_servicio);
             return reply.send({ message: 'Service deleted successfully' });
         } catch (error) {
             request.log.error(error);

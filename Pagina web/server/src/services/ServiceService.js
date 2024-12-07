@@ -41,7 +41,7 @@ export class ServiceService extends BaseService {
             
             // Create a Map for quick tariff lookups
             const tariffsMap = new Map(
-                tariffs.map(tariff => [tariff.id, tariff])
+                tariffs.map(tariff => [tariff.id_tarifa, tariff])
             );
             
             // Filter services and attach their tariffs
@@ -70,18 +70,18 @@ export class ServiceService extends BaseService {
 
     /**
      * Gets tariffs for a specific service filtered by ride type
-     * @param {number} codigos - Service ID
+     * @param {number} codigo_servicio - Service ID
      * @param {string} rideType - Type of ride (CITY or AIRPORT)
      * @returns {Promise<Array>} List of filtered tariffs
      * @throws {Error} If there's an error retrieving the tariffs
      */
-    async getTariffsByType(codigos, rideType) {
+    async getTariffsByType(codigo_servicio, rideType) {
         try {
             // Get offerings for this service
-            const offerings = await this.offeringService.findByServiceAndType(codigos, rideType);
+            const offerings = await this.offeringService.findByServiceAndType(codigo_servicio, rideType);
             
             // Extract unique tariff IDs from offerings
-            const tariffIds = [...new Set(offerings.map(offering => offering.idtarifa))];
+            const tariffIds = [...new Set(offerings.map(offering => offering.id_tarifa))];
             
             // Get tariff details for each ID
             const tariffs = await Promise.all(
@@ -92,7 +92,7 @@ export class ServiceService extends BaseService {
             return tariffs
                 .filter(tariff => tariff && tariff.estadot === 'ACTIVO')
                 .map(tariff => ({
-                    id: tariff.id,
+                    id_tarifa: tariff.id_tarifa,
                     tipo: tariff.tipo,
                     descripciont: tariff.descripciont,
                     precio: tariff.precio,
@@ -115,8 +115,8 @@ export class ServiceService extends BaseService {
             // Get offerings and tariffs for each service
             const servicesWithTariffs = await Promise.all(
                 activeServices.map(async (service) => {
-                    const offerings = await this.offeringService.findByService(service.codigos);
-                    const tariffIds = [...new Set(offerings.map(o => o.idtarifa))];
+                    const offerings = await this.offeringService.findByService(service.codigo_servicio);
+                    const tariffIds = [...new Set(offerings.map(o => o.id_tarifa))];
                     const tariffs = await Promise.all(
                         tariffIds.map(id => this.rateService.findById(id))
                     );
@@ -136,13 +136,13 @@ export class ServiceService extends BaseService {
 
     /**
      * Find service by its code
-     * @param {number} codigos - Service code
+     * @param {number} codigo_servicio - Service code
      * @returns {Promise<Object>} Service data
      * @throws {Error} If service is not found
      */
-    async findByCodigos(codigos) {
+    async findByCodigos(codigo_servicio) {
         try {
-            const service = await this.repository.findById(codigos);
+            const service = await this.repository.findById(codigo_servicio);
             if (!service) {
                 throw new Error('Servicio no encontrado');
             }

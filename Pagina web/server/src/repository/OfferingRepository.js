@@ -9,10 +9,10 @@ export class OfferingRepository extends BaseRepository {
 
     /**
      * Find all offerings for a specific service
-     * @param {number} codigos - Service ID
+     * @param {number} codigo_servicio - Service ID
      * @returns {Promise<Array>} List of offerings with their tariffs
      */
-    async findByService(codigos) {
+    async findByService(codigo_servicio) {
         const results = await this.db(this.tableName)
             .select(
                 'oferta.*',
@@ -24,14 +24,14 @@ export class OfferingRepository extends BaseRepository {
                 'tarifa.fcreada',
                 'tarifa.deletedatt'
             )
-            .join('tarifa', 'oferta.idtarifa', 'tarifa.id_tarifa')
-            .join('servicio', 'oferta.codigos', 'servicio.codigos')
+            .join('tarifa', 'oferta.id_tarifa', 'tarifa.id_tarifa')
+            .join('servicio', 'oferta.codigo_servicio', 'servicio.codigo_servicio')
             .where({
-                'oferta.codigos': codigos,
-                'tarifa.estadot': 'ACTIVO',
-                'servicio.estados': 'ACTIVO'
+                'oferta.codigo_servicio': codigo_servicio,
+                'tarifa.estado_tarifa': 'ACTIVO',
+                'servicio.estado_servicio': 'ACTIVO'
             })
-            .whereNull('tarifa.deletedatt');
+            .whereNull('tarifa.deleted_at_tarifa');
 
         return results.map(result => this._toModel({
             ...result,
@@ -73,11 +73,11 @@ export class OfferingRepository extends BaseRepository {
 
     /**
      * Find offerings for a specific service filtered by ride type
-     * @param {number} codigos - Service ID
+     * @param {number} codigo_servicio - Service ID
      * @param {string} rideType - Type of ride (CITY or AIRPORT)
      * @returns {Promise<Array>} List of filtered offerings
      */
-    async findByServiceAndType(codigos, rideType) {
+    async findByServiceAndType(codigo_servicio, rideType) {
         const query = this.db(this.tableName)
             .select(
                 'oferta.*',
@@ -89,7 +89,7 @@ export class OfferingRepository extends BaseRepository {
                 'tarifa.created_at as fcreada',
                 'tarifa.delete_at_tarifa as deletedatt'
             )
-            .join('tarifa', 'oferta.idtarifa', 'tarifa.id_tarifa')
+            .join('tarifa', 'oferta.id_tarifa', 'tarifa.id_tarifa')
             .where('tarifa.estado_tarifa', 'ACTIVO')
             .whereNull('tarifa.delete_at_tarifa');
 

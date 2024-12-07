@@ -53,8 +53,8 @@ export class BookingService extends BaseService {
      */
     async createTaxiBooking(bookingData, userId) {
         try {
-            const serviceTariffs = await this.serviceService.getTariffsByType(bookingData.codigos, bookingData.rideType);
-            const isValidTariff = serviceTariffs.some(tariff => tariff.id === bookingData.tarifa_id);
+            const serviceTariffs = await this.serviceService.getTariffsByType(bookingData.codigo_servicio, bookingData.rideType);
+            const isValidTariff = serviceTariffs.some(tariff => tariff.id_tarifa === bookingData.tarifa_id);
             
             if (!isValidTariff) {
                 throw new Error('La tarifa seleccionada no es válida para este servicio');
@@ -65,7 +65,7 @@ export class BookingService extends BaseService {
                 fcambio: new Date()
             });
 
-            const { codigos, tarifa_id, rideType, ...reservaData } = bookingData;
+            const { codigo_servicio, tarifa_id, rideType, ...reservaData } = bookingData;
 
             const booking = await this.repository.create({
                 ...reservaData,
@@ -76,12 +76,12 @@ export class BookingService extends BaseService {
             await this.solicitaRepository.create({
                 rut: userId,
                 codigoreserva: booking.codigoreserva,
-                codigos: codigos,
+                codigo_servicio: codigo_servicio,
                 fechasolicitud: new Date()
             });
 
             const [service, tariff] = await Promise.all([
-                this.serviceService.findByCodigos(codigos),
+                this.serviceService.findByCodigos(codigo_servicio),
                 this.rateService.findById(tarifa_id)
             ]);
 

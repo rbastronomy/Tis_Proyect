@@ -24,12 +24,13 @@ function CreateBooking() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [bookingData, setBookingData] = useState({
-    origenv: '',
-    destinov: '',
-    freserva: '',
-    tipo: 'NORMAL',
-    observacion: '',
-    codigos: 1 // Default service code
+    origen_reserva: '',
+    destino_reserva: '',
+    fecha_reserva: '',
+    fecha_realizado: '',
+    tipo_reserva: 'NORMAL',
+    observacion_reserva: '',
+    codigo_servicio: 1 // Default service code
   });
 
   // Protect the route but allow USUARIO and ADMINISTRADOR roles
