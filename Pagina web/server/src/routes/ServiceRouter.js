@@ -28,10 +28,10 @@ export class ServiceRouter extends BaseRouter {
             items: {
               type: 'object',
               properties: {
-                codigos: { type: 'integer' },
-                tipo: { type: 'string' },
-                descripciont: { type: 'string' },
-                estados: { type: 'string' }
+                codigo_servicio: { type: 'integer' },
+                tipo_servicio: { type: 'string' },
+                descripcion_servicio: { type: 'string' },
+                estado_servicio: { type: 'string' }
               }
             }
           }

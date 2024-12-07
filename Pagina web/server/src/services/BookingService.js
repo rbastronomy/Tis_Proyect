@@ -4,7 +4,7 @@ import { TaxiService } from "./TaxiService.js";
 import { HistoryRepository } from '../repository/HistoryRepository.js';
 import { GeneraRepository } from '../repository/GeneraRepository.js';
 import { ServiceService } from './ServiceService.js';
-import { TarifaService } from './TarifaService.js';
+import { RateService } from './RateService.js';
 import { TripRepository } from '../repository/TripRepository.js';
 
 export class BookingService extends BaseService {
@@ -15,7 +15,7 @@ export class BookingService extends BaseService {
         this.HistoryRepository = new HistoryRepository();
         this.generaRepository = new GeneraRepository();
         this.serviceService = new ServiceService();
-        this.tarifaService = new TarifaService();
+        this.rateService = new RateService();
         this.tripRepository = new TripRepository();
     }
 
@@ -82,7 +82,7 @@ export class BookingService extends BaseService {
 
             const [service, tariff] = await Promise.all([
                 this.serviceService.findByCodigos(codigos),
-                this.tarifaService.findById(tarifa_id)
+                this.rateService.findById(tarifa_id)
             ]);
 
             return {

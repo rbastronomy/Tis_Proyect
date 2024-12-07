@@ -33,7 +33,7 @@ function CreateBooking() {
   });
 
   // Protect the route but allow USUARIO and ADMINISTRADOR roles
-  if (!isAuthenticated || !['ADMINISTRADOR', 'USUARIO'].includes(user?.role?.nombrerol)) {
+  if (!isAuthenticated || !['ADMINISTRADOR', 'USUARIO'].includes(user?.role?.nombre_rol)) {
     navigate({ to: '/login' });
     return null;
   }
@@ -59,7 +59,7 @@ function CreateBooking() {
       if (response.ok) {
         const data = await response.json();
         // Redirect based on role
-        const redirectPath = user?.role?.nombrerol === 'ADMINISTRADOR' 
+        const redirectPath = user?.role?.nombre_rol === 'ADMINISTRADOR' 
           ? '/admin/dashboard'
           : '/mis-reservas';
         navigate({ to: redirectPath });

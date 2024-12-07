@@ -38,7 +38,7 @@ export class AuthMiddleware {
         // Check for required roles
         if (roles.length > 0) {
             const hasRequiredRole = roles.some(role => 
-                user.role.nombrerol.toLowerCase() === role.toLowerCase()
+                user.role.nombre_rol.toLowerCase() === role.toLowerCase()
             );
             
             if (!hasRequiredRole) {

@@ -4,7 +4,7 @@ exports.up = function(knex) {
             // Foreign keys
             table.integer('id_permiso')
             .unsigned()
-            .references('id_permisos')
+            .references('id_permiso')
             .inTable('permiso')
             .onDelete('CASCADE')
             .onUpdate('CASCADE');

@@ -1,7 +1,7 @@
 import { BaseService } from '../core/BaseService.js';
 import { ServiceModel } from '../models/ServiceModel.js';
 import { ServiceRepository } from '../repository/ServiceRepository.js';
-import { TarifaService } from './TarifaService.js';
+import { RateService } from './RateService.js';
 import { OfferingService } from './OfferingService.js';
 
 export class ServiceService extends BaseService {
@@ -9,33 +9,60 @@ export class ServiceService extends BaseService {
         const serviceModel = new ServiceModel();
         super(serviceModel);
         this.repository = new ServiceRepository();
-        this.tarifaService = new TarifaService();
+        this.rateService = new RateService();
         this.offeringService = new OfferingService();
     }
 
     /**
      * Gets services filtered by ride type (CITY or AIRPORT)
      * @param {string} rideType - Type of ride (CITY or AIRPORT)
-     * @returns {Promise<Array>} List of services for the specified ride type
+     * @returns {Promise<ServiceModel[]>} List of service models for the specified ride type
      * @throws {Error} If there's an error retrieving the services
      */
     async findByRideType(rideType) {
         try {
-            // Get all active services first
-            const services = await this.repository.findActive();
+            // Get all active services first and convert to models
+            const servicesDB = await this.repository.findActive();
+            const serviceModels = ServiceModel.toModels(servicesDB);
             
             // Get offerings for the ride type
-            const offerings = await this.offeringService.findByRideType(rideType);
+            const offeringsDB = await this.offeringService.findByRideType(rideType);
             
             // Create a Set of service IDs that have offerings for this ride type
-            const serviceIds = new Set(offerings.map(offering => offering.codigos));
+            const serviceIds = new Set(offeringsDB.map(offering => offering.codigo_servicio));
             
-            // Filter services that have offerings for this ride type
-            const filteredServices = services.filter(service => 
-                serviceIds.has(service.codigos)
+            // Create a Set of unique tariff IDs from offerings
+            const tariffIds = [...new Set(offeringsDB.map(offering => offering.id_tarifa))];
+            
+            // Get all tariffs data in one batch (already as models from RateService)
+            const tariffs = await Promise.all(
+                tariffIds.map(id => this.rateService.findById(id))
             );
+            
+            // Create a Map for quick tariff lookups
+            const tariffsMap = new Map(
+                tariffs.map(tariff => [tariff.id, tariff])
+            );
+            
+            // Filter services and attach their tariffs
+            return serviceModels
+                .filter(service => serviceIds.has(service.codigo_servicio))
+                .map(service => {
+                    // Get offerings for this service
+                    const serviceOfferings = offeringsDB.filter(
+                        offering => offering.codigo_servicio === service.codigo_servicio
+                    );
+                    
+                    // Get tariffs for these offerings and filter active ones
+                    const serviceTariffs = serviceOfferings
+                        .map(offering => tariffsMap.get(offering.id_tarifa))
+                        .filter(tariff => tariff && tariff.isActive());
 
-            return filteredServices;
+                    // Attach tariffs to the service model
+                    service.tarifas = serviceTariffs;
+                    return service;
+                });
+
         } catch (error) {
             throw new Error(`Error retrieving services by ride type: ${error.message}`);
         }
@@ -58,7 +85,7 @@ export class ServiceService extends BaseService {
             
             // Get tariff details for each ID
             const tariffs = await Promise.all(
-                tariffIds.map(id => this.tarifaService.findById(id))
+                tariffIds.map(id => this.RateService.findById(id))
             );
             
             // Filter out any null values and inactive tariffs
@@ -91,7 +118,7 @@ export class ServiceService extends BaseService {
                     const offerings = await this.offeringService.findByService(service.codigos);
                     const tariffIds = [...new Set(offerings.map(o => o.idtarifa))];
                     const tariffs = await Promise.all(
-                        tariffIds.map(id => this.tarifaService.findById(id))
+                        tariffIds.map(id => this.rateService.findById(id))
                     );
                     
                     return {

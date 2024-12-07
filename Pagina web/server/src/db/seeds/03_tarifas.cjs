@@ -10,7 +10,7 @@ module.exports.seed = async function(knex) {
       descripcion_tarifa: 'Viaje al aeropuerto - Ida',
       precio: 15000,
       tipo_tarifa: 'IDA',
-      fecha_creacion_tarifa: new Date(),
+      
       estado_tarifa: 'ACTIVO',
       created_at: new Date(),
       updated_at: new Date()
@@ -21,7 +21,7 @@ module.exports.seed = async function(knex) {
       descripcion_tarifa: 'Viaje al aeropuerto - Ida y Vuelta',
       precio: 28000,
       tipo_tarifa: 'IDA_VUELTA',
-      fecha_creacion_tarifa: new Date(),
+      
       estado_tarifa: 'ACTIVO',
       created_at: new Date(),
       updated_at: new Date()
@@ -32,7 +32,7 @@ module.exports.seed = async function(knex) {
       descripcion_tarifa: 'Viaje al aeropuerto - Nocturno Ida (22:00 - 06:00)',
       precio: 18000,
       tipo_tarifa: 'NOCTURNO_IDA',
-      fecha_creacion_tarifa: new Date(),
+      
       estado_tarifa: 'ACTIVO',
       created_at: new Date(),
       updated_at: new Date()
@@ -43,7 +43,7 @@ module.exports.seed = async function(knex) {
       descripcion_tarifa: 'Viaje al aeropuerto - Nocturno Ida y Vuelta',
       precio: 34000,
       tipo_tarifa: 'NOCTURNO_IDA_VUELTA',
-      fecha_creacion_tarifa: new Date(),
+      
       estado_tarifa: 'ACTIVO',
       created_at: new Date(),
       updated_at: new Date()
@@ -54,7 +54,7 @@ module.exports.seed = async function(knex) {
       descripcion_tarifa: 'Traslado dentro de Iquique',
       precio: 5000,
       tipo_tarifa: 'TRASLADO_CIUDAD',
-      fecha_creacion_tarifa: new Date(),
+      
       estado_tarifa: 'ACTIVO',
       created_at: new Date(),
       updated_at: new Date()
@@ -65,7 +65,7 @@ module.exports.seed = async function(knex) {
       descripcion_tarifa: 'Viaje al aeropuerto - Programado Anticipado - Ida',
       precio: 14000,
       tipo_tarifa: 'PROGRAMADO_IDA',
-      fecha_creacion_tarifa: new Date(),
+      
       estado_tarifa: 'ACTIVO',
       created_at: new Date(),
       updated_at: new Date()
@@ -76,7 +76,7 @@ module.exports.seed = async function(knex) {
       descripcion_tarifa: 'Viaje al aeropuerto - Programado Anticipado - Ida y Vuelta',
       precio: 26000,
       tipo_tarifa: 'PROGRAMADO_IDA_VUELTA',
-      fecha_creacion_tarifa: new Date(),
+      
       estado_tarifa: 'ACTIVO',
       created_at: new Date(),
       updated_at: new Date()

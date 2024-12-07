@@ -18,13 +18,8 @@ export class ServiceController extends BaseController {
         try {
             // Only get ACTIVE services for the specified ride type
             const services = await this.service.findByRideType(rideType);
-            
-            // Filter out inactive services
-            const activeServices = services.filter(service => 
-                service.estados === 'ACTIVO'
-            );
-            
-            return reply.send(activeServices);
+            console.log(services);            
+            return reply.send(services);
         } catch (error) {
             request.log.error(error);
             return reply.status(500).send({ 

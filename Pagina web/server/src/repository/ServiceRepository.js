@@ -111,9 +111,9 @@ export class ServiceRepository extends BaseRepository {
     const results = await this.db(this.tableName)
       .select('servicio.*')
       .where('servicio.estado_servicio', 'ACTIVO')
-      .whereNull('servicio.delete_at');
+      .whereNull('servicio.delete_at_servicio');
 
-    return results.map(result => ServiceModel.fromDB(result));
+    return results;
   }
 }
 

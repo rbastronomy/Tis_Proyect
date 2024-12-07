@@ -31,7 +31,8 @@ export class OfferingService extends BaseService {
      */
     async findByRideType(rideType) {
         try {
-            return await this.repository.findByRideType(rideType);
+            const offeringsDB = await this.repository.findByRideType(rideType);
+            return offeringsDB;
         } catch (error) {
             throw new Error(`Error retrieving offerings by ride type: ${error.message}`);
         }

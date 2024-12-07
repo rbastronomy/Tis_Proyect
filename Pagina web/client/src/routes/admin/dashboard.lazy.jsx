@@ -43,7 +43,7 @@ function AdminDashboard() {
   });
 
   useEffect(() => {
-    if (!isAuthenticated || user?.role?.nombrerol !== 'ADMINISTRADOR') {
+    if (!isAuthenticated || user?.role?.nombre_rol !== 'ADMINISTRADOR') {
       navigate({ to: '/login' });
       return;
     }

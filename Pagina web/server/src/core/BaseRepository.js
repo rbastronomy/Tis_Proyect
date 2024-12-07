@@ -34,7 +34,7 @@ export class BaseRepository {
       const result = await this.db(this.tableName)
         .where(this.primaryKey, id)
         .first();
-      return this._toModel(result);
+      return result;
     } catch (error) {
       throw new Error(`Error al buscar por ID en ${this.tableName}: ${error.message}`);
     }
