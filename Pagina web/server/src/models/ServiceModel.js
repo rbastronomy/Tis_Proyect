@@ -2,19 +2,11 @@ import { BaseModel } from '../core/BaseModel.js';
 
 export class ServiceModel extends BaseModel {
   static defaultData = {
-<<<<<<< HEAD
     codigo_servicio: null,
     tipo_servicio: '',
     descripcion_servicio: '',
     estado_servicio: 'ACTIVO',
     delete_at: null,
-=======
-    codigos: null,
-    tipo: '',
-    descripciont: '',
-    estados: 'ACTIVO',
-    deleted_at_service: null,
->>>>>>> c21906aabcf45981368753789d1ec19379cf086a
   };
 
   constructor(data = {}) {

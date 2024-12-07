@@ -27,11 +27,8 @@ export class BookingModel extends BaseModel {
     static defaultData = {
         // Campos de la tabla 'reserva'
         codigo_reserva: null,    // ID de la reserva
-<<<<<<< HEAD
         rut_conductor: null,    // RUT del conductor
         patente_taxi: null,     // Patente del taxi
-=======
->>>>>>> c21906aabcf45981368753789d1ec19379cf086a
         origen_reserva: '',            // Origen
         destino_reserva: '',           // Destino
         fecha_reserva: null,         // Fecha de reserva
@@ -40,11 +37,8 @@ export class BookingModel extends BaseModel {
         observacion_reserva: '',        // Observaciones
         estado_reserva: 'EN_REVISION', // Estado
         deleted_at_reserva: null,      // Soft delete
-<<<<<<< HEAD
         costo_estimado: 0,      // Costo estimado
         oferta_id: null,        // ID de la oferta
-=======
->>>>>>> c21906aabcf45981368753789d1ec19379cf086a
 
         // Modelos relacionados
         driver: null,           // Conductor (UserModel)
@@ -146,13 +140,8 @@ export class BookingModel extends BaseModel {
     addGenerate(trip, Receipt = null) {
         const generateRecord = {
             codigo: trip.codigo,
-<<<<<<< HEAD
             codigo_reserva: this.codigo_reserva,
             codigoboleta: invoice?.codigoboleta || null,
-=======
-            codigoreserva: this.codigoreserva,
-            codigoboleta: Receipt?.codigoboleta || null,
->>>>>>> c21906aabcf45981368753789d1ec19379cf086a
             fechagenerada: new Date()
         };
         this._data.genera.push(generateRecord);
@@ -169,11 +158,7 @@ export class BookingModel extends BaseModel {
 
     toJSON() {
         const json = {
-<<<<<<< HEAD
             codigo_reserva: this._data.codigo_reserva,
-=======
-            codigo_reserva: this._data.codigoreserva,
->>>>>>> c21906aabcf45981368753789d1ec19379cf086a
             rut_conductor: this._data.rut_conductor,
             patente_taxi: this._data.patente_taxi,
             origen_reserva: this._data.origen_reserva,
@@ -183,12 +168,7 @@ export class BookingModel extends BaseModel {
             tipo_reserva: this._data.tipo_reserva,
             observacion_reserva: this._data.observacion_reserva,
             estado_reserva: this._data.estado_reserva,
-<<<<<<< HEAD
             generates: this._data.generates,
-=======
-            deleted_at_reserva: this._data.deleted_at_reserva,
-            genera: this._data.genera,
->>>>>>> c21906aabcf45981368753789d1ec19379cf086a
             costo_estimado: this._data.costo_estimado,
         };
 
@@ -214,13 +194,8 @@ export class BookingModel extends BaseModel {
     get tipo_reserva() { return this._data.tipo_reserva; }
     get estado_reserva() { return this._data.estado_reserva; }
     get fecha_realizado() { return this._data.fecha_realizado; }
-<<<<<<< HEAD
-    get codigos() { return this._data.codigos; }
-    get generates() { return this._data.generates; }
-=======
     get codigo_servicio() { return this._data.codigos; }
     get genera() { return this._data.genera; }
->>>>>>> c21906aabcf45981368753789d1ec19379cf086a
     get costo_estimado() { return this._data.costo_estimado; }
 
     // Add missing setters for model relationships
@@ -261,11 +236,7 @@ export class BookingModel extends BaseModel {
     }
 
     getServiceType() {
-<<<<<<< HEAD
-        return this._data.service?.tipo_reserva;
-=======
         return this._data.service?.tipo_servicio;
->>>>>>> c21906aabcf45981368753789d1ec19379cf086a
     }
 
     associateTrip(tripModel) {
@@ -287,7 +258,6 @@ export class BookingModel extends BaseModel {
         };
     }
 
-<<<<<<< HEAD
     // Update toJSON to include new fields
     toJSON() {
         const json = {
@@ -311,8 +281,6 @@ export class BookingModel extends BaseModel {
         return json;
     }
 
-=======
->>>>>>> c21906aabcf45981368753789d1ec19379cf086a
     // Método para agregar relación servicio-tarifa
     addServiceRate(serviceId, rateId) {
         this._data.service_rate = {

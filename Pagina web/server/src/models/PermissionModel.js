@@ -22,98 +22,58 @@ import { BaseModel } from '../core/BaseModel.js';
  * @property {Date|null} updated_at - Timestamp of when the record was last updated
  */
 
-/**
- * Class representing a Permission in the system
- * @extends {BaseModel<PermissionModelData>}
- */
+    /**
+    * Class representing a Permission in the system
+    * @extends {BaseModel<PermissionModelData>}
+    */
 export class PermissionModel extends BaseModel {
-<<<<<<< HEAD
+    /**
+    * Default values for a new permission instance
+    * @type {PermissionModelData}
+    */
     static defaultData = {
-        id_permisos: null,
-        nombre_permiso: '',
-        descripcion_permiso: '',
-        fecha_creacion: new Date(),
-        //deleteatp: null
+      id_permisos: null,
+      nombre_permiso: '',
+      descripcion_permiso: '',
+      fecha_creacion: new Date(),
+      created_at: null,
+      updated_at: null
     };
 
+    /**
+    * Creates a new PermissionModel instance
+    * @param {Partial<PermissionModelData>} data - Initial permission data
+    */
     constructor(data = {}) {
-        super(data, PermissionModel.defaultData);
+      super(data, PermissionModel.defaultData);
     }
 
-    // Getters for common properties
-    get id_permisos() { return this._data.id_permisos; }
-    get nombre_permiso() { return this._data.nombre_permiso; }
-    get descripcion_permiso() { return this._data.descripcion_permiso; }
-    get fecha_creacion() { return this._data.fecha_creacion; }
-    //get deleteatp() { return this._data.deleteatp; }
+    // Getters
+    /** @returns {number|null} Permission's ID */
+    get id() { return this._data.id_permisos; }
+    /** @returns {string} Permission's name */
+    get nombre() { return this._data.nombre_permiso; }
+    /** @returns {string} Permission's description */
+    get descripcion() { return this._data.descripcion_permiso; }
+    /** @returns {Date} Permission's creation date */
+    get fechaCreacion() { return this._data.fecha_creacion; }
+    /** @returns {Date|null} Permission's created at timestamp */
+    get createdAt() { return this._data.created_at; }
+    /** @returns {Date|null} Permission's updated at timestamp */
+    get updatedAt() { return this._data.updated_at; }
 
-    // Domain methods
-    isDeleted() {
-        return this._data.deleteatp !== null;
-    }
-
+    /**
+    * Converts the permission model to a JSON object
+    * @returns {Object} Permission data in JSON format
+    */
     toJSON() {
-        return {
-            id_permisos: this._data.id_permisos,
-            nombre_permiso: this._data.nombre_permiso,
-            descripcion_permiso: this._data.descripcion_permiso,
-            fecha_creacion: this._data.fechacrefecha_creacionacion,
-            //deleteatp: this._data.deleteatp,
-        };
+      return {
+        id_permisos: this._data.id_permisos,
+        nombre_permiso: this._data.nombre_permiso,
+        descripcion_permiso: this._data.descripcion_permiso,
+        fecha_creacion: this._data.fecha_creacion,
+        created_at: this._data.created_at,
+        updated_at: this._data.updated_at
+      };
     }
-    static fromDB(data) {
-        if (!data) return null;
-        return new PermissionModel(data);
-      }
-=======
-  /**
-   * Default values for a new permission instance
-   * @type {PermissionModelData}
-   */
-  static defaultData = {
-    id_permisos: null,
-    nombre_permiso: '',
-    descripcion_permiso: '',
-    fecha_creacion: new Date(),
-    created_at: null,
-    updated_at: null
-  };
-
-  /**
-   * Creates a new PermissionModel instance
-   * @param {Partial<PermissionModelData>} data - Initial permission data
-   */
-  constructor(data = {}) {
-    super(data, PermissionModel.defaultData);
-  }
-
-  // Getters
-  /** @returns {number|null} Permission's ID */
-  get id() { return this._data.id_permisos; }
-  /** @returns {string} Permission's name */
-  get nombre() { return this._data.nombre_permiso; }
-  /** @returns {string} Permission's description */
-  get descripcion() { return this._data.descripcion_permiso; }
-  /** @returns {Date} Permission's creation date */
-  get fechaCreacion() { return this._data.fecha_creacion; }
-  /** @returns {Date|null} Permission's created at timestamp */
-  get createdAt() { return this._data.created_at; }
-  /** @returns {Date|null} Permission's updated at timestamp */
-  get updatedAt() { return this._data.updated_at; }
-
-  /**
-   * Converts the permission model to a JSON object
-   * @returns {Object} Permission data in JSON format
-   */
-  toJSON() {
-    return {
-      id_permisos: this._data.id_permisos,
-      nombre_permiso: this._data.nombre_permiso,
-      descripcion_permiso: this._data.descripcion_permiso,
-      fecha_creacion: this._data.fecha_creacion,
-      created_at: this._data.created_at,
-      updated_at: this._data.updated_at
-    };
-  }
->>>>>>> c21906aabcf45981368753789d1ec19379cf086a
 }

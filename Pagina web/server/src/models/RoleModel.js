@@ -40,13 +40,9 @@ export class RoleModel extends BaseModel {
     descripcion_rol: '',
     fecha_creada_rol: new Date(),
     estado_rol: 'ACTIVO',
-<<<<<<< HEAD
-    permissions: []
-=======
     permissions: [],
     created_at: null,
     updated_at: null
->>>>>>> c21906aabcf45981368753789d1ec19379cf086a
   };
 
   /**
@@ -61,14 +57,6 @@ export class RoleModel extends BaseModel {
     super(sanitizedData, RoleModel.defaultData);
   }
 
-<<<<<<< HEAD
-  // Getters for common properties
-  get id_roles() { return this._data.id_roles; }
-  get nombre_rol() { return this._data.nombre_rol; }
-  get descripcion_rol() { return this._data.descripcion_rol; }
-  get fecha_creada_rol() { return this._data.fecha_creada_rol; }
-  get estado_rol() { return this._data.estado_rol; }
-=======
   // Getters
   /** @returns {number|null} Role's ID */
   get id() { return this._data.id_roles; }
@@ -81,7 +69,6 @@ export class RoleModel extends BaseModel {
   /** @returns {string} Role's status */
   get estado() { return this._data.estado_rol; }
   /** @returns {Array<import('./PermissionModel.js').PermissionModel>} Role's permissions */
->>>>>>> c21906aabcf45981368753789d1ec19379cf086a
   get permissions() { return this._data.permissions; }
 
   // Setters
@@ -106,26 +93,12 @@ export class RoleModel extends BaseModel {
     return this._data.permissions;
   }
 
-<<<<<<< HEAD
-  toJSON() {
-    return {
-      id_roles: this._data.id_roles,
-      nombre_rol: this._data.nombre_rol,
-      descripcion_rol: this._data.descripcion_rol,
-      fecha_creada_rol: this._data.fecha_creada_rol,
-      estado_rol: this._data.estado_rol,
-      permissions: this._data.permissions.map(p => 
-        p.nombrepermiso || p.name || p
-      )
-    };
-=======
   /**
    * Checks if the role is active
    * @returns {boolean} True if the role is active
    */
   isActive() {
     return this._data.estado_rol === 'ACTIVO';
->>>>>>> c21906aabcf45981368753789d1ec19379cf086a
   }
 
   /**

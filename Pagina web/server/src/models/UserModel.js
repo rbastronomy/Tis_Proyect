@@ -83,13 +83,6 @@ export class UserModel extends BaseModel {
   get rut() { return this._data.rut; }
   /** @returns {string} User's first name */
   get nombre() { return this._data.nombre; }
-<<<<<<< HEAD
-  get apellido_paterno() { return this._data.apellido_paterno; }
-  get apellido_materno() { return this._data.apellido_materno; }
-  get fecha_nacimiento() { return this._data.fecha_nacimiento; }
-  get correo() { return this._data.correo; }
-  get telefono() { return this._data.telefono; }
-=======
   /** @returns {string} User's paternal surname */
   get apellidoPaterno() { return this._data.apellido_paterno; }
   /** @returns {string} User's maternal surname */
@@ -101,52 +94,19 @@ export class UserModel extends BaseModel {
   /** @returns {string} User's phone number */
   get telefono() { return this._data.telefono; }
   /** @returns {string} User's nationality */
->>>>>>> c21906aabcf45981368753789d1ec19379cf086a
   get nacionalidad() { return this._data.nacionalidad; }
   /** @returns {string} User's gender */
   get genero() { return this._data.genero; }
-<<<<<<< HEAD
-  get estado_persona() { return this._data.estado_persona; }
-=======
   /** @returns {string} User's account status */
   get estadoPersona() { return this._data.estado_persona; }
   /** @returns {import('./RoleModel.js').RoleModel} User's role */
->>>>>>> c21906aabcf45981368753789d1ec19379cf086a
   get role() { return this._data.role; }
   /** @param {import('./RoleModel.js').RoleModel} value - Role to assign to the user */
   set role(value) { this._data.role = value; }
-<<<<<<< HEAD
-  get fecha_contratacion() { return this._data.fecha_contratacion; }
-  get licencia_conducir() { return this._data.licencia_conducir; }
-  get adm_fcontratacion() { return this._data.adm_fcontratacion; }
-  get cviajes() { return this._data.cviajes; }
-  get idroles() { return this._data.idroles; }
-  get contrasena() { return this._data.contrasena; }
-
-  // Domain methods
-  getNombreCompleto() {
-    return `${this._data.nombre} ${this._data.apellido_paterno} ${this._data.apellido_materno}`;
-  }
-
-  isLicenciaVigente() {
-    const today = new Date();
-    const licenciaDate = new Date(this._data.licencia_conducir);
-    return licenciaDate > today;
-  }
-
-  getAntiguedad() {
-    const today = new Date();
-    const contratacionDate = new Date(this._data.fecha_contratacion);
-    const diffTime = Math.abs(today - contratacionDate);
-    const diffYears = Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 365)); 
-    return diffYears;
-  }
-=======
   /** @returns {Date} User's hire date */
   get fechaContratacion() { return this._data.fecha_contratacion; }
   /** @returns {Date} User's driver's license expiration date */
   get licenciaConducir() { return this._data.licencia_conducir; }
->>>>>>> c21906aabcf45981368753789d1ec19379cf086a
 
   /**
    * Checks if the user account is active
@@ -235,19 +195,11 @@ export class UserModel extends BaseModel {
       nacionalidad: this._data.nacionalidad,
       genero: this._data.genero,
       estado_persona: this._data.estado_persona,
-<<<<<<< HEAD
-      role: this._data.role?.toJSON(),
-      fecha_contratacion: this._data.fecha_contratacion,
-      licencia_conducir: this._data.licencia_conducir,
-      adm_fcontratacion: this._data.adm_fcontratacion,
-      cviajes: this._data.cviajes
-=======
       role: this._data.role,
       fecha_contratacion: this._data.fecha_contratacion,
       licencia_conducir: this._data.licencia_conducir,
       createdAt: this._data.createdAt,
       updatedAt: this._data.updatedAt
->>>>>>> c21906aabcf45981368753789d1ec19379cf086a
     };
 
     return json;
