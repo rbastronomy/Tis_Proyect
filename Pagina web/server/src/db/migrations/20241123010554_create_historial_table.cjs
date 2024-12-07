@@ -4,6 +4,7 @@ exports.up = function(knex) {
         table.string('estado_historial', 256).notNullable();
         table.text('observacion_historial', 256).notNullable();
         table.timestamp('fecha_cambio').defaultTo(knex.fn.now());
+        table.string('accion', 256).notNullable();
         //fk to reserva
         table.integer('codigo_reserva')
             .unsigned()

@@ -3,12 +3,12 @@ import { BaseModel } from "../core/BaseModel";
 export class RatingModel extends BaseModel{
 
     static ratingData = {
-        idvaloracion: null,
-        comentario: '',
+        id_valoracion: null,
+        comentario_valoracion: '',
         calificacion: 0,
-        fvaloracion: new Date(),
-        estadov: 'ACTIVO',
-        deletedatvj: null
+        fecha_valoracion: null,
+        estado_valoracion: 'ACTIVO',
+        deleted_at_valoracion: null
     }
 
     constructor(data = {}){
@@ -18,7 +18,7 @@ export class RatingModel extends BaseModel{
     get idvaloracion() { return this._data.idvaloracion; }
     get comentario() { return this._data.comentario; }
     get calificacion() { return this._data.calificacion; }
-    get fvaloracion() { return this._data.fvaloracion; }
+    get fecha_valoracion() { return this._data.fecha_valoracion; }
 
     isPositive(){
         return this._data.calificacion >= 4;
@@ -37,12 +37,12 @@ export class RatingModel extends BaseModel{
 
     toJSON(){
         return {
-            idvaloracion: this._data_idvaloracion,
-            comentario: this._data.comentario,
+            id_valoracion: this._data.id_valoracion,
+            comentario_valoracion: this._data.comentario_valoracion,
             calificacion: this._data.calificacion,
-            fvaloracion: this._data.fvaloracion,
-            estadov: this._data.estadov,
-            deletedatvj: this._data.deletedatvj,
+            fecha_valoracion: this._data.fecha_valoracion,
+            estado_valoracion: this._data.estado_valoracion,
+            deleted_at_valoracion: this._data.deleted_at_valoracion,
         };
     }
 
