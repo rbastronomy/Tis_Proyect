@@ -67,7 +67,8 @@ export class UserModel extends BaseModel {
     fecha_contratacion: null,
     licencia_conducir: null,
     createdAt: null,
-    updatedAt: null
+    updatedAt: null,
+    deletedAt: null
   };
 
   /**
@@ -175,7 +176,8 @@ export class UserModel extends BaseModel {
       fecha_contratacion: data.fecha_contratacion,
       licencia_conducir: data.licencia_conducir,
       createdAt: data.createdAt,
-      updatedAt: data.updatedAt
+      updatedAt: data.updatedAt,
+      deletedAt: data.deletedAt
     });
   }
 
@@ -199,7 +201,8 @@ export class UserModel extends BaseModel {
       fecha_contratacion: this._data.fecha_contratacion,
       licencia_conducir: this._data.licencia_conducir,
       createdAt: this._data.createdAt,
-      updatedAt: this._data.updatedAt
+      updatedAt: this._data.updatedAt,
+      deletedAt: this._data.deletedAt
     };
 
     return json;

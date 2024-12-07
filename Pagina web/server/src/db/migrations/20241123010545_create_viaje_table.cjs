@@ -6,13 +6,14 @@ exports.up = function(knex) {
         table.float('duracion');
         table.integer('pasajeros');
         table.string('observacion_viaje', 256);
+        table.timestamp('fecha_viaje');
         table.string('estado_viaje', 256);
         table.timestamp('deleted_at_viaje');
 
         // Unique constraints
-        table.unique('origenv');
-        table.unique('destinov');
-        table.unique('estadov');
+        table.unique('origen_viaje');
+        table.unique('destino_viaje');
+        table.unique('estado_viaje');
 
         table.timestamps(true, true);
     });

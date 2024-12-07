@@ -10,9 +10,8 @@ exports.up = function(knex) {
         table.string('descripcion_tarifa', 256);
         table.float('precio').notNullable();
         table.string('tipo_tarifa', 256).notNullable();
-        table.timestamp('fecha_creacion_tarifa').defaultTo(knex.fn.now());
         table.enum('estado_tarifa', ['ACTIVO', 'INACTIVO']).defaultTo('ACTIVO');
-        table.timestamp('fecha_eliminacion_tarifa').nullable();
+        table.timestamp('delete_at_tarifa').nullable();
 
         table.timestamps(true, true);
     });

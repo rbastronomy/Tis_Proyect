@@ -23,8 +23,6 @@ exports.up = function(knex) {
 
         // Unique constraints
         table.unique('codigo_taxi');
-        table.unique('estado_taxi');
-
         table.timestamps(true, true);
     });
 };

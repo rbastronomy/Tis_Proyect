@@ -29,6 +29,7 @@ exports.up = function(knex) {
         table.timestamp('licencia_conducir');
 
         table.timestamps(true, true);
+        table.timestamp('deleted_at_persona');
     }).then(function() {
         // Add unique constraint in a separate step
         return knex.schema.alterTable('persona', function(table) {

@@ -4,7 +4,7 @@ exports.up = function(knex) {
         table.string('tipo_servicio', 256);
         table.string('descripcion_servicio', 256);
         table.string('estado_servicio', 256);
-        table.timestamp('delete_at');
+        table.timestamp('delete_at_servicio');
 
         // Unique constraints
         table.unique('tipo_servicio');

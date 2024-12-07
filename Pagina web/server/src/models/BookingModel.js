@@ -80,10 +80,10 @@ export class BookingModel extends BaseModel {
     }
 
     // Getters básicos (mantienen nombres de BD)
-    get codigoreserva() { return this._data.codigoreserva; }
-    get origenv() { return this._data.origenv; }
-    get destinov() { return this._data.destinov; }
-    get freserva() { return this._data.freserva; }
+    get codigo_reserva() { return this._data.codigo_reserva; }
+    get origen_reserva() { return this._data.origen_reserva; }
+    get destino_reserva() { return this._data.destino_reserva; }
+    get fecha_reserva() { return this._data.fecha_reserva; }
     // Getters de relaciones (nombres en inglés)
     get driver() { return this._data.driver; }
     get taxi() { return this._data.taxi; }
@@ -94,10 +94,10 @@ export class BookingModel extends BaseModel {
     
 
     // Métodos de estado
-    isPending() { return this._data.estados === 'PENDIENTE'; }
-    isConfirmed() { return this._data.estados === 'CONFIRMADO'; }
-    canBeAssigned() { return this._data.estados === 'EN_REVISION'; }
-    canBeCancelled() { return ['EN_REVISION', 'PENDIENTE'].includes(this._data.estados); }
+    isPending() { return this._data.estado_reserva === 'PENDIENTE'; }
+    isConfirmed() { return this._data.estado_reserva === 'CONFIRMADO'; }
+    canBeAssigned() { return this._data.estado_reserva === 'EN_REVISION'; }
+    canBeCancelled() { return ['EN_REVISION', 'PENDIENTE'].includes(this._data.estado_reserva); }
     
     // Métodos de relaciones
     hasDriver() { return !!this._data.driver; }
@@ -135,8 +135,8 @@ export class BookingModel extends BaseModel {
     // Métodos para relaciones ternarias
     addGenerate(trip, Receipt = null) {
         const generateRecord = {
-            codigo: trip.codigo,
-            codigoreserva: this.codigoreserva,
+            codigo_viaje: trip.codigo_viaje,
+            codigo_reserva: this.codigo_reserva,
             codigoboleta: Receipt?.codigoboleta || null,
             fechagenerada: new Date()
         };
@@ -154,7 +154,7 @@ export class BookingModel extends BaseModel {
 
     toJSON() {
         const json = {
-            codigo_reserva: this._data.codigoreserva,
+            codigo_reserva: this._data.codigo_reserva,
             rut_conductor: this._data.rut_conductor,
             patente_taxi: this._data.patente_taxi,
             origen_reserva: this._data.origen_reserva,
@@ -191,7 +191,7 @@ export class BookingModel extends BaseModel {
     get tipo_reserva() { return this._data.tipo_reserva; }
     get estado_reserva() { return this._data.estado_reserva; }
     get fecha_realizado() { return this._data.fecha_realizado; }
-    get codigo_servicio() { return this._data.codigos; }
+    get codigo_servicio() { return this._data.codigo_servicio; }
     get genera() { return this._data.genera; }
     get costo_estimado() { return this._data.costo_estimado; }
 

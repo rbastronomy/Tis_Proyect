@@ -1,7 +1,8 @@
 exports.up = function(knex) {
-    return knex.schema.createTable('posee', function(table) {
-        // Foreign keys
-        table.integer('id_permisos')
+    return knex.schema
+        .createTable('posee', function(table) {
+            // Foreign keys
+            table.integer('id_permiso')
             .unsigned()
             .references('id_permisos')
             .inTable('permiso')

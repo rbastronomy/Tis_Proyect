@@ -65,8 +65,8 @@ class Auth {
             getUserAttributes: (attributes) => ({
                 rut: attributes.id,
                 nombre: attributes.nombre,
-                apellidop: attributes.apellidop,
-                apellidom: attributes.apellidom,
+                apellido_paterno: attributes.apellido_paterno,
+                apellido_materno: attributes.apellido_materno,
                 correo: attributes.correo,
                 role: attributes.role
             })
