@@ -10,18 +10,18 @@ export class TripModel extends BaseModel {
         codigo_viaje: null,           // ID del viaje
         origen_viaje: '',            // Origen del viaje
         destino_viaje: '',           // Destino del viaje
-        duracion: 0,                 // Duración del viaje
+        duracion: 0,                 // Duración del viaje minutos
         pasajeros: 0,                // Número de pasajeros
         observacion_viaje: '',       // Observaciones del viaje
         fecha_viaje: null,           // Fecha del viaje
-        estado_viaje: 'PENDIENTE',   // Estado del viaje
+        estado_viaje: 'REGISTRADO',   // Estado del viaje
         deleted_at_viaje: null,      // Soft delete
 
         // Relaciones
         booking: null,          // Reserva asociada (BookingModel)
         driver: null,           // Conductor (UserModel)
         taxi: null,             // Taxi (TaxiModel)
-        invoice: null,          // Boleta (InvoiceModel)
+        receipt: null,          // Boleta (ReceiptModel)
 
         // Relaciones ternarias
         generates: [],          // Relación viaje-reserva-boleta
@@ -34,7 +34,7 @@ export class TripModel extends BaseModel {
             booking: data.booking instanceof BookingModel ? data.booking : null,
             driver: data.driver instanceof UserModel ? data.driver : null,
             taxi: data.taxi instanceof TaxiModel ? data.taxi : null,
-            invoice: data.invoice instanceof ReceiptModel ? data.invoice : null
+            receipt: data.receipt instanceof ReceiptModel ? data.receipt : null
         };
 
         super(modelData, TripModel.defaultData);
@@ -49,8 +49,8 @@ export class TripModel extends BaseModel {
         if (data.taxi && !(data.taxi instanceof TaxiModel)) {
             this._data.taxi = new TaxiModel(data.taxi);
         }
-        if (data.invoice && !(data.invoice instanceof ReceiptModel)) {
-            this._data.invoice = new ReceiptModel(data.invoice);
+        if (data.receipt && !(data.receipt instanceof ReceiptModel)) {
+            this._data.receipt = new ReceiptModel(data.receipt);
         }
 
         // Inicializar arreglos de relaciones
@@ -73,9 +73,13 @@ export class TripModel extends BaseModel {
     get booking() { return this._data.booking; }
     get driver() { return this._data.driver; }
     get taxi() { return this._data.taxi; }
-    get invoice() { return this._data.invoice; }
+    get receipt() { return this._data.receipt; }
     get generates() { return this._data.generates; }
     get ratings() { return this._data.ratings; }
+
+    getDuracionEnHoras() {
+        return this._data.duracion / 60;
+    }
 
     // Métodos de estado
     isPending() { return this._data.estado_viaje === 'PENDIENTE'; }
@@ -83,11 +87,12 @@ export class TripModel extends BaseModel {
     isCompleted() { return this._data.estado_viaje === 'COMPLETADO'; }
     isCancelled() { return this._data.estado_viaje === 'CANCELADO'; }
 
+
     // Métodos de relaciones
     hasBooking() { return !!this._data.booking; }
     hasDriver() { return !!this._data.driver; }
     hasTaxi() { return !!this._data.taxi; }
-    hasInvoice() { return !!this._data.invoice; }
+    hasReceipt() { return !!this._data.receipt; }
 
     // Métodos para relaciones ternarias
     addGenerate(booking, invoice = null) {
