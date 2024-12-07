@@ -116,7 +116,8 @@ export class PermissionRepository extends BaseRepository {
                 .where('posee.id_roles', id_roles)
                 .orderBy('permiso.nombre_permiso');
 
-            return permissions.map(permission => this._toModel(permission));
+            //return array of permission models just raw data
+            return permissions;
         } catch (error) {
             throw new Error(`Error finding permissions by role: ${error.message}`);
         }

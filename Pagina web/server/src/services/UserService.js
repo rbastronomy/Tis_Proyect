@@ -2,7 +2,6 @@ import { BaseService } from '../core/BaseService.js';
 import UserRepository from '../repository/UserRepository.js';
 import { RoleService } from './RoleService.js';
 import { UserModel } from '../models/UserModel.js';
-import { RoleModel } from '../models/RoleModel.js';
 
 export class UserService extends BaseService {
   constructor() {
@@ -23,14 +22,13 @@ export class UserService extends BaseService {
       if (!UserData) return null;
 
       // Get user's role with permissions already loaded
-      const roleData = await this.roleService.findById(UserData.id_roles);
-      if (!roleData) {
+      const role = await this.roleService.findById(UserData.id_roles);
+      if (!role) {
         return null;
       }
 
       //creamos el modelo de usuario
       const user = UserModel.toModel(UserData);
-      const role = RoleModel.toModel(roleData);
 
       user.role = role;
 
