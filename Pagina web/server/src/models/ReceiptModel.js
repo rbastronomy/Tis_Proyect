@@ -4,7 +4,7 @@ export class ReceiptModel extends BaseModel {
     static receiptData = {
         codigo_boleta: null,
         total: 0,
-        fecha_emision: new Date(),
+        fecha_emision: null,
         metodo_pago: '',
         descripcion_boleta: '',
         estado_boleta: 'ACTIVO',

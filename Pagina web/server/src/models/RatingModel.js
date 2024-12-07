@@ -6,7 +6,7 @@ export class RatingModel extends BaseModel{
         id_valoracion: null,
         comentario_valoracion: '',
         calificacion: 0,
-        fecha_valoracion: new Date(),
+        fecha_valoracion: null,
         estado_valoracion: 'ACTIVO',
         deleted_at_valoracion: null
     }
@@ -37,7 +37,7 @@ export class RatingModel extends BaseModel{
 
     toJSON(){
         return {
-            id_valoracion: this.id_valoracion,
+            id_valoracion: this._data.id_valoracion,
             comentario_valoracion: this._data.comentario_valoracion,
             calificacion: this._data.calificacion,
             fecha_valoracion: this._data.fecha_valoracion,
