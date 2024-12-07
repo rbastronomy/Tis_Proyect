@@ -2,11 +2,11 @@ import { BaseModel } from '../core/BaseModel.js';
 
 export class PermissionModel extends BaseModel {
     static defaultData = {
-        idpermiso: null,
-        nombrepermiso: '',
-        descripcionpermiso: '',
-        fechacreacion: new Date(),
-        deleteatp: null
+        id_permisos: null,
+        nombre_permiso: '',
+        descripcion_permiso: '',
+        fecha_creacion: new Date(),
+        //deleteatp: null
     };
 
     constructor(data = {}) {
@@ -14,11 +14,11 @@ export class PermissionModel extends BaseModel {
     }
 
     // Getters for common properties
-    get idpermiso() { return this._data.idpermiso; }
-    get nombrepermiso() { return this._data.nombrepermiso; }
-    get descripcionpermiso() { return this._data.descripcionpermiso; }
-    get fechacreacion() { return this._data.fechacreacion; }
-    get deleteatp() { return this._data.deleteatp; }
+    get id_permisos() { return this._data.id_permisos; }
+    get nombre_permiso() { return this._data.nombre_permiso; }
+    get descripcion_permiso() { return this._data.descripcion_permiso; }
+    get fecha_creacion() { return this._data.fecha_creacion; }
+    //get deleteatp() { return this._data.deleteatp; }
 
     // Domain methods
     isDeleted() {
@@ -27,11 +27,15 @@ export class PermissionModel extends BaseModel {
 
     toJSON() {
         return {
-            idpermiso: this._data.idpermiso,
-            nombrepermiso: this._data.nombrepermiso,
-            descripcionpermiso: this._data.descripcionpermiso,
-            fechacreacion: this._data.fechacreacion,
-            deleteatp: this._data.deleteatp,
+            id_permisos: this._data.id_permisos,
+            nombre_permiso: this._data.nombre_permiso,
+            descripcion_permiso: this._data.descripcion_permiso,
+            fecha_creacion: this._data.fechacrefecha_creacionacion,
+            //deleteatp: this._data.deleteatp,
         };
     }
+    static fromDB(data) {
+        if (!data) return null;
+        return new PermissionModel(data);
+      }
 }

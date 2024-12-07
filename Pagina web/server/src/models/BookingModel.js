@@ -8,17 +8,17 @@ import { OfferingModel } from './OfferingModel.js';
 export class BookingModel extends BaseModel {
     static defaultData = {
         // Campos de la tabla 'reserva'
-        codigoreserva: null,    // ID de la reserva
+        codigo_reserva: null,    // ID de la reserva
         rut_conductor: null,    // RUT del conductor
         patente_taxi: null,     // Patente del taxi
-        origenv: '',            // Origen
-        destinov: '',           // Destino
-        freserva: null,         // Fecha de reserva
-        frealizado: null,       // Fecha de realización
-        tipo: 'NORMAL',         // Tipo de reserva
-        observacion: '',        // Observaciones
-        estados: 'EN_REVISION', // Estado
-        deletedatre: null,      // Soft delete
+        origen_reserva: '',            // Origen
+        destino_reserva: '',           // Destino
+        fecha_reserva: null,         // Fecha de reserva
+        fecha_realizado: null,       // Fecha de realización
+        tipo_reserva: 'NORMAL',         // Tipo de reserva
+        observacion_reserva: '',        // Observaciones
+        estado_reserva: 'EN_REVISION', // Estado
+        deleted_at_reserva: null,      // Soft delete
         costo_estimado: 0,      // Costo estimado
         oferta_id: null,        // ID de la oferta
 
@@ -70,10 +70,10 @@ export class BookingModel extends BaseModel {
     }
 
     // Getters básicos (mantienen nombres de BD)
-    get codigoreserva() { return this._data.codigoreserva; }
-    get origenv() { return this._data.origenv; }
-    get destinov() { return this._data.destinov; }
-    get freserva() { return this._data.freserva; }
+    get codigo_reserva() { return this._data.codigo_reserva; }
+    get origen_reserva() { return this._data.origen_reserva; }
+    get destino_reserva() { return this._data.destino_reserva; }
+    get fecha_reserva() { return this._data.fecha_reserva; }
     // Getters de relaciones (nombres en inglés)
     get driver() { return this._data.driver; }
     get taxi() { return this._data.taxi; }
@@ -81,10 +81,10 @@ export class BookingModel extends BaseModel {
     
 
     // Métodos de estado
-    isPending() { return this._data.estados === 'PENDIENTE'; }
-    isConfirmed() { return this._data.estados === 'CONFIRMADO'; }
-    canBeAssigned() { return this._data.estados === 'EN_REVISION'; }
-    canBeCancelled() { return ['EN_REVISION', 'PENDIENTE'].includes(this._data.estados); }
+    isPending() { return this._data.estado_reserva === 'PENDIENTE'; }
+    isConfirmed() { return this._data.estado_reserva === 'CONFIRMADO'; }
+    canBeAssigned() { return this._data.estado_reserva === 'EN_REVISION'; }
+    canBeCancelled() { return ['EN_REVISION', 'PENDIENTE'].includes(this._data.estado_reserva); }
     
     // Métodos de relaciones
     hasDriver() { return !!this._data.driver; }
@@ -95,7 +95,7 @@ export class BookingModel extends BaseModel {
     addGenerate(trip, invoice = null) {
         const generateRecord = {
             codigo: trip.codigo,
-            codigoreserva: this.codigoreserva,
+            codigo_reserva: this.codigo_reserva,
             codigoboleta: invoice?.codigoboleta || null,
             fechagenerada: new Date()
         };
@@ -121,16 +121,16 @@ export class BookingModel extends BaseModel {
 
     toJSON() {
         const json = {
-            codigoreserva: this._data.codigoreserva,
+            codigo_reserva: this._data.codigo_reserva,
             rut_conductor: this._data.rut_conductor,
             patente_taxi: this._data.patente_taxi,
-            origenv: this._data.origenv,
-            destinov: this._data.destinov,
-            freserva: this._data.freserva,
-            frealizado: this._data.frealizado,
-            tipo: this._data.tipo,
-            observacion: this._data.observacion,
-            estados: this._data.estados,
+            origen_reserva: this._data.origen_reserva,
+            destino_reserva: this._data.destino_reserva,
+            fecha_reserva: this._data.fecha_reserva,
+            fecha_realizado: this._data.fecha_realizado,
+            tipo_reserva: this._data.tipo_reserva,
+            observacion_reserva: this._data.observacion_reserva,
+            estado_reserva: this._data.estado_reserva,
             generates: this._data.generates,
             costo_estimado: this._data.costo_estimado,
             offering: this._data.offering
@@ -153,9 +153,9 @@ export class BookingModel extends BaseModel {
     // Add missing getters
     get rut_conductor() { return this._data.rut_conductor; }
     get patente_taxi() { return this._data.patente_taxi; }
-    get tipo() { return this._data.tipo; }
-    get estados() { return this._data.estados; }
-    get frealizado() { return this._data.frealizado; }
+    get tipo_reserva() { return this._data.tipo_reserva; }
+    get estado_reserva() { return this._data.estado_reserva; }
+    get fecha_realizado() { return this._data.fecha_realizado; }
     get codigos() { return this._data.codigos; }
     get generates() { return this._data.generates; }
     get costo_estimado() { return this._data.costo_estimado; }
@@ -180,11 +180,11 @@ export class BookingModel extends BaseModel {
     }
 
     canBeStarted() {
-        return this._data.estados === 'PENDIENTE' && this.hasDriver();
+        return this._data.estado_reserva === 'PENDIENTE' && this.hasDriver();
     }
 
     canBeCompleted() {
-        return this._data.estados === 'EN_CAMINO';
+        return this._data.estado_reserva === 'EN_CAMINO';
     }
 
     // Add missing model-specific methods
@@ -198,7 +198,7 @@ export class BookingModel extends BaseModel {
     }
 
     getServiceType() {
-        return this._data.service?.tipo;
+        return this._data.service?.tipo_reserva;
     }
 
     associateTrip(tripModel) {
@@ -227,8 +227,8 @@ export class BookingModel extends BaseModel {
             idhistorial: this._data.idhistorial,
             rut_conductor: this._data.rut_conductor,
             patente_taxi: this._data.patente_taxi,
-            tipo: this._data.tipo,
-            estados: this._data.estados,
+            tipo_reserva: this._data.tipo_reserva,
+            estado_reserva: this._data.estado_reserva,
             codigos: this._data.codigos,
             generates: this._data.generates,
             costo_estimado: this._data.costo_estimado,

@@ -5,12 +5,12 @@ export class RateModel extends BaseModel{
     static rateData = {
         id_tarifa: null,
         rut: null,
-        descripciont: '',
+        descrdescripcion_tarifaipciont: '',
         precio: 0,
-        tipo: '',
-        fcreada: new Date(),
-        estadot: 'ACTIVO',
-        deleteatt: null,
+        tipo_tarifa: '',
+        fecha_creacion_tarifa: new Date(),
+        estado_tarifa: 'ACTIVO',
+        fecha_eliminacion_tarifa: null,
         persona: null
     }
 
@@ -18,18 +18,18 @@ export class RateModel extends BaseModel{
         super(data, RateModel.rateData);
     }
 
-    get id() { return this._data.id; }
-    get descripciont() { return this._data.descripciont; }
+    get id_tarifa() { return this._data.id_tarifa; }
+    get descripcion_tarifa() { return this._data.descripcion_tarifa; }
     get precio() { return this._data.precio; }
-    get tipo() { return this._data.tipo; }
-    get estadot() { return this._data.estadot; }
+    get tipo_tarifa() { return this._data.tipo_tarifa; }
+    get estado_tarifa() { return this._data.estado_tarifa; }
 
     getPersona(){
         return this._data.persona;
     }
 
     isActive(){
-        return this._data.estadot === 'ACTIVO';
+        return this._data.estado_tarifa === 'ACTIVO';
     }
 
     getPrecio(){
@@ -38,13 +38,13 @@ export class RateModel extends BaseModel{
 
     toJSON(){
         return {
-            id: this._data.id,
-            descripciont: this._data.descripciont,
+            id_tarifa: this._data.id_tarifa,
+            descripcion_tarifa: this._data.descripcion_tarifa,
             precio: this._data.precio,
-            tipo: this._data.tipo,
-            fcreada: this._data.fcreada,
-            estadot: this._data.estadot,
-            deleteatt: this._data.deleteatt,
+            tipo_tarifa: this._data.tipo_tarifa,
+            fecha_creacion_tarifa: this._data.fecha_creacion_tarifa,
+            estado_tarifa: this._data.estado_tarifa,
+            fecha_eliminacion_tarifa: this._data.fecha_eliminacion_tarifa,
         };
     }
 

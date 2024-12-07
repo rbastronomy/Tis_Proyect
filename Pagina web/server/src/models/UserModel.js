@@ -4,9 +4,9 @@ export class UserModel extends BaseModel {
   static defaultData = {
     rut: null,
     nombre: '',
-    apellidop: '',
-    apellidom: '',
-    fnacimiento: null,
+    apellido_paterno: '',
+    apellido_materno: '',
+    fecha_nacimiento: null,
     correo: '',
     ntelefono: '',
     nacionalidad: '',
@@ -28,18 +28,18 @@ export class UserModel extends BaseModel {
   // Getters for common properties
   get rut() { return this._data.rut; }
   get nombre() { return this._data.nombre; }
-  get apellidop() { return this._data.apellidop; }
-  get apellidom() { return this._data.apellidom; }
-  get fnacimiento() { return this._data.fnacimiento; }
+  get apellido_paterno() { return this._data.apellido_paterno; }
+  get apellido_materno() { return this._data.apellido_materno; }
+  get fecha_nacimiento() { return this._data.fecha_nacimiento; }
   get correo() { return this._data.correo; }
-  get ntelefono() { return this._data.ntelefono; }
+  get telefono() { return this._data.telefono; }
   get nacionalidad() { return this._data.nacionalidad; }
   get genero() { return this._data.genero; }
-  get estadop() { return this._data.estadop; }
+  get estado_persona() { return this._data.estado_persona; }
   get role() { return this._data.role; }
   set role(value) { this._data.role = value; }
-  get fcontratacion() { return this._data.fcontratacion; }
-  get licenciaconducir() { return this._data.licenciaconducir; }
+  get fecha_contratacion() { return this._data.fecha_contratacion; }
+  get licencia_conducir() { return this._data.licencia_conducir; }
   get adm_fcontratacion() { return this._data.adm_fcontratacion; }
   get cviajes() { return this._data.cviajes; }
   get idroles() { return this._data.idroles; }
@@ -47,25 +47,25 @@ export class UserModel extends BaseModel {
 
   // Domain methods
   getNombreCompleto() {
-    return `${this._data.nombre} ${this._data.apellidop} ${this._data.apellidom}`;
+    return `${this._data.nombre} ${this._data.apellido_paterno} ${this._data.apellido_materno}`;
   }
 
   isLicenciaVigente() {
     const today = new Date();
-    const licenciaDate = new Date(this._data.licenciaconducir);
+    const licenciaDate = new Date(this._data.licencia_conducir);
     return licenciaDate > today;
   }
 
   getAntiguedad() {
     const today = new Date();
-    const contratacionDate = new Date(this._data.fcontratacion);
+    const contratacionDate = new Date(this._data.fecha_contratacion);
     const diffTime = Math.abs(today - contratacionDate);
     const diffYears = Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 365)); 
     return diffYears;
   }
 
   isActive() {
-    return this._data.estadop === 'ACTIVO';
+    return this._data.estado_persona === 'ACTIVO';
   }
 
   hasPermission(permissionName) {
@@ -80,17 +80,17 @@ export class UserModel extends BaseModel {
     return {
       rut: this._data.rut,
       nombre: this._data.nombre,
-      apellidop: this._data.apellidop,
-      apellidom: this._data.apellidom,
-      fnacimiento: this._data.fnacimiento,
+      apellido_paterno: this._data.apellido_paterno,
+      apellido_materno: this._data.apellido_materno,
+      fecha_nacimiento: this._data.fecha_nacimiento,
       correo: this._data.correo,
-      ntelefono: this._data.ntelefono,
+      telefono: this._data.telefono,
       nacionalidad: this._data.nacionalidad,
       genero: this._data.genero,
-      estadop: this._data.estadop,
+      estado_persona: this._data.estado_persona,
       role: this._data.role?.toJSON(),
-      fcontratacion: this._data.fcontratacion,
-      licenciaconducir: this._data.licenciaconducir,
+      fecha_contratacion: this._data.fecha_contratacion,
+      licencia_conducir: this._data.licencia_conducir,
       adm_fcontratacion: this._data.adm_fcontratacion,
       cviajes: this._data.cviajes
     };

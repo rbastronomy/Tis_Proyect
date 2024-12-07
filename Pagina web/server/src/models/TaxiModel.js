@@ -5,15 +5,16 @@ export class TaxiModel extends BaseModel{
   static taxiData = {
     patente: null,
     rut: null,
-    marco: '',
+    marca: '',
     modelo: '',
     color: '',
     ano: null,
     estado: '',
-    revisiontecnica: null,
-    permisoscirculacion: null,
-    deletedatt: null,
-    estadotx: 'DISPONIBLE'
+    vencimiento_revision_tecnica: null,
+    vencimiento_permiso_circulacion: null,
+    codigo_taxi: null,
+    deleted_at_taxi: null,
+    estado_taxi: 'DISPONIBLE'
   }
   
   constructor(data = {}){
@@ -21,30 +22,32 @@ export class TaxiModel extends BaseModel{
   }
 
   get patente() { return this._data.patente; }
-  get marco() { return this._data.marco; }
+  get marca() { return this._data.marca; }
   get modelo() { return this._data.modelo; }
-  get estadotx() { return this._data.estadotx; }
+  get codigo_taxi() { return this._data.codigo_taxi; }
+  get vencimiento_revision_tecnica() { return this._data.vencimiento_revision_tecnica; }
+  get vencimiento_permiso_circulacion() { return this._data.vencimiento_permiso_circulacion; }
+  get estado_taxi() { return this._data.estado_taxi; }
 
   isAvailable(){
-    return this._data.estadotx === 'DISPONIBLE';
+    return this._data.estado_taxi === 'DISPONIBLE';
   }
 
-
-
-  //Agregar metodos necesarios para el manejo de la clase
+  
 
   toJSON(){
     return {
       patente: this._data.patente,
-      marco: this._data.marco,
+      marca: this._data.marca,
       modelo: this._data.modelo,
       color: this._data.color,
       ano: this._data.ano,
       estado: this._data.estado,
-      revisiontecnica: this._data.revisiontecnica,
-      permisoscirculacion: this._data.permisoscirculacion,
-      deletedatt: this._data.deletedatt,
-      estadotx: this._data.estadotx
+      codigo_taxi: this._data.codigo_taxi,
+      vencimiento_revision_tecnica: this._data.vencimiento_revision_tecnica,
+      vencimiento_permiso_circulacion: this._data.vencimiento_permiso_circulacion,
+      deleted_at_taxi: this._data.deleted_at_taxi,
+      estado_taxi: this._data.estado_taxi
     };
   }
 

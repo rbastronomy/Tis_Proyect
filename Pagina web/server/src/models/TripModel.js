@@ -7,13 +7,16 @@ import { ReceiptModel } from './ReceiptModel.js';
 export class TripModel extends BaseModel {
     static defaultData = {
         // Campos de la tabla 'viaje'
-        codigo: null,           // ID del viaje
+        codigo_viaje: null,           // ID del viaje
         codigoreserva: null,    // ID de la reserva asociada
-        duracionv: 0,           // Duración del viaje
-        observacionv: '',       // Observaciones del viaje
+        origen_viaje: '',       // Origen del viaje
+        destino_viaje: '',      // Destino del viaje
+        duracion: 0,           // Duración del viaje
+        pasajeros: 0,          // Cantidad de pasajeros
+        observacion_viaje: '',       // Observaciones del viaje
         fechav: null,           // Fecha del viaje
-        estadov: 'PENDIENTE',   // Estado del viaje
-        deletedatvj: null,      // Soft delete
+        estado_viaje: 'PENDIENTE',   // Estado del viaje
+        deleted_at_viaje: null,      // Soft delete
 
         // Relaciones
         booking: null,          // Reserva asociada (BookingModel)
@@ -57,13 +60,16 @@ export class TripModel extends BaseModel {
     }
 
     // Getters básicos (mantienen nombres de BD)
-    get codigo() { return this._data.codigo; }
+    get codigo_viaje() { return this._data.codigo_viaje; }
+    get origen_viaje() { return this._data.origen_viaje; }
+    get destino_viaje() { return this._data.destino_viaje; }
     get codigoreserva() { return this._data.codigoreserva; }
-    get duracionv() { return this._data.duracionv; }
-    get observacionv() { return this._data.observacionv; }
+    get duracion() { return this._data.duracion; }
+    get pasajeros() { return this._data.pasajeros; }
+    get observacion_viaje() { return this._data.observacion_viaje; }
     get fechav() { return this._data.fechav; }
-    get estadov() { return this._data.estadov; }
-    get deletedatvj() { return this._data.deletedatvj; }
+    get estado_viaje() { return this._data.estado_viaje; }
+    get deleted_at_viaje() { return this._data.deleted_at_viaje; }
 
     // Getters de relaciones (nombres en inglés)
     get booking() { return this._data.booking; }
@@ -74,10 +80,10 @@ export class TripModel extends BaseModel {
     get ratings() { return this._data.ratings; }
 
     // Métodos de estado
-    isPending() { return this._data.estadov === 'PENDIENTE'; }
-    isInProgress() { return this._data.estadov === 'EN_CURSO'; }
-    isCompleted() { return this._data.estadov === 'COMPLETADO'; }
-    isCancelled() { return this._data.estadov === 'CANCELADO'; }
+    isPending() { return this._data.estado_viaje === 'PENDIENTE'; }
+    isInProgress() { return this._data.estado_viaje === 'EN_CURSO'; }
+    isCompleted() { return this._data.estado_viaje === 'COMPLETADO'; }
+    isCancelled() { return this._data.estado_viaje === 'CANCELADO'; }
 
     // Métodos de relaciones
     hasBooking() { return !!this._data.booking; }
@@ -88,7 +94,7 @@ export class TripModel extends BaseModel {
     // Métodos para relaciones ternarias
     addGenerate(booking, invoice = null) {
         const generateRecord = {
-            codigo: this.codigo,
+            codigo_viaje: this.codigo_viaje,
             codigoreserva: booking.codigoreserva,
             codigoboleta: invoice?.codigoboleta || null,
             fechagenerada: new Date()
@@ -100,7 +106,7 @@ export class TripModel extends BaseModel {
     addRating(userId, ratingId) {
         const ratingRecord = {
             rut: userId,
-            codigo: this.codigo,
+            codigo_viaje: this.codigo_viaje,
             idvaloracion: ratingId,
             fechavaloracion: new Date()
         };
@@ -110,12 +116,15 @@ export class TripModel extends BaseModel {
 
     toJSON() {
         const json = {
-            codigo: this._data.codigo,
+            codigo_viaje: this._data.codigo_viaje,
             codigoreserva: this._data.codigoreserva,
-            duracionv: this._data.duracionv,
-            observacionv: this._data.observacionv,
+            origen_viaje: this._data.origen_viaje,
+            destino_viaje: this._data.destino_viaje,
+            pasajeros: this._data.pasajeros,
+            duracion: this._data.duracion,
+            observacion_viaje: this._data.observacion_viaje,
             fechav: this._data.fechav,
-            estadov: this._data.estadov,
+            estado_viaje: this._data.estado_viaje,
             generates: this._data.generates,
             ratings: this._data.ratings
         };
