@@ -2,14 +2,14 @@ exports.up = function(knex) {
     return knex.schema.alterTable('reserva', function(table) {
         // Add the new foreign key columns
         table.integer('rut_conductor')
-            .references('rut_persona')
+            .references('rut')
             .inTable('persona')
             .onDelete('RESTRICT')
             .onUpdate('CASCADE')
             .nullable()
 
         table.string('patente_taxi')
-            .references('patente_taxi')
+            .references('patente')
             .inTable('taxi')
             .onDelete('RESTRICT')
             .onUpdate('CASCADE')

@@ -109,15 +109,15 @@ export class PermissionRepository extends BaseRepository {
      * @returns {Promise<PermissionModel[]>} Array of permissions
      */
     async findByRole(id_roles) {
+        console.log(id_roles);
         try {
             const permissions = await this.db(this.tableName)
-                .select('permiso.*')
-                .join('posee', 'permiso.id_permisos', 'posee.id_permisos')
+                .select(`${this.tableName}.*`)
+                .join('posee', `${this.tableName}.${this.primaryKey}`, 'posee.id_permisos')
                 .where('posee.id_roles', id_roles)
-                .orderBy('permiso.nombre_permiso');
+                .orderBy(`${this.tableName}.nombre_permiso`);
 
-            //return array of permission models just raw data
-            return permissions;
+            return permissions.map(permission => this._toModel(permission));
         } catch (error) {
             throw new Error(`Error finding permissions by role: ${error.message}`);
         }

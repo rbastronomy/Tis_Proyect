@@ -1,4 +1,4 @@
-   // Pagina web/server/src/db/seeds/roles_permissions.cjs
+   // Pagina web/server/src/db/seeds/00_roles_permissions.cjs
    exports.seed = async function(knex) {
     // Clean the tables first
     await knex('posee').del();
@@ -42,61 +42,61 @@
         id_permisos: 2,
         nombre_permiso: 'eliminar_usuario',
         descripcion_permiso: 'Eliminar usuarios existentes',
-        fechacreacion: new Date()
+        fecha_creacion: new Date()
       },
       {
         id_permisos: 3,
-        nombrepermiso: 'asignar_rol',
-        descripcionpermiso: 'Asignar roles a usuarios',
-        fechacreacion: new Date()
+        nombre_permiso: 'asignar_rol',
+        descripcion_permiso: 'Asignar roles a usuarios',
+        fecha_creacion: new Date()
       },
       {
         id_permisos: 4,
-        nombrepermiso: 'gestionar_viajes',
-        descripcionpermiso: 'Gestionar viajes en el sistema',
-        fechacreacion: new Date()
+        nombre_permiso: 'gestionar_viajes',
+        descripcion_permiso: 'Gestionar viajes en el sistema',
+        fecha_creacion: new Date()
       },
       {
         id_permisos: 5,
-        nombrepermiso: 'crear_reserva',
-        descripcionpermiso: 'Crear nuevas reservas de taxi',
-        fechacreacion: new Date()
+        nombre_permiso: 'crear_reserva',
+        descripcion_permiso: 'Crear nuevas reservas de taxi',
+        fecha_creacion: new Date()
       },
       {
         id_permisos: 6,
-        nombrepermiso: 'cancelar_reserva',
-        descripcionpermiso: 'Cancelar reservas existentes',
-        fechacreacion: new Date()
+        nombre_permiso: 'cancelar_reserva',
+        descripcion_permiso: 'Cancelar reservas existentes',
+        fecha_creacion: new Date()
       },
       {
         id_permisos: 7,
-        nombrepermiso: 'ver_reservas',
-        descripcionpermiso: 'Ver listado de reservas',
-        fechacreacion: new Date()
+        nombre_permiso: 'ver_reservas',
+        descripcion_permiso: 'Ver listado de reservas',
+        fecha_creacion: new Date()
       },
       {
         id_permisos: 8,
-        nombrepermiso: 'validar_reserva',
-        descripcionpermiso: 'Validar nuevas reservas de taxi',
-        fechacreacion: new Date()
+        nombre_permiso: 'validar_reserva',
+        descripcion_permiso: 'Validar nuevas reservas de taxi',
+        fecha_creacion: new Date()
       },
       {
         id_permisos: 9,
-        nombrepermiso: 'iniciar_viaje',
-        descripcionpermiso: 'Iniciar un viaje asignado',
-        fechacreacion: new Date()
+        nombre_permiso: 'iniciar_viaje',
+        descripcion_permiso: 'Iniciar un viaje asignado',
+        fecha_creacion: new Date()
       },
       {
         id_permisos: 10,
-        nombrepermiso: 'completar_viaje',
-        descripcionpermiso: 'Marcar un viaje como completado',
-        fechacreacion: new Date()
+        nombre_permiso: 'completar_viaje',
+        descripcion_permiso: 'Marcar un viaje como completado',
+        fecha_creacion: new Date()
       },
       {
         id_permisos: 11,
-        nombrepermiso: 'ver_historial',
-        descripcionpermiso: 'Ver historial de reservas y viajes',
-        fechacreacion: new Date()
+        nombre_permiso: 'ver_historial',
+        descripcion_permiso: 'Ver historial de reservas y viajes',
+        fecha_creacion: new Date()
       }
     ]);
 
@@ -106,51 +106,51 @@
       ...Array.from({ length: 11 }, (_, i) => ({
         id_roles: 1,
         id_permisos: i + 1,
-        fcambio: new Date()
+        fecha_cambio_permiso: new Date()
       })),
       
       // Regular user permissions
       { 
         id_roles: 2, 
         id_permisos: 5,
-        fcambio: new Date()
+        fecha_cambio_permiso: new Date()
       },
       { 
         id_roles: 2, 
         id_permisos: 6,
-        fcambio: new Date()
+        fecha_cambio_permiso: new Date()
       },
       { 
         id_roles: 2, 
         id_permisos: 7,
-        fcambio: new Date()
+        fecha_cambio_permiso: new Date()
       },
       { 
         id_roles: 2, 
         id_permisos: 11,
-        fcambio: new Date()
+        fecha_cambio_permiso: new Date()
       },
       
       // Driver permissions
       { 
         id_roles: 3, 
         id_permisos: 7,
-        fcambio: new Date()
+        fecha_cambio_permiso: new Date()
       },
       { 
         id_roles: 3, 
         id_permisos: 9,
-        fcambio: new Date()
+        fecha_cambio_permiso: new Date()
       },
       { 
         id_roles: 3, 
         id_permisos: 10,
-        fcambio: new Date()
+        fecha_cambio_permiso: new Date()
       },
       { 
         id_roles: 3, 
         id_permisos: 11,
-        fcambio: new Date()
+        fecha_cambio_permiso: new Date()
       }
     ];
 

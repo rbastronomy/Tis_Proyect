@@ -90,11 +90,6 @@ export class AuthService {
 
       // Get password using the getter from UserModel
       const hashedPassword = user._data.contrasena; // Access internal data directly since there's no getter
-      
-      console.log('Validating password:', {
-        hashedPassword: hashedPassword ? 'exists' : 'missing',
-        contrasena: contrasena ? 'exists' : 'missing'
-      });
 
       // Validate password
       const isValidPassword = await this._validatePassword(

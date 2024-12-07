@@ -31,7 +31,7 @@ exports.up = function(knex) {
         .createTable('valora', function(table) {
             table.integer('rut_persona')
                 .unsigned()
-                .references('rut_persona')
+                .references('rut')
                 .inTable('persona')
                 .onDelete('RESTRICT')
                 .onUpdate('CASCADE');

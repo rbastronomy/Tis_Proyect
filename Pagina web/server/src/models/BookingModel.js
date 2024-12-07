@@ -42,7 +42,7 @@ export class BookingModel extends BaseModel {
         trip: null,             //viaje (TripModel)
         client: null,           // Cliente (UserModel)
         service: null,          // Servicio (ServiceModel)
-        history: [],          // Historial de reservas (BookingHistoryModel)    
+        history: [],          // Historial de reservas (BookingHistoryModel)
     };
 
     constructor(data = {}) {
