@@ -1,6 +1,6 @@
-import { BaseModel } from "../core/BaseModel";
+import { BaseModel } from '../core/BaseModel.js';
 
-export class HistoryModel extends BaseModel{
+export class HistoryModel extends BaseModel {
 
     static historyData = {
         idhistorial: null,

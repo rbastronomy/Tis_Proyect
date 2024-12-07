@@ -1,6 +1,6 @@
 import { BaseService } from '../core/BaseService.js';
 import { ServiceModel } from '../models/ServiceModel.js';
-import { ServicioRepository } from '../repository/ServicioRepository.js';
+import { ServiceRepository } from '../repository/ServiceRepository.js';
 import { TarifaService } from './TarifaService.js';
 import { OfferingService } from './OfferingService.js';
 
@@ -8,7 +8,7 @@ export class ServiceService extends BaseService {
     constructor() {
         const serviceModel = new ServiceModel();
         super(serviceModel);
-        this.repository = new ServicioRepository();
+        this.repository = new ServiceRepository();
         this.tarifaService = new TarifaService();
         this.offeringService = new OfferingService();
     }

@@ -2,7 +2,7 @@ import { BaseModel } from '../core/BaseModel.js';
 import { BookingModel } from './BookingModel.js';
 import { UserModel } from './UserModel.js';
 import { TaxiModel } from './TaxiModel.js';
-import { InvoiceModel } from './ReceiptModel.js';
+import { ReceiptModel } from './ReceiptModel.js';
 
 export class TripModel extends BaseModel {
     static defaultData = {
@@ -32,7 +32,7 @@ export class TripModel extends BaseModel {
             booking: data.booking instanceof BookingModel ? data.booking : null,
             driver: data.driver instanceof UserModel ? data.driver : null,
             taxi: data.taxi instanceof TaxiModel ? data.taxi : null,
-            invoice: data.invoice instanceof InvoiceModel ? data.invoice : null
+            invoice: data.invoice instanceof ReceiptModel ? data.invoice : null
         };
 
         super(modelData, TripModel.defaultData);
@@ -47,8 +47,8 @@ export class TripModel extends BaseModel {
         if (data.taxi && !(data.taxi instanceof TaxiModel)) {
             this._data.taxi = new TaxiModel(data.taxi);
         }
-        if (data.invoice && !(data.invoice instanceof InvoiceModel)) {
-            this._data.invoice = new InvoiceModel(data.invoice);
+        if (data.invoice && !(data.invoice instanceof ReceiptModel)) {
+            this._data.invoice = new ReceiptModel(data.invoice);
         }
 
         // Inicializar arreglos de relaciones
