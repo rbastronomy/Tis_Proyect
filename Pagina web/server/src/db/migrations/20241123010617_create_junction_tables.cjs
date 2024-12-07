@@ -27,7 +27,7 @@ exports.up = function(knex) {
         // VALORA table (persona-viaje-valoracion)
         .createTable('valora', function(table) {
             table.integer('rut_persona')
-                .references('rut_persona')
+                .references('rut')
                 .inTable('persona')
                 .onDelete('RESTRICT')
                 .onUpdate('CASCADE');

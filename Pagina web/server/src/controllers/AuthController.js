@@ -53,9 +53,9 @@ export class AuthController {
    */
   async login(request, reply) {
     try {
-      const { email, password } = request.body;
-      console.log('Login attempt with email:', email);
-      const { user, session } = await this.authService.login(email, password);
+      const { correo, contrasena } = request.body;
+      console.log('Login attempt with email:', correo);
+      const { user, session } = await this.authService.login(correo, contrasena);
       
       const sessionCookie = this.authService.auth.createSessionCookie(session);
       reply.header('Set-Cookie', sessionCookie.serialize());

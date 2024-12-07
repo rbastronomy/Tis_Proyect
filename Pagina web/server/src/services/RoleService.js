@@ -1,12 +1,11 @@
 import { BaseService } from '../core/BaseService.js';
 import { RoleRepository } from '../repository/RoleRepository.js';
 import { PermissionService } from './PermissionService.js';
-
+import { RoleModel } from '../models/RoleModel.js';
 export class RoleService extends BaseService {
     constructor() {
         const roleRepository = new RoleRepository();
         super(roleRepository);
-        this.roleRepository = roleRepository;
         this.permissionService = new PermissionService();
     }
 
@@ -65,15 +64,17 @@ export class RoleService extends BaseService {
      * @returns {Promise<RoleModel|null>}
      */
     async findById(id) {
-        const role = await this.roleRepository.findById(id);
-        if (!role) return null;
+        const roleData = await this.repository.findById(id);
+        if (!roleData) return null;
 
         // Get full permission objects using PermissionService
-        const permissions = await this.getPermissions(id);
-        return {
-            ...role,
-            permissions
-        };
+        const permissions = await this.permissionService.getPermissionsForRole(roleData.id_roles);
+        
+        const role = RoleModel.toModel(roleData);
+        
+
+        role.permissions = permissions;
+        return role;
     }
 
     /**

@@ -14,25 +14,16 @@ export class RoleRepository extends BaseRepository {
   /**
    * Finds a role by its ID
    * @param {string|number} roleId - The ID of the role
-   * @returns {Promise<RoleModel|null>} - The role model or null if not found
+   * @returns {Promise<RoleData|null>}
    */
   async findById(roleId) {
     try {
-      const role = await this.db(this.tableName)
+      const roleData = await this.db(this.tableName)
         .where(this.primaryKey, roleId)
         .first();
+      if (!roleData) return null;
 
-      if (!role) return null;
-
-      const permissions = await this.db('permiso')
-        .join('posee', 'permiso.id_permisos', 'posee.id_permisos')
-        .where('posee.id_roles', roleId)
-        .select('permiso.*');
-      
-      return this._toModel({
-        ...role,
-        permissions
-      });
+      return roleData;
     } catch (error) {
       throw new Error(`Error finding role by ID: ${error.message}`);
     }

@@ -1,5 +1,6 @@
 import { BaseService } from '../core/BaseService.js';
 import PermissionRepository from '../repository/PermissionRepository.js';
+import { PermissionModel } from '../models/PermissionModel.js';
 
 export class PermissionService extends BaseService {
     constructor() {
@@ -42,5 +43,15 @@ export class PermissionService extends BaseService {
      */
     async findById(id) {
         return this.repository.findById(id);
+    }
+
+    /**
+     * Get permissions for a role
+     * @param {string} roleId - Role ID
+     * @returns {Promise<PermissionModel[]>}
+     */
+    async getPermissionsForRole(roleId) {
+       const permissions = await this.repository.findByRole(roleId);
+       return PermissionModel.toModels(permissions);
     }
 }

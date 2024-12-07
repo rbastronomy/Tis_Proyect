@@ -30,8 +30,8 @@ function Login() {
         },
         credentials: 'include',
         body: JSON.stringify({
-          email: data.email,
-          password: data.password
+          correo: data.email,
+          contrasena: data.password
         }),
       });
 

@@ -40,11 +40,11 @@ export class UserRepository extends BaseRepository {
    */
   async findByEmail(email) {
     try {
-      const result = await this.db.select('*')
+      const userData = await this.db.select('*')
         .from(this.tableName)
         .where('correo', '=', email)
         .first();
-      return this._toModel(result);
+      return userData
     } catch (error) {
       console.error('Error finding user by email:', error);
       throw error;
@@ -107,22 +107,20 @@ export class UserRepository extends BaseRepository {
         created_at: new Date(),
         updated_at: new Date()
       };
-
-      console.log('Formatted data for DB:', dbData);
-
+      
       const [insertedId] = await this.db(this.tableName)
         .insert(dbData)
         .returning(['rut']);
 
       console.log('Inserted RUT:', insertedId.rut);
 
-      const result = await this.db.select('*')
+      const userDB = await this.db.select('*')
         .from(this.tableName)
         .where({ rut: formattedRut })
         .first();
 
-      console.log('Found user after insert:', result);
-      return this._toModel(result);
+      console.log('Found user after insert:', userDB);
+      return userDB
     } catch (error) {
       console.error('Error creating user:', error);
       if (error.code === '42P01') {
