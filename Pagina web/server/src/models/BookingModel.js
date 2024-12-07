@@ -27,8 +27,6 @@ export class BookingModel extends BaseModel {
     static defaultData = {
         // Campos de la tabla 'reserva'
         codigo_reserva: null,    // ID de la reserva
-        rut_conductor: null,    // RUT del conductor
-        patente_taxi: null,     // Patente del taxi
         origen_reserva: '',            // Origen
         destino_reserva: '',           // Destino
         fecha_reserva: null,         // Fecha de reserva
@@ -37,8 +35,6 @@ export class BookingModel extends BaseModel {
         observacion_reserva: '',        // Observaciones
         estado_reserva: 'EN_REVISION', // Estado
         deleted_at_reserva: null,      // Soft delete
-        costo_estimado: 0,      // Costo estimado
-        oferta_id: null,        // ID de la oferta
 
         // Modelos relacionados
         driver: null,           // Conductor (UserModel)
@@ -168,7 +164,8 @@ export class BookingModel extends BaseModel {
             tipo_reserva: this._data.tipo_reserva,
             observacion_reserva: this._data.observacion_reserva,
             estado_reserva: this._data.estado_reserva,
-            generates: this._data.generates,
+            deleted_at_reserva: this._data.deleted_at_reserva,
+            genera: this._data.genera,
             costo_estimado: this._data.costo_estimado,
         };
 
@@ -256,29 +253,6 @@ export class BookingModel extends BaseModel {
             metodo_pago: receiptModel.metodo_pago,
             descripcion_tarifa: receiptModel.descripcion_tarifa
         };
-    }
-
-    // Update toJSON to include new fields
-    toJSON() {
-        const json = {
-            ...super.toJSON(),
-            idhistorial: this._data.idhistorial,
-            rut_conductor: this._data.rut_conductor,
-            patente_taxi: this._data.patente_taxi,
-            tipo_reserva: this._data.tipo_reserva,
-            estado_reserva: this._data.estado_reserva,
-            codigos: this._data.codigos,
-            generates: this._data.generates,
-            costo_estimado: this._data.costo_estimado,
-            tarifa_id: this._data.tarifa_id
-        };
-
-        // Add related models
-        if (this._data.rate) json.rate = this._data.rate.toJSON();
-        if (this._data.trip_info) json.trip_info = this._data.trip_info;
-        if (this._data.invoice_info) json.invoice_info = this._data.invoice_info;
-
-        return json;
     }
 
     // Método para agregar relación servicio-tarifa

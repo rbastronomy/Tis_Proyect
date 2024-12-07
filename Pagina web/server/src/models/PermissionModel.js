@@ -27,18 +27,18 @@ import { BaseModel } from '../core/BaseModel.js';
     * @extends {BaseModel<PermissionModelData>}
     */
 export class PermissionModel extends BaseModel {
-    /**
-    * Default values for a new permission instance
-    * @type {PermissionModelData}
-    */
-    static defaultData = {
-      id_permisos: null,
-      nombre_permiso: '',
-      descripcion_permiso: '',
-      fecha_creacion: new Date(),
-      created_at: null,
-      updated_at: null
-    };
+  /**
+   * Default values for a new permission instance
+   * @type {PermissionModelData}
+   */
+  static defaultData = {
+    id_permisos: null,
+    nombre_permiso: '',
+    descripcion_permiso: '',
+    fecha_creacion: new Date(),
+    created_at: null,
+    updated_at: null
+  };
 
     /**
     * Creates a new PermissionModel instance
