@@ -120,6 +120,24 @@ export class TripRepository extends BaseRepository {
     return results.map(result => new this.modelClass(result));
   }
 
+  async findByUser(rut) {
+    const results = await this.db(this.tableName)
+      .select(
+        'viaje.*',
+        'reserva.origen_reserva',
+        'reserva.destino_reserva',
+        'reserva.tipo_reserva',
+        'persona.nombre as conductor_nombre',
+        'persona.apellido as conductor_apellido'
+      )
+      .join('reserva', 'viaje.codigo_reserva', 'reserva.codigo_reserva')
+      .join('persona', 'reserva.rut_conductor', 'persona.rut')
+      .where('reserva.rut_pasajero', rut)
+      .orderBy('viaje.fecha_viaje', 'desc');
+
+    return results.map(result => new this.modelClass(result));
+  }
+
   /**
    * Find trip with full details
    * @param {number} codigo_viaje - Trip ID
