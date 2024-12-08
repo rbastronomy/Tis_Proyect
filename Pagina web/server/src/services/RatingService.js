@@ -1,4 +1,4 @@
-import { BaseRepository } from "../core/BaseRepository,js";
+import { BaseService } from "../core/BaseService.js";
 import { RatingModel } from "../models/RatingModel.js";
 import { RatingRepository } from "../repository/RatingRepository.js";
 import { TripRepository } from "../repository/TripRepository.js";
