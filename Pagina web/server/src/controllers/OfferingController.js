@@ -12,11 +12,11 @@ export class OfferingController extends BaseController {
      * @param {Object} reply - Fastify reply object
      */
     async getOfferingsByServiceAndType(request, reply) {
-        const { codigos, rideType } = request.params;
+        const { codigo_servicio, rideType } = request.params;
 
         try {
             const tariffs = await this.service.findByServiceAndType(
-                parseInt(codigos), 
+                parseInt(codigo_servicio), 
                 rideType
             );
             return reply.send(tariffs);

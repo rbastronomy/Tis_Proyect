@@ -23,7 +23,7 @@ function Navbar() {
     await logout();
   };
 
-  console.log(user?.role?.nombrerol);
+  console.log(user?.role?.nombre_rol);
 
   const menuItems = [
     { key: "/", label: "Inicio" },
@@ -36,7 +36,7 @@ function Navbar() {
     { key: "/contacto", label: "Contacto" },
     { key: "/sobre", label: "Sobre Nosotros" },
     { key: "/ayuda", label: "Ayuda" },
-    ...(isAuthenticated && user?.role?.nombrerol === 'ADMINISTRADOR' 
+    ...(isAuthenticated && user?.role?.nombre_rol === 'ADMINISTRADOR' 
       ? [{ key: "/admin/dashboard", label: "Panel Admin" }] 
       : []
     ),
@@ -160,7 +160,7 @@ function Navbar() {
         >
           Ayuda
         </Button>
-        {isAuthenticated && user?.role?.nombrerol === 'ADMINISTRADOR' && (
+        {isAuthenticated && user?.role?.nombre_rol === 'ADMINISTRADOR' && (
           <Button
             auto
             bordered

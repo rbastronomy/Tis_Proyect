@@ -2,7 +2,7 @@ import { BaseService } from '../core/BaseService.js';
 import { RateModel } from '../models/RateModel.js';
 import { RateRepository } from '../repository/RateRepository.js';
 
-export class TarifaService extends BaseService {
+export class RateService extends BaseService {
     constructor() {
         const rateModel = new RateModel();
         super(rateModel);
@@ -63,10 +63,11 @@ export class TarifaService extends BaseService {
      */
     async findById(id) {
         try {
-            const tariff = await this.repository.findById(id);
-            if (!tariff) {
+            const tariffDB = await this.repository.findById(id);
+            if (!tariffDB) {
                 throw new Error('Tarifa no encontrada');
             }
+            const tariff = new RateModel(tariffDB);
             return tariff;
         } catch (error) {
             throw new Error(`Error retrieving tariff: ${error.message}`);

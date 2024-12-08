@@ -34,7 +34,7 @@ function BookingList() {
     try {
       // Different endpoints based on user role
       const endpoint =
-        user?.role?.nombrerol === 'CONDUCTOR'
+        user?.role?.nombre_rol === 'CONDUCTOR'
           ? '/api/reservas/pending' // For drivers, show pending trips
           : '/api/reservas/' // For users/admin, show all bookings
 
@@ -130,7 +130,7 @@ function BookingList() {
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Mis Reservas</h1>
-        {['USUARIO', 'ADMINISTRADOR'].includes(user?.role?.nombrerol) && (
+        {['USUARIO', 'ADMINISTRADOR'].includes(user?.role?.nombre_rol) && (
           <Button
             color="primary"
             onClick={() => navigate({ to: '/reservas/create' })}
@@ -180,7 +180,7 @@ function BookingList() {
                 </div>
               </div>
             </CardBody>
-            {user?.role?.nombrerol === 'ADMINISTRADOR' && booking.estados === 'EN_REVISION' && (
+            {user?.role?.nombre_rol === 'ADMINISTRADOR' && booking.estados === 'EN_REVISION' && (
               <CardFooter className="gap-2">
                 <Button 
                   color="success" 

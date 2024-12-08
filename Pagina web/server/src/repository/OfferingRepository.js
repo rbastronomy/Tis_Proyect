@@ -9,10 +9,10 @@ export class OfferingRepository extends BaseRepository {
 
     /**
      * Find all offerings for a specific service
-     * @param {number} codigos - Service ID
+     * @param {number} codigo_servicio - Service ID
      * @returns {Promise<Array>} List of offerings with their tariffs
      */
-    async findByService(codigos) {
+    async findByService(codigo_servicio) {
         const results = await this.db(this.tableName)
             .select(
                 'oferta.*',
@@ -24,14 +24,14 @@ export class OfferingRepository extends BaseRepository {
                 'tarifa.fcreada',
                 'tarifa.deletedatt'
             )
-            .join('tarifa', 'oferta.idtarifa', 'tarifa.id_tarifa')
-            .join('servicio', 'oferta.codigos', 'servicio.codigos')
+            .join('tarifa', 'oferta.id_tarifa', 'tarifa.id_tarifa')
+            .join('servicio', 'oferta.codigo_servicio', 'servicio.codigo_servicio')
             .where({
-                'oferta.codigos': codigos,
-                'tarifa.estadot': 'ACTIVO',
-                'servicio.estados': 'ACTIVO'
+                'oferta.codigo_servicio': codigo_servicio,
+                'tarifa.estado_tarifa': 'ACTIVO',
+                'servicio.estado_servicio': 'ACTIVO'
             })
-            .whereNull('tarifa.deletedatt');
+            .whereNull('tarifa.deleted_at_tarifa');
 
         return results.map(result => this._toModel({
             ...result,
@@ -54,68 +54,49 @@ export class OfferingRepository extends BaseRepository {
      */
     async findByRideType(rideType) {
         const query = this.db(this.tableName)
-            .select(
-                'oferta.*',
-                'tarifa.id_tarifa as rate_id',
-                'tarifa.descripciont',
-                'tarifa.precio',
-                'tarifa.tipo as rate_tipo',
-                'tarifa.estadot',
-                'tarifa.fcreada',
-                'tarifa.deletedatt'
-            )
-            .join('tarifa', 'oferta.idtarifa', 'tarifa.id_tarifa')
-            .where('tarifa.estadot', 'ACTIVO')
-            .whereNull('tarifa.deletedatt');
+            .select('oferta.*')
+            .join('tarifa', 'oferta.id_tarifa', 'tarifa.id_tarifa')
+            .where({
+                'tarifa.estado_tarifa': 'ACTIVO'
+            })
+            .whereNull('tarifa.delete_at_tarifa');
 
         if (rideType === 'CITY') {
-            query.where('tarifa.tipo', 'TRASLADO_CIUDAD');
+            query.where('tarifa.tipo_tarifa', 'TRASLADO_CIUDAD');
         } else if (rideType === 'AIRPORT') {
-            query.whereNot('tarifa.tipo', 'TRASLADO_CIUDAD');
+            query.whereNot('tarifa.tipo_tarifa', 'TRASLADO_CIUDAD');
         }
 
         const results = await query;
-
-        return results.map(result => this._toModel({
-            ...result,
-            rate: RateModel.fromDB({
-                id: result.id,
-                tipo: result.tipo,
-                descripciont: result.descripciont,
-                precio: result.precio,
-                estadot: result.estadot,
-                fcreada: result.fcreada,
-                deletedatt: result.deletedatt
-            })
-        }));
+        return results;
     }
 
     /**
      * Find offerings for a specific service filtered by ride type
-     * @param {number} codigos - Service ID
+     * @param {number} codigo_servicio - Service ID
      * @param {string} rideType - Type of ride (CITY or AIRPORT)
      * @returns {Promise<Array>} List of filtered offerings
      */
-    async findByServiceAndType(codigos, rideType) {
+    async findByServiceAndType(codigo_servicio, rideType) {
         const query = this.db(this.tableName)
             .select(
                 'oferta.*',
-                'tarifa.id',
-                'tarifa.tipo',
-                'tarifa.descripciont',
+                'tarifa.id_tarifa as id',
+                'tarifa.tipo_tarifa as tipo',
+                'tarifa.descripcion_tarifa as descripciont',
                 'tarifa.precio',
-                'tarifa.estadot',
-                'tarifa.fcreada',
-                'tarifa.deletedatt'
+                'tarifa.estado_tarifa as estadot',
+                'tarifa.created_at as fcreada',
+                'tarifa.delete_at_tarifa as deletedatt'
             )
-            .join('tarifa', 'oferta.idtarifa', 'tarifa.id_tarifa')
-            .where('tarifa.estadot', 'ACTIVO')
-            .whereNull('tarifa.deletedatt');
+            .join('tarifa', 'oferta.id_tarifa', 'tarifa.id_tarifa')
+            .where('tarifa.estado_tarifa', 'ACTIVO')
+            .whereNull('tarifa.delete_at_tarifa');
 
         if (rideType === 'CITY') {
-            query.where('tarifa.tipo', 'TRASLADO_CIUDAD');
+            query.where('tarifa.tipo_tarifa', 'TRASLADO_CIUDAD');
         } else if (rideType === 'AIRPORT') {
-            query.whereNot('tarifa.tipo', 'TRASLADO_CIUDAD');
+            query.whereNot('tarifa.tipo_tarifa', 'TRASLADO_CIUDAD');
         }
 
         const results = await query;

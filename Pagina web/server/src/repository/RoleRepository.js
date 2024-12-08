@@ -55,7 +55,7 @@ export class RoleRepository extends BaseRepository {
     try {
       await this.db('posee').insert({
         id_roles: roleId,
-        id_permisos: permissionId,
+        id_permiso: permissionId,
         fecha_cambio_permiso: new Date(),
         created_at: new Date(),
         updated_at: new Date()
@@ -76,7 +76,7 @@ export class RoleRepository extends BaseRepository {
       await this.db('posee')
         .where({
           id_roles: roleId,
-          id_permisos: permissionId
+          id_permiso: permissionId
         })
         .delete();
     } catch (error) {
@@ -171,7 +171,7 @@ export class RoleRepository extends BaseRepository {
       const rolesWithPermissions = await Promise.all(
         roles.map(async (role) => {
           const permissions = await this.db('permiso')
-            .join('posee', 'permiso.id_permisos', 'posee.id_permisos')
+            .join('posee', 'permiso.id_permiso', 'posee.id_permiso')
             .where('posee.id_roles', role.id_roles)
             .select('permiso.*');
 

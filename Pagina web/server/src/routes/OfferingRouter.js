@@ -10,13 +10,13 @@ export class OfferingRouter extends BaseRouter {
 
     setupRoutes() {
         // Get offerings by service and ride type
-        this.addRoute('GET', '/by-service/:codigos/:rideType', {
+        this.addRoute('GET', '/by-service/:codigo_servicio/:rideType', {
             schema: {
                 params: {
                     type: 'object',
-                    required: ['codigos', 'rideType'],
+                    required: ['codigo_servicio', 'rideType'],
                     properties: {
-                        codigos: { type: 'integer' },
+                        codigo_servicio: { type: 'integer' },
                         rideType: { 
                             type: 'string',
                             enum: ['CITY', 'AIRPORT']

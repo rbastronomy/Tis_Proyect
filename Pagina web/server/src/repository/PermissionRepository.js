@@ -3,7 +3,7 @@ import { PermissionModel } from '../models/PermissionModel.js';
 
 export class PermissionRepository extends BaseRepository {
     constructor() {
-        super('permiso', PermissionModel, 'id_permisos');
+        super('permiso', PermissionModel, 'id_permiso');
     }
 
     _toModel(data) {
@@ -13,13 +13,13 @@ export class PermissionRepository extends BaseRepository {
 
     /**
      * Find permission by ID
-     * @param {number} id_permisos - Permission ID
+     * @param {number} id_permiso - Permission ID
      * @returns {Promise<PermissionModel|null>} Permission instance or null
      */
-    async findById(id_permisos) {
+    async findById(id_permiso) {
         try {
             const permission = await this.db(this.tableName)
-                .where('id_permisos', id_permisos)
+                .where('id_permiso', id_permiso)
                 .first();
             return this._toModel(permission);
         } catch (error) {
@@ -57,7 +57,7 @@ export class PermissionRepository extends BaseRepository {
                     created_at: new Date(),
                     updated_at: new Date()
                 })
-                .returning('id_permisos');
+                .returning('id_permiso');
 
             return this.findById(permissionId);
         } catch (error) {
@@ -67,14 +67,14 @@ export class PermissionRepository extends BaseRepository {
 
     /**
      * Update permission
-     * @param {number} id_permisos - Permission ID
+     * @param {number} id_permiso - Permission ID
      * @param {Object} updateData - Updated permission data
      * @returns {Promise<PermissionModel|null>} Updated permission or null
      */
-    async update(id_permisos, updateData) {
+    async update(id_permiso, updateData) {
         try {
             const [updated] = await this.db(this.tableName)
-                .where('id_permisos', id_permisos)
+                .where('id_permiso', id_permiso)
                 .update({
                     ...updateData,
                     updated_at: new Date()
@@ -113,7 +113,7 @@ export class PermissionRepository extends BaseRepository {
         try {
             const permissions = await this.db(this.tableName)
                 .select(`${this.tableName}.*`)
-                .join('posee', `${this.tableName}.${this.primaryKey}`, 'posee.id_permisos')
+                .join('posee', `${this.tableName}.${this.primaryKey}`, 'posee.id_permiso')
                 .where('posee.id_roles', id_roles)
                 .orderBy(`${this.tableName}.nombre_permiso`);
 

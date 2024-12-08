@@ -3,7 +3,7 @@ import { BaseModel } from '../core/BaseModel.js';
 /**
  * Represents permission data from the database
  * @typedef {Object} PermissionData
- * @property {number} id_permisos - Unique identifier for the permission
+ * @property {number} id_permiso - Unique identifier for the permission
  * @property {string} nombre_permiso - Name of the permission
  * @property {string} descripcion_permiso - Description of the permission
  * @property {Date} fecha_creacion - Date when the permission was created
@@ -14,7 +14,7 @@ import { BaseModel } from '../core/BaseModel.js';
 /**
  * Represents the internal data structure of PermissionModel
  * @typedef {Object} PermissionModelData
- * @property {number|null} id_permisos - Unique identifier for the permission
+ * @property {number|null} id_permiso - Unique identifier for the permission
  * @property {string} nombre_permiso - Name of the permission
  * @property {string} descripcion_permiso - Description of the permission
  * @property {Date} fecha_creacion - Date when the permission was created
@@ -32,7 +32,7 @@ export class PermissionModel extends BaseModel {
    * @type {PermissionModelData}
    */
   static defaultData = {
-    id_permisos: null,
+    id_permiso: null,
     nombre_permiso: '',
     descripcion_permiso: '',
     fecha_creacion: new Date(),
@@ -50,7 +50,7 @@ export class PermissionModel extends BaseModel {
 
     // Getters
     /** @returns {number|null} Permission's ID */
-    get id() { return this._data.id_permisos; }
+    get id() { return this._data.id_permiso; }
     /** @returns {string} Permission's name */
     get nombre() { return this._data.nombre_permiso; }
     /** @returns {string} Permission's description */
@@ -68,7 +68,7 @@ export class PermissionModel extends BaseModel {
     */
     toJSON() {
       return {
-        id_permisos: this._data.id_permisos,
+        id_permiso: this._data.id_permiso,
         nombre_permiso: this._data.nombre_permiso,
         descripcion_permiso: this._data.descripcion_permiso,
         fecha_creacion: this._data.fecha_creacion,

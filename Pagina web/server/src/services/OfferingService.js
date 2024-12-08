@@ -11,13 +11,13 @@ export class OfferingService extends BaseService {
 
     /**
      * Find all offerings for a specific service
-     * @param {number} codigos - Service ID
+     * @param {number} codigo_servicio - Service ID
      * @returns {Promise<Array>} List of offerings for the service
      * @throws {Error} If there's an error retrieving the offerings
      */
-    async findByService(codigos) {
+    async findByService(codigo_servicio) {
         try {
-            return await this.repository.findByService(codigos);
+            return await this.repository.findByService(codigo_servicio);
         } catch (error) {
             throw new Error(`Error retrieving offerings for service: ${error.message}`);
         }
@@ -31,7 +31,8 @@ export class OfferingService extends BaseService {
      */
     async findByRideType(rideType) {
         try {
-            return await this.repository.findByRideType(rideType);
+            const offeringsDB = await this.repository.findByRideType(rideType);
+            return offeringsDB;
         } catch (error) {
             throw new Error(`Error retrieving offerings by ride type: ${error.message}`);
         }
@@ -39,14 +40,14 @@ export class OfferingService extends BaseService {
 
     /**
      * Find offerings for a specific service filtered by ride type
-     * @param {number} codigos - Service ID
+     * @param {number} codigo_servicio - Service ID
      * @param {string} rideType - Type of ride (CITY or AIRPORT)
      * @returns {Promise<Array>} List of filtered offerings
      * @throws {Error} If there's an error retrieving the offerings
      */
-    async findByServiceAndType(codigos, rideType) {
+    async findByServiceAndType(codigo_servicio, rideType) {
         try {
-            return await this.repository.findByServiceAndType(codigos, rideType);
+            return await this.repository.findByServiceAndType(codigo_servicio, rideType);
         } catch (error) {
             throw new Error(`Error retrieving offerings by service and type: ${error.message}`);
         }
@@ -55,8 +56,8 @@ export class OfferingService extends BaseService {
     /**
      * Create a new offering
      * @param {Object} data - Offering data
-     * @param {number} data.idtarifa - Tariff ID
-     * @param {number} data.codigos - Service ID
+     * @param {number} data.id_tarifa - Tariff ID
+     * @param {number} data.codigo_servicio - Service ID
      * @returns {Promise<Object>} Created offering
      * @throws {Error} If there's an error creating the offering
      */

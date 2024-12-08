@@ -1,5 +1,5 @@
-import { BaseRepository } from "../core/BaseRepository";
-import { RatingModel } from "../models/RatingModel";
+import { BaseRepository } from "../core/BaseRepository.js";
+import { RatingModel } from "../models/RatingModel.js";
 
 export class RatingRepository extends BaseRepository{
     constructor(){
@@ -48,10 +48,22 @@ export class RatingRepository extends BaseRepository{
         try {
           const ratings = await this.db(this.tableName)
             .select("*")
-            .whereNull("deleted_at_reserva");
+            .whereNull("deleted_at_valoracion");
           return ratings.map((rating) => RatingModel.fromDB(rating));
         } catch (error) {
           throw new Error(`Error getting all ratings: ${error.message}`);
+        }
+    }
+
+    async findByTrip(codigo_viaje) {
+        try {
+            const ratings = await this.db(this.tableName)
+                .select('*')
+                .where('codigo_viaje', codigo_viaje)
+                .whereNull('deleted_at_valoracion');
+            return ratings.map((rating) => RatingModel.fromDB(rating));
+        } catch (error) {
+            throw new Error(`Error getting ratings for trip: ${error.message}`);
         }
     }
 }

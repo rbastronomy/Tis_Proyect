@@ -22,7 +22,7 @@ export class BookingRouter extends BaseRouter {
       schema: {
         body: {
           type: 'object',
-          required: ['origenv', 'destinov', 'freserva', 'codigos', 'tarifa_id'],
+          required: ['origenv', 'destinov', 'freserva', 'codigo_servicio', 'tarifa_id'],
           properties: {
             origenv: { 
               type: 'string',
@@ -47,7 +47,7 @@ export class BookingRouter extends BaseRouter {
               type: 'string',
               maxLength: 256
             },
-            codigos: {
+            codigo_servicio: {
               type: 'integer',
               description: 'Código del servicio solicitado'
             },

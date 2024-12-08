@@ -38,6 +38,151 @@ const AIRPORT_ADDRESS = {
   }
 };
 
+const isNightTime = (date) => {
+  const hours = new Date(date).getHours();
+  return hours >= 22 || hours < 6;
+};
+
+const getTimeOptions = () => {
+  const now = Date.now();
+  return [
+    {
+      key: 'ASAP',
+      label: 'Lo antes posible (30 minutos)',
+      value: new Date(now + 30 * 60000).toISOString()
+    },
+    {
+      key: 'HOUR_1',
+      label: 'En 1 hora',
+      value: new Date(now + 60 * 60000).toISOString()
+    },
+    {
+      key: 'HOUR_2',
+      label: 'En 2 horas',
+      value: new Date(now + 120 * 60000).toISOString()
+    },
+    {
+      key: 'HOUR_3',
+      label: 'En 3 horas',
+      value: new Date(now + 180 * 60000).toISOString()
+    }
+  ];
+};
+
+const getMinDateTime = () => {
+  const now = new Date();
+  now.setMinutes(now.getMinutes() + 30);
+  return now.toISOString().slice(0, 16);
+};
+
+const TimeSelector = ({ field, error, bookingType }) => {
+  const [selectedTimeKey, setSelectedTimeKey] = useState(() => {
+    if (field.value) {
+      const option = getTimeOptions().find(opt => 
+        Math.abs(new Date(opt.value) - new Date(field.value)) < 1000
+      );
+      return option?.key || 'ASAP';
+    }
+    return 'ASAP';
+  });
+
+  useEffect(() => {
+    if (!field.value) {
+      const asapOption = getTimeOptions().find(opt => opt.key === 'ASAP');
+      if (asapOption) {
+        field.onChange(asapOption.value);
+        setSelectedTimeKey('ASAP');
+      }
+    }
+  }, [field]);
+
+  useEffect(() => {
+    if (field.value) {
+      const option = getTimeOptions().find(opt => 
+        Math.abs(new Date(opt.value) - new Date(field.value)) < 1000
+      );
+      if (option && option.key !== selectedTimeKey) {
+        setSelectedTimeKey(option.key);
+      }
+    }
+  }, [field.value, selectedTimeKey]);
+
+  const handleTimeSelection = (keys) => {
+    const selectedKey = Array.from(keys)[0];
+    const option = getTimeOptions().find(opt => opt.key === selectedKey);
+    if (option) {
+      setSelectedTimeKey(selectedKey);
+      field.onChange(option.value);
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <label className="text-sm font-medium">
+        Hora de recogida
+      </label>
+      {bookingType === 'NORMAL' ? (
+        <div className="relative">
+          <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+          <Select
+            aria-label="Hora de recogida"
+            selectedKeys={new Set([selectedTimeKey])}
+            disallowEmptySelection={true}
+            onSelectionChange={handleTimeSelection}
+            classNames={{
+              trigger: "bg-default-100 pl-10",
+              base: error && "border-danger"
+            }}
+            isInvalid={!!error}
+            errorMessage={error?.message}
+          >
+            {getTimeOptions().map(option => (
+              <SelectItem 
+                key={option.key}
+                value={option.key}
+              >
+                {option.label}
+              </SelectItem>
+            ))}
+          </Select>
+          {field.value && (
+            <div className="text-sm text-gray-600 mt-1">
+              Hora seleccionada: {formatTimeOption(field.value)}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="relative">
+          <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+          <Input
+            type="datetime-local"
+            {...field}
+            min={getMinDateTime()}
+            className="pl-10"
+            classNames={{
+              input: "bg-transparent",
+              inputWrapper: ["bg-default-100", error && "border-danger"]
+            }}
+            isInvalid={!!error}
+            errorMessage={error?.message}
+          />
+        </div>
+      )}
+    </div>
+  );
+};
+
+TimeSelector.propTypes = {
+  field: PropTypes.shape({
+    onChange: PropTypes.func.isRequired,
+    value: PropTypes.string
+  }).isRequired,
+  error: PropTypes.shape({
+    message: PropTypes.string
+  }),
+  bookingType: PropTypes.string.isRequired
+};
+
 function CreateBooking() {
   const { isAuthenticated, user } = useAuth()
   const navigate = useNavigate()
@@ -45,24 +190,18 @@ function CreateBooking() {
   const [submitError, setSubmitError] = useState('')
   const [services, setServices] = useState([])
   const [loadingServices, setLoadingServices] = useState(true)
-  const [selectedService, setSelectedService] = useState('')
   const [rideType, setRideType] = useState(null) // 'CITY' or 'AIRPORT'
-  const [availableTariffs, setAvailableTariffs] = useState([])
-  const [loadingTariffs, setLoadingTariffs] = useState(false)
 
   const { control, handleSubmit, setValue, watch, formState: { errors } } = useForm({
     defaultValues: {
-      origenv: '',
-      destinov: '',
-      freserva: new Date(Date.now() + 30 * 60000).toISOString(),
-      codigos: '',
-      oferta_id: '',
-      observacion: ''
+      origen_reserva: '',
+      destino_reserva: '',
+      fecha_reserva: new Date(Date.now() + 30 * 60000).toISOString(),
+      codigo_servicio: '',
+      id_tarifa: '',
+      observacion_reserva: ''
     }
   });
-
-  // Watch for service changes
-  const selectedServiceId = watch('codigos');
 
   // Fetch services when ride type changes
   useEffect(() => {
@@ -75,8 +214,8 @@ function CreateBooking() {
             const data = await response.json();
             setServices(data);
             // Reset service selection when ride type changes
-            setValue('codigos', '');
-            setSelectedService('');
+            setValue('codigo_servicio', '');
+            setValue('id_tarifa', '');
           }
         } catch (error) {
           console.error('Error fetching services:', error);
@@ -89,44 +228,20 @@ function CreateBooking() {
     }
   }, [rideType, setValue]);
 
-  // Fetch tariffs when service is selected
-  useEffect(() => {
-    if (selectedServiceId && rideType) {
-      const fetchTariffs = async () => {
-        setLoadingTariffs(true);
-        try {
-          const response = await fetch(
-            `/api/offerings/by-service/${selectedServiceId}/${rideType}`
-          );
-          if (response.ok) {
-            const data = await response.json();
-            setAvailableTariffs(data);
-            setValue('oferta_id', '');
-          }
-        } catch (error) {
-          console.error('Error fetching tariffs:', error);
-        } finally {
-          setLoadingTariffs(false);
-        }
-      };
-
-      fetchTariffs();
-    }
-  }, [selectedServiceId, rideType, setValue]);
-
-  const selectedServiceData = services.find(s => s.codigos.toString() === selectedService);
-  const bookingType = selectedServiceData?.tipo;
+  const selectedServiceData = services.find(s => s.codigo_servicio.toString() === watch('codigo_servicio'));
+  const bookingType = selectedServiceData?.tipo_servicio;
+  const availableTariffs = selectedServiceData?.tarifas || [];
 
   // Set destination when ride type changes
   useEffect(() => {
     if (rideType === 'AIRPORT') {
-      setValue('destinov', AIRPORT_ADDRESS.label);
+      setValue('destino_reserva', AIRPORT_ADDRESS.label);
     } else {
-      setValue('destinov', '');
+      setValue('destino_reserva', '');
     }
   }, [rideType, setValue]);
 
-  if (!isAuthenticated || !['ADMINISTRADOR', 'USUARIO'].includes(user?.role?.nombrerol)) {
+  if (!isAuthenticated || !['ADMINISTRADOR', 'USUARIO'].includes(user?.role?.nombre_rol)) {
     return <div>Loading...</div>
   }
 
@@ -148,9 +263,10 @@ function CreateBooking() {
         credentials: 'include',
         body: JSON.stringify({
           ...data,
-          codigos: parseInt(data.codigos),
-          oferta_id: parseInt(data.oferta_id),
-          freserva: new Date(data.freserva).toISOString()
+          codigo_servicio: parseInt(data.codigo_servicio),
+          id_tarifa: parseInt(data.id_tarifa),
+          fecha_reserva: new Date(data.fecha_reserva).toISOString(),
+          tipo_reserva: rideType === 'CITY' ? 'CIUDAD' : 'AEROPUERTO'
         })
       })
 
@@ -167,134 +283,6 @@ function CreateBooking() {
       setLoading(false)
     }
   }
-
-  /**
-   * Generates time options for selection.
-   * @returns {Array<Object>} Array of time option objects.
-   */
-  const getTimeOptions = () => {
-    const now = Date.now();
-    return [
-      {
-        key: 'ASAP',
-        label: 'Lo antes posible (30 minutos)',
-        value: new Date(now + 30 * 60000).toISOString()
-      },
-      {
-        key: 'HOUR_1',
-        label: 'En 1 hora',
-        value: new Date(now + 60 * 60000).toISOString()
-      },
-      {
-        key: 'HOUR_2',
-        label: 'En 2 horas',
-        value: new Date(now + 120 * 60000).toISOString()
-      },
-      {
-        key: 'HOUR_3',
-        label: 'En 3 horas',
-        value: new Date(now + 180 * 60000).toISOString()
-      }
-    ];
-  };
-
-  /**
-   * Gets the minimum datetime value for the picker.
-   * @returns {string} ISO string representing the minimum datetime.
-   */
-  const getMinDateTime = () => {
-    const now = new Date()
-    now.setMinutes(now.getMinutes() + 30)
-    return now.toISOString().slice(0, 16)
-  }
-
-  const TimeOptionsSelect = ({ field, error }) => {
-    const [selectedTimeOption, setSelectedTimeOption] = useState('ASAP')
-    
-    useEffect(() => {
-      const option = getTimeOptions().find(opt => opt.key === 'ASAP');
-      if (option) {
-        field.onChange(option.value);
-      }
-    }, []);
-
-    return (
-      <div className="relative">
-        <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-        <Select
-          aria-label="Hora de llegada"
-          selectedKeys={new Set([selectedTimeOption])}
-          defaultSelectedKeys={new Set(['ASAP'])}
-          disallowEmptySelection={true}
-          onSelectionChange={(keys) => {
-            const selectedKey = Array.from(keys)[0];
-            setSelectedTimeOption(selectedKey);
-            field.onChange(selectedKey);
-          }}
-          classNames={{
-            trigger: "bg-default-100 pl-10",
-            base: error && "border-danger"
-          }}
-          isInvalid={!!error}
-          errorMessage={error?.message}
-        >
-          {getTimeOptions().map(option => (
-            <SelectItem 
-              key={option.key} 
-              value={option.key}
-            >
-              {option.label}
-            </SelectItem>
-          ))}
-        </Select>
-        {field.value && (
-          <div className="text-sm text-gray-600 mt-1">
-            Hora seleccionada: {formatTimeOption(field.value)}
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  TimeOptionsSelect.propTypes = {
-    field: PropTypes.shape({
-      onChange: PropTypes.func.isRequired,
-      value: PropTypes.string
-    }).isRequired,
-    error: PropTypes.shape({
-      message: PropTypes.string
-    })
-  };
-
-  const DateTimePicker = ({ field, error }) => {
-    return (
-      <div className="relative">
-        <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-        <Input
-          type="datetime-local"
-          {...field}
-          min={getMinDateTime()}
-          className="pl-10"
-          classNames={{
-            input: "bg-transparent",
-            inputWrapper: ["bg-default-100", error && "border-danger"]
-          }}
-          isInvalid={!!error}
-          errorMessage={error?.message}
-        />
-      </div>
-    );
-  };
-
-  DateTimePicker.propTypes = {
-    field: PropTypes.shape({
-      onChange: PropTypes.func.isRequired,
-      value: PropTypes.string
-    }).isRequired,
-    error: PropTypes.shape({
-      message: PropTypes.string
-    })
-  };
 
   return (
     <div className="flex justify-center items-center min-h-[calc(100vh-64px)] bg-gradient-to-b from-gray-50 to-white p-4">
@@ -339,7 +327,7 @@ function CreateBooking() {
             {/* Service Selection */}
             {rideType && (
               <Controller
-                name="codigos"
+                name="codigo_servicio"
                 control={control}
                 rules={{ required: "El tipo de servicio es requerido" }}
                 render={({ field, fieldState: { error } }) => (
@@ -348,11 +336,12 @@ function CreateBooking() {
                       Tipo de Servicio
                     </label>
                     <Select
-                      selectedKeys={selectedService ? new Set([selectedService]) : new Set()}
+                      selectedKeys={field.value ? new Set([field.value]) : new Set()}
                       onSelectionChange={(keys) => {
                         const selectedKey = Array.from(keys)[0];
-                        setSelectedService(selectedKey);
                         field.onChange(selectedKey);
+                        // Reset tariff selection when service changes
+                        setValue('id_tarifa', '');
                       }}
                       isLoading={loadingServices}
                       isInvalid={!!error}
@@ -360,10 +349,10 @@ function CreateBooking() {
                     >
                       {services.map((service) => (
                         <SelectItem 
-                          key={service.codigos.toString()} 
-                          value={service.codigos.toString()}
+                          key={service.codigo_servicio.toString()} 
+                          value={service.codigo_servicio.toString()}
                         >
-                          {service.tipo === 'NORMAL' ? 'Servicio Normal' : 'Servicio Programado'}
+                          {service.tipo_servicio === 'NORMAL' ? 'Servicio Normal' : 'Servicio Programado'}
                         </SelectItem>
                       ))}
                     </Select>
@@ -372,48 +361,77 @@ function CreateBooking() {
               />
             )}
 
-            {/* Tariff Selection */}
-            {selectedService && (
-              <Controller
-                name="oferta_id"
-                control={control}
-                rules={{ required: "La tarifa es requerida" }}
-                render={({ field, fieldState: { error } }) => (
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">
-                      Tarifa
-                    </label>
-                    <Select
-                      selectedKeys={field.value ? new Set([field.value.toString()]) : new Set()}
-                      onSelectionChange={(keys) => {
-                        const selectedKey = Array.from(keys)[0];
-                        field.onChange(selectedKey);
-                      }}
-                      isLoading={loadingTariffs}
-                      isInvalid={!!error}
-                      errorMessage={error?.message}
-                    >
-                      {availableTariffs.map((tariff) => (
-                        <SelectItem 
-                          key={tariff.id.toString()} 
-                          value={tariff.id.toString()}
-                          description={`$${tariff.precio}`}
-                        >
-                          {tariff.descripciont}
-                        </SelectItem>
-                      ))}
-                    </Select>
-                  </div>
-                )}
-              />
-            )}
-
-            {/* Rest of the form (addresses, time, observations) only show if tariff is selected */}
-            {watch('oferta_id') && (
+            {/* Show all other fields after service selection */}
+            {watch('codigo_servicio') && (
               <>
+                {/* Time Selection */}
+                <Controller
+                  name="fecha_reserva"
+                  control={control}
+                  rules={{ required: "La hora es requerida" }}
+                  render={({ field, fieldState: { error } }) => (
+                    <TimeSelector field={field} error={error} bookingType={bookingType} />
+                  )}
+                />
+
+                {/* Tariff Selection */}
+                <Controller
+                  name="id_tarifa"
+                  control={control}
+                  rules={{ required: "La tarifa es requerida" }}
+                  render={({ field, fieldState: { error } }) => {
+                    const selectedTime = watch('fecha_reserva');
+                    const isNight = selectedTime ? isNightTime(selectedTime) : false;
+                    
+                    // Filter tariffs based on time
+                    const filteredTariffs = availableTariffs.filter(tariff => {
+                      if (!selectedTime) return true; // Show all tariffs if no time selected
+                      const isNightTariff = tariff.tipo_tarifa.includes('NOCTURNO');
+                      return isNight ? isNightTariff : !isNightTariff;
+                    });
+
+                    return (
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">
+                          Tarifa
+                        </label>
+                        <Select
+                          selectedKeys={field.value ? new Set([field.value.toString()]) : new Set()}
+                          onSelectionChange={(keys) => {
+                            const selectedKey = Array.from(keys)[0];
+                            field.onChange(selectedKey);
+                          }}
+                          isInvalid={!!error}
+                          errorMessage={error?.message}
+                          isDisabled={!selectedTime} // Disable selection until time is chosen
+                        >
+                          {filteredTariffs.map((tariff) => (
+                            <SelectItem 
+                              key={tariff.id_tarifa.toString()} 
+                              value={tariff.id_tarifa.toString()}
+                            >
+                              {tariff.descripcion_tarifa}
+                            </SelectItem>
+                          ))}
+                        </Select>
+                        {selectedTime && filteredTariffs.length === 0 && (
+                          <p className="text-sm text-danger">
+                            No hay tarifas disponibles para el horario seleccionado
+                          </p>
+                        )}
+                        {!selectedTime && (
+                          <p className="text-sm text-gray-500">
+                            Seleccione primero la hora de recogida
+                          </p>
+                        )}
+                      </div>
+                    );
+                  }}
+                />
+
                 {/* Origin Address */}
                 <Controller
-                  name="origenv"
+                  name="origen_reserva"
                   control={control}
                   rules={{ required: "La dirección de origen es requerida" }}
                   render={({ field, fieldState: { error } }) => (
@@ -444,7 +462,7 @@ function CreateBooking() {
 
                 {/* Destination Address */}
                 <Controller
-                  name="destinov"
+                  name="destino_reserva"
                   control={control}
                   rules={{ required: "La dirección de destino es requerida" }}
                   render={({ field, fieldState: { error } }) => (
@@ -489,35 +507,14 @@ function CreateBooking() {
                   )}
                 />
 
-                {/* Time Selection */}
-                {bookingType && (
-                  <Controller
-                    name="freserva"
-                    control={control}
-                    rules={{ required: "La hora es requerida" }}
-                    render={({ field, fieldState: { error } }) => (
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">
-                          {bookingType === 'NORMAL' ? 'Hora Estimada de Llegada' : 'Fecha y Hora del Servicio'}
-                        </label>
-                        {bookingType === 'NORMAL' ? (
-                          <TimeOptionsSelect field={field} error={error} />
-                        ) : (
-                          <DateTimePicker field={field} error={error} />
-                        )}
-                      </div>
-                    )}
-                  />
-                )}
-
                 {/* Observations */}
                 <Controller
-                  name="observacion"
+                  name="observacion_reserva"
                   control={control}
                   render={({ field }) => (
                     <div className="space-y-2">
                       <label className="text-sm font-medium">
-                        Observaciones
+                        observacion_reservaes
                       </label>
                       <Textarea
                         {...field}
@@ -540,7 +537,7 @@ function CreateBooking() {
               className="w-full"
               size="lg"
               isLoading={loading}
-              isDisabled={!watch('oferta_id') || Object.keys(errors).length > 0}
+              isDisabled={!watch('id_tarifa') || Object.keys(errors).length > 0}
             >
               {loading ? "Procesando..." : "Solicitar Servicio"}
             </Button>

@@ -28,10 +28,23 @@ export class ServiceRouter extends BaseRouter {
             items: {
               type: 'object',
               properties: {
-                codigos: { type: 'integer' },
-                tipo: { type: 'string' },
-                descripciont: { type: 'string' },
-                estados: { type: 'string' }
+                codigo_servicio: { type: 'integer' },
+                tipo_servicio: { type: 'string' },
+                descripcion_servicio: { type: 'string' },
+                estado_servicio: { type: 'string' },
+                tarifas: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      id_tarifa: { type: 'integer' },
+                      tipo_tarifa: { type: 'string' },
+                      descripcion_tarifa: { type: 'string' },
+                      precio_tarifa: { type: 'number' },
+                      estado_tarifa: { type: 'string' }
+                    }
+                  }
+                }
               }
             }
           }
@@ -52,10 +65,10 @@ export class ServiceRouter extends BaseRouter {
                 items: {
                   type: 'object',
                   properties: {
-                    codigos: { type: 'integer' },
+                    codigo_servicio: { type: 'integer' },
                     tipo: { type: 'string' },
                     descripciont: { type: 'string' },
-                    estados: { type: 'string' }
+                    estado_servicio: { type: 'string' }
                   }
                 }
               }
