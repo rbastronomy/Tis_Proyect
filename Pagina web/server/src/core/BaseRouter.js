@@ -31,6 +31,9 @@ export class BaseRouter {
    */
   registerRoutes() {
     this.routes.forEach(({ method, path, options }) => {
+      const fullPath = `${this.prefix}${path}`;
+      console.log(`Registering route: ${method} ${fullPath}`);
+
       this.provider[method.toLowerCase()](path, options);
     });
   }
@@ -103,4 +106,83 @@ export class BaseRouter {
       this.withPermissions(handler, permissions, roles)
     );
   }
+
+  /**
+   * Registra una ruta GET para obtener datos paginados
+   * @param {string} path - Ruta base (ej: '/users')
+   * @param {Object} options - Opciones de la ruta
+   */
+  registerPaginatedRoute(path, controller) {
+    const fullPath = this.prefix + path;
+    
+    this.provider.get(fullPath, {
+      schema: {
+        querystring: {
+          type: 'object',
+          properties: {
+            page: { type: 'integer', minimum: 1, default: 1 },
+            pageSize: { type: 'integer', minimum: 1, default: 10 },
+            orderBy: { type: 'string' },
+            order: { type: 'string', enum: ['asc', 'desc'] }
+          }
+        }
+      },
+      handler: this.withErrorHandler(controller.getPaginated.bind(controller))
+    });
+  }
+
+  registerCrudRoutes(path, controller) {
+    const fullPath = this.prefix + path;
+
+    // GET /resource (paginado)
+    this.registerPaginatedRoute(path, controller);
+
+    // GET /resource/:id
+    this.provider.get(`${fullPath}/:id`, {
+      handler: this.withErrorHandler(controller.getById.bind(controller))
+    });
+
+    // POST /resource
+    this.provider.post(fullPath, {
+      handler: this.withErrorHandler(controller.create.bind(controller))
+    });
+
+    // PUT /resource/:id
+    this.provider.put(`${fullPath}/:id`, {
+      handler: this.withErrorHandler(controller.update.bind(controller))
+    });
+
+    // DELETE /resource/:id
+    this.provider.delete(`${fullPath}/:id`, {
+      handler: this.withErrorHandler(controller.delete.bind(controller))
+    });
+  }
+
+  registerProtectedCrudRoutes(path, controller, permissions = [], roles = []) {
+    const fullPath = this.prefix + path;
+
+    // GET /resource (paginado)
+    this.provider.get(fullPath, {
+      schema: {
+        querystring: {
+          type: 'object',
+          properties: {
+            page: { type: 'integer', minimum: 1, default: 1 },
+            pageSize: { type: 'integer', minimum: 1, default: 10 },
+            orderBy: { type: 'string' },
+            order: { type: 'string', enum: ['asc', 'desc'] }
+          }
+        }
+      },
+      handler: this.withAuth(
+        controller.getPaginated.bind(controller),
+        permissions,
+        roles
+      )
+    });
+
+    // Otras rutas CRUD protegidas...
+    // ... (similar a registerCrudRoutes pero con withAuth)
+  }
+
 }

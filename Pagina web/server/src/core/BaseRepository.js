@@ -3,25 +3,12 @@ import { db } from '../db/database.js';
 export class BaseRepository {
   /**
    * @param {string} tableName - Nombre de la tabla en la base de datos
-   * @param {class} ModelClass - Clase del modelo a utilizar para las instancias
    * @param {string} primaryKey - Nombre de la columna ID
    */
-  constructor(tableName, ModelClass, primaryKey = 'id') {
+  constructor(tableName, primaryKey = 'id') {
     this.tableName = tableName;
-    this.ModelClass = ModelClass;
     this.primaryKey = primaryKey;
     this.db = db;
-  }
-
-  /**
-   * Convierte datos de la DB al modelo correspondiente
-   * @param {Object} data - Datos crudos de la base de datos
-   * @returns {Object|null} - Instancia del modelo o null
-   * @protected
-   */
-  _toModel(data) {
-    if (!data) return null;
-    return new this.ModelClass(data);
   }
 
   /**
@@ -34,7 +21,7 @@ export class BaseRepository {
       const result = await this.db(this.tableName)
         .where(this.primaryKey, id)
         .first();
-      return this._toModel(result);
+      return result;
     } catch (error) {
       throw new Error(`Error al buscar por ID en ${this.tableName}: ${error.message}`);
     }
@@ -50,7 +37,7 @@ export class BaseRepository {
       const results = await this.db(this.tableName)
         .where(filters)
         .select('*');
-      return results.map(result => this._toModel(result));
+      return results;
     } catch (error) {
       throw new Error(`Error al buscar todos en ${this.tableName}: ${error.message}`);
     }
@@ -63,10 +50,10 @@ export class BaseRepository {
    */
   async create(data) {
     try {
-      const [id] = await this.db(this.tableName)
+      const [newRecord] = await this.db(this.tableName)
         .insert(data)
-        .returning(this.primaryKey);
-      return id;
+        .returning('*');
+      return newRecord;
     } catch (error) {
       throw new Error(`Error al crear en ${this.tableName}: ${error.message}`);
     }
@@ -84,7 +71,7 @@ export class BaseRepository {
         .where(this.primaryKey, id)
         .update(data)
         .returning('*');
-      return this._toModel(updated);
+      return updated;
     } catch (error) {
       throw new Error(`Error al actualizar en ${this.tableName}: ${error.message}`);
     }
@@ -138,6 +125,9 @@ export class BaseRepository {
         }
       });
 
+      const totalQuery = query.clone();
+      const [{ count: total }] = await totalQuery.count('* as count');
+  
       // Opcional: Paginación
       if (options.page && options.pageSize) {
         const page = options.page > 0 ? options.page : 1;
@@ -152,7 +142,17 @@ export class BaseRepository {
         query = query.orderBy(options.orderBy, options.order || 'asc');
       }
 
-      return await query;
+      const data = await query;
+
+      return {
+        data,
+        pagination: {
+          total: parseInt(total),
+          page: options.page || 1,
+          pageSize: options.pageSize || 10,
+          totalPages: Math.ceil(total / (options.pageSize || 10))
+        }
+      };
     } catch (error) {
       throw new Error(`Error en búsqueda compleja en ${this.tableName}: ${error.message}`);
     }

@@ -1,6 +1,6 @@
 import { BaseRepository } from '../core/BaseRepository.js';
 import { OfferingModel } from '../models/OfferingModel.js';
-import { RateModel } from '../models/TarifaModel.js';
+import { RateModel } from '../models/RateModel.js';
 
 export class OfferingRepository extends BaseRepository {
     constructor() {

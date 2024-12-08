@@ -13,6 +13,7 @@ import { createFileRoute } from '@tanstack/react-router'
 // Import Routes
 
 import { Route as rootRoute } from './routes/__root'
+import { Route as ExamplePageImport } from './routes/ExamplePage'
 import { Route as TaxiIndexImport } from './routes/taxi/index'
 import { Route as PostIndexImport } from './routes/post/index'
 import { Route as TaxiRutaImport } from './routes/taxi/ruta'
@@ -63,6 +64,11 @@ const AyudaLazyRoute = AyudaLazyImport.update({
   path: '/ayuda',
   getParentRoute: () => rootRoute,
 } as any).lazy(() => import('./routes/ayuda.lazy').then((d) => d.Route))
+
+const ExamplePageRoute = ExamplePageImport.update({
+  path: '/ExamplePage',
+  getParentRoute: () => rootRoute,
+} as any)
 
 const IndexLazyRoute = IndexLazyImport.update({
   path: '/',
@@ -126,6 +132,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexLazyImport
+      parentRoute: typeof rootRoute
+    }
+    '/ExamplePage': {
+      id: '/ExamplePage'
+      path: '/ExamplePage'
+      fullPath: '/ExamplePage'
+      preLoaderRoute: typeof ExamplePageImport
       parentRoute: typeof rootRoute
     }
     '/ayuda': {
@@ -233,6 +246,7 @@ declare module '@tanstack/react-router' {
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexLazyRoute
+  '/ExamplePage': typeof ExamplePageRoute
   '/ayuda': typeof AyudaLazyRoute
   '/contacto': typeof ContactoLazyRoute
   '/dashboard': typeof DashboardLazyRoute
@@ -251,6 +265,7 @@ export interface FileRoutesByFullPath {
 
 export interface FileRoutesByTo {
   '/': typeof IndexLazyRoute
+  '/ExamplePage': typeof ExamplePageRoute
   '/ayuda': typeof AyudaLazyRoute
   '/contacto': typeof ContactoLazyRoute
   '/dashboard': typeof DashboardLazyRoute
@@ -270,6 +285,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRoute
   '/': typeof IndexLazyRoute
+  '/ExamplePage': typeof ExamplePageRoute
   '/ayuda': typeof AyudaLazyRoute
   '/contacto': typeof ContactoLazyRoute
   '/dashboard': typeof DashboardLazyRoute
@@ -290,6 +306,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/ExamplePage'
     | '/ayuda'
     | '/contacto'
     | '/dashboard'
@@ -307,6 +324,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/ExamplePage'
     | '/ayuda'
     | '/contacto'
     | '/dashboard'
@@ -324,6 +342,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/ExamplePage'
     | '/ayuda'
     | '/contacto'
     | '/dashboard'
@@ -343,6 +362,7 @@ export interface FileRouteTypes {
 
 export interface RootRouteChildren {
   IndexLazyRoute: typeof IndexLazyRoute
+  ExamplePageRoute: typeof ExamplePageRoute
   AyudaLazyRoute: typeof AyudaLazyRoute
   ContactoLazyRoute: typeof ContactoLazyRoute
   DashboardLazyRoute: typeof DashboardLazyRoute
@@ -361,6 +381,7 @@ export interface RootRouteChildren {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexLazyRoute: IndexLazyRoute,
+  ExamplePageRoute: ExamplePageRoute,
   AyudaLazyRoute: AyudaLazyRoute,
   ContactoLazyRoute: ContactoLazyRoute,
   DashboardLazyRoute: DashboardLazyRoute,
@@ -390,6 +411,7 @@ export const routeTree = rootRoute
       "filePath": "__root.jsx",
       "children": [
         "/",
+        "/ExamplePage",
         "/ayuda",
         "/contacto",
         "/dashboard",
@@ -408,6 +430,9 @@ export const routeTree = rootRoute
     },
     "/": {
       "filePath": "index.lazy.jsx"
+    },
+    "/ExamplePage": {
+      "filePath": "ExamplePage.jsx"
     },
     "/ayuda": {
       "filePath": "ayuda.lazy.jsx"

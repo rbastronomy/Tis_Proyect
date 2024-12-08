@@ -17,11 +17,57 @@ export class UserRouter extends BaseRouter {
   }
 
   setupRoutes() {
+    
+    // 1. Ruta paginada (para tablas o listas largas)
+    this.addRoute('GET', '/', {
+      schema: {
+        querystring: {
+          type: 'object',
+          properties: {
+            page: { type: 'integer', minimum: 1, default: 1 },
+            pageSize: { type: 'integer', minimum: 1, default: 10 },
+            orderBy: { type: 'string' },
+            order: { type: 'string', enum: ['asc', 'desc'] }
+          }
+        }
+      },
+      handler: this.withAuth(
+        this.controller.getPaginated.bind(this.controller),
+        [],
+        ['ADMINISTRADOR']
+      )
+    });
+
+    /*
     this.addRoute('GET', '/', {
       handler: this.withAuth(
         this.controller.getAll.bind(this.controller),
         [],
         ['admin']
+      )
+    });
+    */
+
+    // 3. Búsqueda específica con filtros
+    this.provider.get('/search', {
+      schema: {
+        querystring: {
+          type: 'object',
+          properties: {
+            role: { type: 'string' },
+            status: { type: 'string' },
+            // otros filtros...
+          }
+        }
+      },
+      handler: this.withAuth(
+        async (request, reply) => {
+          const filters = request.query;
+          const data = await this.controller.getAll(filters);
+          return reply.send(data);
+        },
+        [],
+        ['ADMINISTRADOR']
       )
     });
 

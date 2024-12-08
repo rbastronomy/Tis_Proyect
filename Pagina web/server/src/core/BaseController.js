@@ -47,5 +47,23 @@ export class BaseController {
         reply.status(500).send(error.message);
       }
     }
+
+      /**
+     * Handler para obtener registros paginados
+     * @param {FastifyRequest} request
+     * @param {FastifyReply} reply
+     */
+    async getPaginated(request, reply) {
+      const { page = 1, pageSize = 10, orderBy, order, ...filters } = request.query;
+
+      const result = await this.service.findWherePaginated(filters, {
+        page: parseInt(page),
+        pageSize: parseInt(pageSize),
+        orderBy,
+        order
+      });
+
+      return reply.code(200).send(result);
+    }
   }
   

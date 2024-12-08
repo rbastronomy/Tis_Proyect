@@ -1,6 +1,5 @@
 import { BaseRepository } from "../core/BaseRepository.js";
 import { HistoryModel } from "../models/HistoryModel.js";
-
 export class HistoryRepository extends BaseRepository {
   constructor() {
     super("historial", HistoryModel, "id_historial");
