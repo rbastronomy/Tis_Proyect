@@ -5,8 +5,6 @@ export class ExampleRouter extends BaseRouter {
   constructor(provider) {
     super(provider, '/api/examples');
     this.controller = new ExampleController();
-    this.setupRoutes();
-    this.registerRoutes();
   }
 
   setupRoutes() {
