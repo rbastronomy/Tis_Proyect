@@ -1,134 +1,155 @@
 import { BaseService } from '../core/BaseService.js';
+import HistoryRepository from '../repository/HistoryRepository.js';
 import { HistoryModel } from '../models/HistoryModel.js';
-import { HistoryRepository } from '../repository/HistoryRepository.js';
 
+/**
+ * Service class for managing booking history
+ * @extends {BaseService}
+ */
 export class HistoryService extends BaseService {
+    /**
+     * Creates an instance of HistoryService
+     */
     constructor() {
-        const historyModel = new HistoryModel();
-        super(historyModel);
-        this.repository = new HistoryRepository();
+        const historyRepository = new HistoryRepository();
+        super(historyRepository);
     }
 
     /**
-     * Encuentra el historial por ID de usuario
-     * @param {number} userId - ID del usuario
-     * @returns {Promise<Array>} Lista de registros del historial
-     * @throws {Error} Si hay un error al recuperar el historial
+     * Creates a new history entry
+     * @param {Object} historyData - History entry data
+     * @param {string} historyData.estado_historial - Status of the history entry
+     * @param {string} [historyData.observacion_historial] - Observations or description
+     * @param {string} historyData.accion - Action performed
+     * @param {number} historyData.codigo_reserva - Related booking code
+     * @returns {Promise<Object>} Created history entry
+     * @throws {Error} If creation fails
      */
-    async findByUserId(userId) {
+    async createHistoryEntry(historyData) {
         try {
-            return await this.repository.findByUserId(userId);
-        } catch (error) {
-            throw new Error(`Error al recuperar historial del usuario: ${error.message}`);
-        }
-    }
-
-    /**
-     * Encuentra el historial por ID de servicio
-     * @param {number} serviceId - ID del servicio
-     * @returns {Promise<Array>} Lista de registros del historial
-     * @throws {Error} Si hay un error al recuperar el historial
-     */
-    async findByServiceId(serviceId) {
-        try {
-            return await this.repository.findByServiceId(serviceId);
-        } catch (error) {
-            throw new Error(`Error al recuperar historial del servicio: ${error.message}`);
-        }
-    }
-
-    /**
-     * Crea un nuevo registro en el historial
-     * @param {Object} data - Datos del historial
-     * @param {number} data.usuario_id - ID del usuario
-     * @param {number} data.servicio_id - ID del servicio
-     * @param {string} data.tipo_cambio - Tipo de cambio realizado
-     * @param {string} data.descripcion - Descripción del cambio
-     * @returns {Promise<Object>} Registro creado
-     * @throws {Error} Si hay un error al crear el registro
-     */
-    async create(data) {
-        try {
-            const historyEntry = await this.repository.create({
-                ...data,
-                fecha: new Date(),
-                created_at: new Date(),
-                updated_at: new Date()
+            return await this.repository.create({
+                estado_historial: historyData.estado_historial,
+                observacion_historial: historyData.observacion_historial || '',
+                accion: historyData.accion,
+                codigo_reserva: historyData.codigo_reserva,
+                fecha_cambio: new Date()
             });
-            return historyEntry;
         } catch (error) {
-            throw new Error(`Error al crear registro en historial: ${error.message}`);
+            console.error('Error creating history entry:', error);
+            throw new Error(`Error al crear entrada de historial: ${error.message}`);
         }
     }
 
     /**
-     * Encuentra el historial por rango de fechas
-     * @param {Date} startDate - Fecha inicial
-     * @param {Date} endDate - Fecha final
-     * @returns {Promise<Array>} Lista de registros del historial
-     * @throws {Error} Si hay un error al recuperar el historial
+     * Creates a history entry within a transaction
+     * @param {Object} trx - Knex transaction object
+     * @param {string} accion - Action performed
+     * @param {Object} [additionalData] - Additional data for the history entry
+     * @param {string} [additionalData.observacion_historial] - Observations
+     * @param {number} [additionalData.codigo_reserva] - Related booking code
+     * @returns {Promise<HistoryModel>} Created history entry model
+     * @throws {Error} If creation fails
      */
-    async findByDateRange(startDate, endDate) {
+    async createHistoryEntryWithTransaction(trx, accion, codigo_reserva, additionalData = {}) {
+        if (!trx) {
+            throw new Error('Transaction object is required');
+        }
+
+        try {
+            const historyData = {
+                estado_historial: 'RESERVA_EN_REVISION',
+                observacion_historial: additionalData.observacion_historial || '',
+                accion: accion,
+                codigo_reserva: codigo_reserva,
+                fecha_cambio: new Date()
+            };
+
+            // Create and validate model - single instance
+            const historyModel = new HistoryModel(historyData);
+            
+            // Save to database using the provided transaction
+            const rawHistory = await this.repository.create(historyModel.toJSON(), trx);
+            
+            // Update the existing model with the saved data (including ID and timestamps)
+            historyModel.update(rawHistory);
+            
+            return historyModel;
+        } catch (error) {
+            console.error('Error creating history entry with transaction:', error);
+            throw new Error(`Error al crear entrada de historial con transacción: ${error.message}`);
+        }
+    }
+
+    /**
+     * Gets history entries for a booking
+     * @param {number} codigo_reserva - Booking code
+     * @returns {Promise<Array>} History entries for the booking
+     */
+    async getBookingHistory(codigo_reserva) {
+        try {
+            return await this.repository.findByBookingCode(codigo_reserva);
+        } catch (error) {
+            console.error('Error getting booking history:', error);
+            throw new Error(`Error al obtener historial de reserva: ${error.message}`);
+        }
+    }
+
+    /**
+     * Gets history entries by state
+     * @param {string} estado - History state to filter by
+     * @returns {Promise<Array>} Filtered history entries
+     */
+    async getHistoryByState(estado) {
+        try {
+            return await this.repository.findByState(estado);
+        } catch (error) {
+            console.error('Error getting history by state:', error);
+            throw new Error(`Error al obtener historial por estado: ${error.message}`);
+        }
+    }
+
+    /**
+     * Gets history entries within a date range
+     * @param {Date} startDate - Start date
+     * @param {Date} endDate - End date
+     * @returns {Promise<Array>} History entries within range
+     */
+    async getHistoryByDateRange(startDate, endDate) {
         try {
             return await this.repository.findByDateRange(startDate, endDate);
         } catch (error) {
-            throw new Error(`Error al recuperar historial por rango de fechas: ${error.message}`);
+            console.error('Error getting history by date range:', error);
+            throw new Error(`Error al obtener historial por rango de fechas: ${error.message}`);
         }
     }
 
     /**
-     * Encuentra el historial por tipo de cambio
-     * @param {string} changeType - Tipo de cambio
-     * @returns {Promise<Array>} Lista de registros del historial
-     * @throws {Error} Si hay un error al recuperar el historial
+     * Gets history entries by action type
+     * @param {string} accion - Action type to filter by
+     * @returns {Promise<Array>} Filtered history entries
      */
-    async findByChangeType(changeType) {
+    async getHistoryByAction(accion) {
         try {
-            return await this.repository.findByChangeType(changeType);
+            return await this.repository.findByAction(accion);
         } catch (error) {
-            throw new Error(`Error al recuperar historial por tipo de cambio: ${error.message}`);
+            console.error('Error getting history by action:', error);
+            throw new Error(`Error al obtener historial por acción: ${error.message}`);
         }
     }
 
     /**
-     * Obtiene el historial paginado
-     * @param {number} page - Número de página
-     * @param {number} limit - Límite de registros por página
-     * @param {Object} filters - Filtros adicionales
-     * @returns {Promise<Object>} Objeto con registros y metadata de paginación
-     * @throws {Error} Si hay un error al recuperar el historial
+     * Gets detailed history entry with booking information
+     * @param {number} historyId - History entry ID
+     * @returns {Promise<Object|null>} History entry with booking details
      */
-    async getPaginated(page = 1, limit = 10, filters = {}) {
+    async getHistoryWithBookingDetails(historyId) {
         try {
-            const offset = (page - 1) * limit;
-            const records = await this.repository.findPaginated(offset, limit, filters);
-            const total = await this.repository.count(filters);
-
-            return {
-                records,
-                pagination: {
-                    page,
-                    limit,
-                    total,
-                    totalPages: Math.ceil(total / limit)
-                }
-            };
+            return await this.repository.findWithBookingDetails(historyId);
         } catch (error) {
-            throw new Error(`Error al recuperar historial paginado: ${error.message}`);
+            console.error('Error getting history with booking details:', error);
+            throw new Error(`Error al obtener historial con detalles de reserva: ${error.message}`);
         }
     }
+}
 
-    /**
-     * Obtiene resumen de cambios por período
-     * @param {string} period - Período ('day', 'week', 'month', 'year')
-     * @returns {Promise<Array>} Resumen de cambios agrupados por período
-     * @throws {Error} Si hay un error al generar el resumen
-     */
-    async getChangesSummary(period) {
-        try {
-            return await this.repository.getChangesSummary(period);
-        } catch (error) {
-            throw new Error(`Error al generar resumen de cambios: ${error.message}`);
-        }
-    }
-} 
+export default HistoryService; 

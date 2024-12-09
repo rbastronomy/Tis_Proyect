@@ -1,46 +1,75 @@
 import { BaseService } from "../core/BaseService.js";
 import BookingRepository from "../repository/BookingRepository.js";
 import { TaxiService } from "./TaxiService.js";
-import { HistoryRepository } from '../repository/HistoryRepository.js';
-import { GeneraRepository } from '../repository/GeneraRepository.js';
 import { ServiceService } from './ServiceService.js';
 import { RateService } from './RateService.js';
-import { TripRepository } from '../repository/TripRepository.js';
+import { BookingModel } from '../models/BookingModel.js';
+import { HistoryService } from './HistoryService.js';
+import { OfferingService } from "./OfferingService.js";
 
 export class BookingService extends BaseService {
     constructor() {
         const bookingRepository = new BookingRepository();
         super(bookingRepository);
         this.taxiService = new TaxiService();
-        this.HistoryRepository = new HistoryRepository();
-        this.generaRepository = new GeneraRepository();
         this.serviceService = new ServiceService();
         this.rateService = new RateService();
-        this.tripRepository = new TripRepository();
+        this.historyService = new HistoryService();
+        this.offeringService = new OfferingService();
     }
 
     /**
-     * Creates a new booking
-     * @param {Object} bookingData - Booking data
-     * @returns {Promise<Object>} Created booking
+     * Creates a new booking with its initial history entry
+     * @param {Object} bookingData - Data for the new booking
+     * @returns {Promise<{booking: BookingModel, history: HistoryModel}>} Created booking and history entry
      * @throws {Error} If creation fails
      */
     async createBooking(bookingData) {
-        this.validarDatosBooking(bookingData);
-
-        const trx = await this.repository.transaction();
-
         try {
-            const historial = await this.crearEntradaHistorial(trx, 'creada');
-            bookingData.historial = historial.codigoreserva;
-            bookingData.estados = 'pendiente';
+            const offeringId = await this.offeringService.findIdByServiceAndRate(
+                bookingData.codigo_servicio, 
+                bookingData.id_tarifa
+            );
+
+            if (!offeringId) {
+                throw new Error('Oferta no encontrada');
+            }
             
-            const createdBooking = await this.repository.create(bookingData);
-            await trx.commit();
-            return createdBooking;
+            // Remove service and rate IDs from booking data since they're not part of the domain model
+            const { codigo_servicio, id_tarifa, ...bookingModelData } = bookingData;
+            
+            // Create and validate booking model before saving
+            const bookingModel = BookingModel.toModel(bookingModelData);
+
+            return await this.repository.transaction(async (trx) => {
+                // The repository will handle mapping the model to DB structure including id_oferta
+                const dbBooking = {
+                    ...bookingModel.toJSON(),
+                    id_oferta: offeringId,
+                    rut_conductor: null,
+                    patente_taxi: null
+                };
+
+                const rawBooking = await this.repository.create(dbBooking, trx);
+                
+                // Update the model with the saved data (excluding DB-specific fields)
+                const { id_oferta, rut_conductor, patente_taxi, ...modelData } = rawBooking;
+                bookingModel.update(modelData);
+                
+                // Create the history entry using the same transaction
+                const historyEntry = await this.historyService.createHistoryEntryWithTransaction(
+                    trx,
+                    'CREACION',
+                    rawBooking.codigo_reserva
+                );
+
+                bookingModel.history.push(historyEntry);
+
+                return bookingModel;
+            });
         } catch (error) {
             console.error('Error creating booking:', error);
-            throw error;
+            throw new Error(`Error al crear reserva: ${error.message}`);
         }
     }
 
@@ -65,7 +94,7 @@ export class BookingService extends BaseService {
                 fcambio: new Date()
             });
 
-            const { codigo_servicio, tarifa_id, rideType, ...reservaData } = bookingData;
+            const { codigo_servicio, tarifa_id, ...reservaData } = bookingData;
 
             const booking = await this.repository.create({
                 ...reservaData,
@@ -370,6 +399,57 @@ export class BookingService extends BaseService {
         } catch (error) {
             console.error('Error getting pending bookings:', error);
             throw new Error('Error al obtener las reservas pendientes');
+        }
+    }
+
+    /**
+     * Gets a specific booking by its code
+     * @param {number} codigoReserva - The booking code to find
+     * @returns {Promise<BookingModel|null>} The found booking or null
+     * @throws {Error} If retrieval fails
+     */
+    async getBookingByCode(codigoReserva) {
+        try {
+            // Get raw booking data
+            const rawBooking = await this.repository.findByCodigoReserva(codigoReserva);
+            
+            if (!rawBooking) {
+                return null;
+            }
+
+            // Get the offering to get service and rate IDs
+            const offering = await this.offeringService.findById(rawBooking.id_oferta);
+            
+            if (!offering) {
+                throw new Error('Oferta asociada no encontrada');
+            }
+
+            // Get service and rate details from their respective services
+            const [serviceModel, rateModel] = await Promise.all([
+                this.serviceService.findByCodigos(offering.codigo_servicio),
+                this.rateService.findById(offering.id_tarifa)
+            ]);
+
+            if (!serviceModel || !rateModel) {
+                throw new Error('Servicio o tarifa no encontrados');
+            }
+
+            // Create a domain model with all the information
+            return BookingModel.toModel({
+                ...rawBooking,
+                servicio: {
+                    tipo: serviceModel.tipo_servicio,
+                    descripcion: serviceModel.descripcion_servicio
+                },
+                tarifa: {
+                    precio: rateModel.precio,
+                    descripcion: rateModel.descripcion_tarifa,
+                    tipo: rateModel.tipo_tarifa
+                }
+            });
+        } catch (error) {
+            console.error('Error getting booking by code:', error);
+            throw new Error(`Error al obtener la reserva: ${error.message}`);
         }
     }
 

@@ -1,22 +1,28 @@
 import { BaseRepository } from "../core/BaseRepository.js";
-import { BookingModel } from "../models/BookingModel.js";
 
 export class BookingRepository extends BaseRepository {
   constructor() {
-    super("reserva", BookingModel, "codigo_reserva");
+    super("reserva", null, "codigo_reserva");
   }
 
   /**
    * Create new booking
    * @param {Object} bookingData - Booking data
-   * @returns {Promise<Object>} Created booking
+   * @param {Object} [trx] - Optional transaction object
+   * @returns {Promise<Object>} Created booking raw data
    */
-  async create(bookingData) {
+  async create(bookingData, trx = null) {
     try {
-      const [created] = await this.db(this.tableName)
-        .insert(bookingData)
+      const { codigo_reserva, ...dataToInsert } = bookingData;
+      dataToInsert.created_at = new Date();
+      dataToInsert.updated_at = new Date();
+      
+      const query = (trx || this.db)(this.tableName)
+        .insert(dataToInsert)
         .returning("*");
-      return BookingModel.fromDB(created);
+
+      const [created] = await query;
+      return created;
     } catch (error) {
       throw new Error(`Error creating booking: ${error.message}`);
     }
@@ -26,15 +32,18 @@ export class BookingRepository extends BaseRepository {
    * Update booking
    * @param {number} codigo_reserva - Booking ID
    * @param {Object} updateData - Updated booking data
-   * @returns {Promise<Object|null>} Updated booking or null
+   * @param {Object} [trx] - Optional transaction object
+   * @returns {Promise<Object|null>} Updated booking raw data or null
    */
-  async update(codigo_reserva, updateData) {
+  async update(codigo_reserva, updateData, trx = null) {
     try {
-      const [updated] = await this.db(this.tableName)
+      const query = (trx || this.db)(this.tableName)
         .where("codigo_reserva", codigo_reserva)
         .update(updateData)
         .returning("*");
-      return updated ? BookingModel.fromDB(updated) : null;
+
+      const [updated] = await query;
+      return updated || null;
     } catch (error) {
       throw new Error(`Error updating booking: ${error.message}`);
     }
@@ -43,18 +52,18 @@ export class BookingRepository extends BaseRepository {
   /**
    * Soft delete booking
    * @param {number} codigo_reserva - Booking ID
-   * @returns {Promise<Object|null>} Deleted booking or null
+   * @returns {Promise<Object|null>} Deleted booking raw data or null
    */
   async softDelete(codigo_reserva) {
     try {
-      const [deletedBooking] = await this.db(this.tableName)
+      const [deleted] = await this.db(this.tableName)
         .where("codigo_reserva", codigo_reserva)
         .update({
           estado_reserva: "ELIMINADO",
           deleted_at_reserva: new Date(),
         })
         .returning("*");
-      return deletedBooking ? BookingModel.fromDB(deletedBooking) : null;
+      return deleted || null;
     } catch (error) {
       throw new Error(`Error soft deleting booking: ${error.message}`);
     }
@@ -63,14 +72,13 @@ export class BookingRepository extends BaseRepository {
   /**
    * Find booking by ID
    * @param {number} codigo_reserva - Booking ID
-   * @returns {Promise<BookingModel|null>} Booking instance or null
+   * @returns {Promise<Object|null>} Raw booking data or null
    */
   async findById(codigo_reserva) {
     try {
-      const result = await this.db(this.tableName)
+      return await this.db(this.tableName)
         .where("codigo_reserva", codigo_reserva)
         .first();
-      return result ? BookingModel.fromDB(result) : null;
     } catch (error) {
       throw new Error(`Error finding booking by ID: ${error.message}`);
     }
@@ -79,14 +87,13 @@ export class BookingRepository extends BaseRepository {
   /**
    * Find booking by trip
    * @param {number} codigo_viaje - Trip ID
-   * @returns {Promise<BookingModel|null>} Booking instance or null
+   * @returns {Promise<Object|null>} Raw booking data or null
    */
   async findByTrip(codigo_viaje) {
     try {
-      const result = await this.db(this.tableName)
+      return await this.db(this.tableName)
         .where("codigo_viaje", codigo_viaje)
         .first();
-      return result ? BookingModel.fromDB(result) : null;
     } catch (error) {
       throw new Error(`Error finding booking by trip: ${error.message}`);
     }
@@ -95,7 +102,7 @@ export class BookingRepository extends BaseRepository {
   /**
    * Find bookings with filters
    * @param {Object} filters - Filter criteria
-   * @returns {Promise<Array>} Filtered bookings
+   * @returns {Promise<Array>} Raw booking data array
    */
   async findWithFilters(filters) {
     try {
@@ -120,7 +127,7 @@ export class BookingRepository extends BaseRepository {
       const bookings = await query;
 
       // Get rates for each booking
-      const bookingsWithRates = await Promise.all(
+      return await Promise.all(
         bookings.map(async (booking) => {
           const rateQuery = await this.db("tarifa")
             .select("tarifa.precio", "tarifa.descripcion_tarifa", "tarifa.tipo_tarifa")
@@ -128,7 +135,7 @@ export class BookingRepository extends BaseRepository {
             .where("oferta.id_oferta", booking.id_oferta)
             .first();
 
-          const bookingData = {
+          return {
             ...booking,
             servicio: booking.tipo_servicio ? {
               tipo: booking.tipo_servicio,
@@ -140,15 +147,8 @@ export class BookingRepository extends BaseRepository {
               tipo: rateQuery.tipo_tarifa
             } : null
           };
-
-          delete bookingData.tipo_servicio;
-          delete bookingData.descripcion_servicio;
-
-          return BookingModel.fromDB(bookingData);
         })
       );
-
-      return bookingsWithRates;
     } catch (error) {
       throw new Error(`Error finding bookings with filters: ${error.message}`);
     }
@@ -157,7 +157,7 @@ export class BookingRepository extends BaseRepository {
   /**
    * Find bookings by status
    * @param {string} status - Status to filter by
-   * @returns {Promise<Array>} Filtered bookings
+   * @returns {Promise<Array>} Raw booking data array
    */
   async findByStatus(status) {
     return this.findWithFilters({ estado_reserva: status });
@@ -165,7 +165,7 @@ export class BookingRepository extends BaseRepository {
 
   /**
    * Find pending bookings
-   * @returns {Promise<Array>} Pending bookings
+   * @returns {Promise<Array>} Raw booking data array
    */
   async findPendingBookings() {
     return this.findByStatus("PENDIENTE");
@@ -174,26 +174,24 @@ export class BookingRepository extends BaseRepository {
   /**
    * Find active bookings for a driver
    * @param {number} rut_conductor - Driver's RUT
-   * @returns {Promise<Array>} Driver's active bookings
+   * @returns {Promise<Array>} Raw booking data array
    */
   async findActiveByDriver(rut_conductor) {
-    const results = await this.db(this.tableName)
+    return await this.db(this.tableName)
       .select("*")
       .where("rut_conductor", rut_conductor)
       .whereIn("estado_reserva", ["PENDIENTE", "EN_CAMINO"])
       .whereNull("deleted_at_reserva");
-
-    return results.map(result => BookingModel.fromDB(result));
   }
 
   /**
    * Find booking by ID with related data
    * @param {number} codigo_reserva - Booking ID
-   * @returns {Promise<BookingModel|null>} Booking with related data
+   * @returns {Promise<Object|null>} Raw booking data with relations or null
    */
   async findWithDetails(codigo_reserva) {
     try {
-      const result = await this.db(this.tableName)
+      return await this.db(this.tableName)
         .select(
           "reserva.*",
           "viaje.duracion",
@@ -213,8 +211,6 @@ export class BookingRepository extends BaseRepository {
         .leftJoin("taxi", "reserva.patente_taxi", "taxi.patente")
         .where("reserva.codigo_reserva", codigo_reserva)
         .first();
-
-      return result ? BookingModel.fromDB(result) : null;
     } catch (error) {
       throw new Error(`Error finding booking with details: ${error.message}`);
     }
@@ -222,16 +218,45 @@ export class BookingRepository extends BaseRepository {
 
   /**
    * Find all bookings
-   * @returns {Promise<Array>} All bookings
+   * @returns {Promise<Array>} Raw booking data array
    */
   async findAll() {
     try {
-      const bookings = await this.db(this.tableName)
+      return await this.db(this.tableName)
         .select("*")
         .whereNull("deleted_at_reserva");
-      return bookings.map((booking) => BookingModel.fromDB(booking));
     } catch (error) {
       throw new Error(`Error getting all bookings: ${error.message}`);
+    }
+  }
+
+  /**
+   * Find booking by its code
+   * @param {number} codigo_reserva - Booking code
+   * @returns {Promise<Object|null>} Raw booking data or null
+   */
+  async findByCodigoReserva(codigo_reserva) {
+    try {
+      const booking = await this.db(this.tableName)
+        .select(
+          'codigo_reserva',
+          'rut_cliente',
+          'id_oferta',
+          'origen_reserva',
+          'destino_reserva',
+          'fecha_reserva',
+          'fecha_realizado',
+          'tipo_reserva',
+          'observacion_reserva',
+          'estado_reserva'
+        )
+        .where('codigo_reserva', codigo_reserva)
+        .whereNull('deleted_at_reserva')
+        .first();
+
+      return booking || null;
+    } catch (error) {
+      throw new Error(`Error finding booking by code: ${error.message}`);
     }
   }
 }

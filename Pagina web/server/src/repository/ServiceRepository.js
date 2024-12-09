@@ -16,7 +16,7 @@ export class ServiceRepository extends BaseRepository {
       const [createdService] = await this.db(this.tableName)
         .insert(serviceData)
         .returning('*');
-      return ServiceModel.fromDB(createdService);
+      return createdService
     } catch (error) {
       throw new Error(`Error creating service: ${error.message}`);
     }
@@ -34,7 +34,7 @@ export class ServiceRepository extends BaseRepository {
         .where({ codigo_servicio })
         .update(updateData)
         .returning('*');
-      return updatedService ? ServiceModel.fromDB(updatedService) : null;
+      return updatedService
     } catch (error) {
       throw new Error(`Error updating service: ${error.message}`);
     }
@@ -54,7 +54,7 @@ export class ServiceRepository extends BaseRepository {
           delete_at: new Date()
         })
         .returning('*');
-      return deletedService ? ServiceModel.fromDB(deletedService) : null;
+      return deletedService
     } catch (error) {
       throw new Error(`Error soft deleting service: ${error.message}`);
     }
@@ -100,7 +100,7 @@ export class ServiceRepository extends BaseRepository {
     const result = await this.db(this.tableName)
       .where({ codigo_servicio })
       .first();
-    return result ? ServiceModel.fromDB(result) : null;
+    return result
   }
 
   /**

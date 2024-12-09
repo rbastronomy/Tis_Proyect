@@ -67,7 +67,7 @@ export class RateService extends BaseService {
             if (!tariffDB) {
                 throw new Error('Tarifa no encontrada');
             }
-            const tariff = new RateModel(tariffDB);
+            const tariff = RateModel.toModel(tariffDB);
             return tariff;
         } catch (error) {
             throw new Error(`Error retrieving tariff: ${error.message}`);

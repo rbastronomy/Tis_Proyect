@@ -46,14 +46,17 @@ export class BaseRepository {
   /**
    * Crea un nuevo registro
    * @param {Object} data - Datos a insertar
+   * @param {Object} [trx] - Optional transaction object
    * @returns {Promise<Object>} - Instancia del modelo creado
    */
-  async create(data) {
+  async create(data, trx = null) {
     try {
-      const [newRecord] = await this.db(this.tableName)
+      const query = (trx || this.db)(this.tableName)
         .insert(data)
-        .returning('*');
-      return newRecord;
+        .returning('*');  // Return all columns instead of just the ID
+      
+      const [result] = await query;
+      return result;
     } catch (error) {
       throw new Error(`Error al crear en ${this.tableName}: ${error.message}`);
     }

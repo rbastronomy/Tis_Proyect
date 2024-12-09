@@ -255,7 +255,7 @@ function CreateBooking() {
     setLoading(true)
     setSubmitError('')
     try {
-      const response = await fetch('/api/reservas/', {
+      const response = await fetch('/api/bookings/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

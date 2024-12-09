@@ -106,4 +106,36 @@ export class OfferingService extends BaseService {
             throw new Error(`Error deleting offering: ${error.message}`);
         }
     }
+
+    /**
+     * Find offering ID by service code and rate ID
+     * @param {number} codigo_servicio - Service ID
+     * @param {number} id_tarifa - Rate ID
+     * @returns {Promise<number|null>} Offering ID if found, null otherwise
+     * @throws {Error} If there's an error retrieving the offering
+     */
+    async findIdByServiceAndRate(codigo_servicio, id_tarifa) {
+        try {
+            return await this.repository.findOne({
+                codigo_servicio,
+                id_tarifa
+            });
+        } catch (error) {
+            throw new Error(`Error finding offering by service and rate: ${error.message}`);
+        }
+    }
+
+    /**
+     * Find offering by its ID
+     * @param {number} id_oferta - Offering ID
+     * @returns {Promise<Object|null>} Offering with service and rate IDs if found, null otherwise
+     * @throws {Error} If there's an error retrieving the offering
+     */
+    async findById(id_oferta) {
+        try {
+            return await this.repository.findById(id_oferta);
+        } catch (error) {
+            throw new Error(`Error finding offering: ${error.message}`);
+        }
+    }
 } 

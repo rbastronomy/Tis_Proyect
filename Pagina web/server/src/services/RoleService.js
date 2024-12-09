@@ -69,7 +69,6 @@ export class RoleService extends BaseService {
 
         // Get full permission objects using PermissionService
         const permissions = await this.permissionService.getPermissionsForRole(roleData.id_roles);
-        
         const role = RoleModel.toModel(roleData);
         
 

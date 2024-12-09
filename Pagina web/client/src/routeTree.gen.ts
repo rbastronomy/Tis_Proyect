@@ -28,6 +28,9 @@ const AyudaLazyImport = createFileRoute('/ayuda')()
 const IndexLazyImport = createFileRoute('/')()
 const ReservasIndexLazyImport = createFileRoute('/reservas/')()
 const ReservasCreateLazyImport = createFileRoute('/reservas/create')()
+const ReservasCodigoReservaLazyImport = createFileRoute(
+  '/reservas/$codigoReserva',
+)()
 const AdminDashboardLazyImport = createFileRoute('/admin/dashboard')()
 const AdminCreateBookingLazyImport = createFileRoute('/admin/create-booking')()
 
@@ -90,6 +93,13 @@ const ReservasCreateLazyRoute = ReservasCreateLazyImport.update({
   getParentRoute: () => rootRoute,
 } as any).lazy(() =>
   import('./routes/reservas/create.lazy').then((d) => d.Route),
+)
+
+const ReservasCodigoReservaLazyRoute = ReservasCodigoReservaLazyImport.update({
+  path: '/reservas/$codigoReserva',
+  getParentRoute: () => rootRoute,
+} as any).lazy(() =>
+  import('./routes/reservas/$codigoReserva.lazy').then((d) => d.Route),
 )
 
 const AdminDashboardLazyRoute = AdminDashboardLazyImport.update({
@@ -192,6 +202,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminDashboardLazyImport
       parentRoute: typeof rootRoute
     }
+    '/reservas/$codigoReserva': {
+      id: '/reservas/$codigoReserva'
+      path: '/reservas/$codigoReserva'
+      fullPath: '/reservas/$codigoReserva'
+      preLoaderRoute: typeof ReservasCodigoReservaLazyImport
+      parentRoute: typeof rootRoute
+    }
     '/reservas/create': {
       id: '/reservas/create'
       path: '/reservas/create'
@@ -230,6 +247,7 @@ export interface FileRoutesByFullPath {
   '/taxi/ruta': typeof TaxiRutaRoute
   '/admin/create-booking': typeof AdminCreateBookingLazyRoute
   '/admin/dashboard': typeof AdminDashboardLazyRoute
+  '/reservas/$codigoReserva': typeof ReservasCodigoReservaLazyRoute
   '/reservas/create': typeof ReservasCreateLazyRoute
   '/taxi': typeof TaxiIndexRoute
   '/reservas': typeof ReservasIndexLazyRoute
@@ -247,6 +265,7 @@ export interface FileRoutesByTo {
   '/taxi/ruta': typeof TaxiRutaRoute
   '/admin/create-booking': typeof AdminCreateBookingLazyRoute
   '/admin/dashboard': typeof AdminDashboardLazyRoute
+  '/reservas/$codigoReserva': typeof ReservasCodigoReservaLazyRoute
   '/reservas/create': typeof ReservasCreateLazyRoute
   '/taxi': typeof TaxiIndexRoute
   '/reservas': typeof ReservasIndexLazyRoute
@@ -265,6 +284,7 @@ export interface FileRoutesById {
   '/taxi/ruta': typeof TaxiRutaRoute
   '/admin/create-booking': typeof AdminCreateBookingLazyRoute
   '/admin/dashboard': typeof AdminDashboardLazyRoute
+  '/reservas/$codigoReserva': typeof ReservasCodigoReservaLazyRoute
   '/reservas/create': typeof ReservasCreateLazyRoute
   '/taxi/': typeof TaxiIndexRoute
   '/reservas/': typeof ReservasIndexLazyRoute
@@ -284,6 +304,7 @@ export interface FileRouteTypes {
     | '/taxi/ruta'
     | '/admin/create-booking'
     | '/admin/dashboard'
+    | '/reservas/$codigoReserva'
     | '/reservas/create'
     | '/taxi'
     | '/reservas'
@@ -300,6 +321,7 @@ export interface FileRouteTypes {
     | '/taxi/ruta'
     | '/admin/create-booking'
     | '/admin/dashboard'
+    | '/reservas/$codigoReserva'
     | '/reservas/create'
     | '/taxi'
     | '/reservas'
@@ -316,6 +338,7 @@ export interface FileRouteTypes {
     | '/taxi/ruta'
     | '/admin/create-booking'
     | '/admin/dashboard'
+    | '/reservas/$codigoReserva'
     | '/reservas/create'
     | '/taxi/'
     | '/reservas/'
@@ -334,6 +357,7 @@ export interface RootRouteChildren {
   TaxiRutaRoute: typeof TaxiRutaRoute
   AdminCreateBookingLazyRoute: typeof AdminCreateBookingLazyRoute
   AdminDashboardLazyRoute: typeof AdminDashboardLazyRoute
+  ReservasCodigoReservaLazyRoute: typeof ReservasCodigoReservaLazyRoute
   ReservasCreateLazyRoute: typeof ReservasCreateLazyRoute
   TaxiIndexRoute: typeof TaxiIndexRoute
   ReservasIndexLazyRoute: typeof ReservasIndexLazyRoute
@@ -351,6 +375,7 @@ const rootRouteChildren: RootRouteChildren = {
   TaxiRutaRoute: TaxiRutaRoute,
   AdminCreateBookingLazyRoute: AdminCreateBookingLazyRoute,
   AdminDashboardLazyRoute: AdminDashboardLazyRoute,
+  ReservasCodigoReservaLazyRoute: ReservasCodigoReservaLazyRoute,
   ReservasCreateLazyRoute: ReservasCreateLazyRoute,
   TaxiIndexRoute: TaxiIndexRoute,
   ReservasIndexLazyRoute: ReservasIndexLazyRoute,
@@ -379,6 +404,7 @@ export const routeTree = rootRoute
         "/taxi/ruta",
         "/admin/create-booking",
         "/admin/dashboard",
+        "/reservas/$codigoReserva",
         "/reservas/create",
         "/taxi/",
         "/reservas/"
@@ -416,6 +442,9 @@ export const routeTree = rootRoute
     },
     "/admin/dashboard": {
       "filePath": "admin/dashboard.lazy.jsx"
+    },
+    "/reservas/$codigoReserva": {
+      "filePath": "reservas/$codigoReserva.lazy.jsx"
     },
     "/reservas/create": {
       "filePath": "reservas/create.lazy.jsx"

@@ -4,7 +4,29 @@ import { RateModel } from '../models/RateModel.js';
 
 export class OfferingRepository extends BaseRepository {
     constructor() {
-        super('oferta', OfferingModel, 'oferta_id');
+        super('oferta', OfferingModel, 'id_oferta');
+    }
+
+    /**
+     * Find offering by its ID
+     * @param {number} id_oferta - Offering ID
+     * @returns {Promise<Object|null>} Found offering or null
+     */
+    async findById(id_oferta) {
+        try {
+            const result = await this.db(this.tableName)
+                .select(
+                    'oferta.id_oferta',
+                    'oferta.codigo_servicio',
+                    'oferta.id_tarifa'
+                )
+                .where('oferta.id_oferta', id_oferta)
+                .first();
+
+            return result || null;
+        } catch (error) {
+            throw new Error(`Error in findById: ${error.message}`);
+        }
     }
 
     /**
@@ -147,5 +169,25 @@ export class OfferingRepository extends BaseRepository {
         await this.db(this.tableName)
             .where({ [this.primaryKey]: id })
             .del();
+    }
+
+    /**
+     * Find a single offering ID by criteria
+     * @param {Object} criteria - Search criteria
+     * @param {number} [criteria.codigo_servicio] - Service ID
+     * @param {number} [criteria.id_tarifa] - Rate ID
+     * @returns {Promise<number|null>} Found offering ID or null
+     */
+    async findOne(criteria) {
+        try {
+            const result = await this.db(this.tableName)
+                .select('id_oferta')
+                .where(criteria)
+                .first();
+
+            return result ? result.id_oferta : null;
+        } catch (error) {
+            throw new Error(`Error in findOne: ${error.message}`);
+        }
     }
 } 

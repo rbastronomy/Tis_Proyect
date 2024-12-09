@@ -1,162 +1,231 @@
 import { BaseModel } from "../core/BaseModel.js";
 import { UserModel } from './UserModel.js';
 import { TaxiModel } from './TaxiModel.js';
-import { TripModel } from './TripModel.js';
+
 import { ServiceModel } from './ServiceModel.js';
-import { HistoryModel } from './HistoryModel.js';
 
 /**
- * @typedef {Object} BookingData
- * @property {number} codigo_reserva - The unique identifier for the booking.
- * @property {string} rut_cliente - The RUT of the client.
- * @property {number} id_oferta - The ID of the offering.
- * @property {number} id_asignacion_taxis - The ID of the offering.
- * @property {string} origen_reserva - The origin of the reservation.
- * @property {string} destino_reserva - The destination of the reservation.
- * @property {Date} fecha_reserva - The date of the reservation.
- * @property {Date} fecha_realizado - The date of the reservation.
- * @property {string} tipo_reserva - The type of the reservation.
- * @property {string} observacion_reserva - The observation of the reservation.
- * @property {string} estado_reserva - The state of the reservation.
- * @property {Date} deleted_at_reserva - The date of the reservation.
- * @property {number} createdAt - The date of the reservation(Knex timestamps).
- * @property {number} updatedAt - The date of the reservation(Knex timestamps).
+ * Represents the internal data structure of BookingModel
+ * @typedef {Object} BookingModelData
+ * @property {number|null} codigo_reserva - Booking ID
+ * @property {string} origen_reserva - Origin location
+ * @property {string} destino_reserva - Destination location
+ * @property {Date|null} fecha_reserva - Booking date
+ * @property {Date|null} fecha_realizado - Completion date
+ * @property {string} tipo_reserva - Booking type
+ * @property {string} observacion_reserva - Observations
+ * @property {string} estado_reserva - Status
+ * @property {Date|null} deleted_at_reserva - Soft delete timestamp
+ * @property {Date|null} created_at - Creation timestamp
+ * @property {Date|null} updated_at - Last update timestamp
+ * @property {UserModel|null} driver - Associated driver
+ * @property {TaxiModel|null} taxi - Associated taxi
+ * @property {UserModel|null} cliente - Associated cliente
+ * @property {ServiceModel|null} service - Associated service
+ * @property {import('./HistoryModel.js').HistoryModel[]} history - Booking history records
  */
 
+/**
+ * @typedef {Object} ValidationError
+ * @property {string} field - The field that failed validation
+ * @property {string} message - The error message
+ */
+
+/**
+ * Class representing a Booking in the system
+ * @extends {BaseModel<BookingModelData>}
+ */
 export class BookingModel extends BaseModel {
-    static defaultData = {
-        // Campos de la tabla 'reserva'
-        codigo_reserva: null,    // ID de la reserva
-        origen_reserva: '',            // Origen
-        destino_reserva: '',           // Destino
-        fecha_reserva: null,         // Fecha de reserva
-        fecha_realizado: null,       // Fecha de realización
-        tipo_reserva: 'NORMAL',         // Tipo de reserva
-        observacion_reserva: '',        // Observaciones
-        estado_reserva: 'EN_REVISION', // Estado
-        deleted_at_reserva: null,      // Soft delete
-
-        // Modelos relacionados
-        driver: null,           // Conductor (UserModel)
-        taxi: null,             // Taxi (TaxiModel)
-        trip: null,             //viaje (TripModel)
-        client: null,           // Cliente (UserModel)
-        service: null,          // Servicio (ServiceModel)
-        history: [],          // Historial de reservas (BookingHistoryModel)
-    };
-
-    constructor(data = {}) {
-        // Manejar instancias de modelos si se proporcionan directamente
-        const modelData = {
-            ...data,
-            driver: data.driver instanceof UserModel ? data.driver : null,
-            taxi: data.taxi instanceof TaxiModel ? data.taxi : null,
-            trip: data.trip instanceof TripModel ? data.trip : null,
-            client: data.client instanceof UserModel ? data.client : null,
-            service: data.service instanceof ServiceModel ? data.service : null,
-            history: data.history instanceof HistoryModel ? data.history : [],
-        };
-
-        super(modelData, BookingModel.defaultData);
-
-        // Inicializar modelos si se proporcionan datos crudos
-        if (data.driver && !(data.driver instanceof UserModel)) {
-            this._data.driver = new UserModel(data.driver);
-        }
-        if (data.taxi && !(data.taxi instanceof TaxiModel)) {
-            this._data.taxi = new TaxiModel(data.taxi);
-        }
-        if (data.trip && !(data.trip instanceof TripModel)) {
-            this._data.trip = new TripModel(data.trip);
-        }
-        if (data.client && !(data.client instanceof UserModel)) {
-            this._data.client = new UserModel(data.client);
-        }
-        if (data.service && !(data.service instanceof ServiceModel)) {
-            this._data.service = new ServiceModel(data.service);
-        }
-        this._data.history = Array.isArray(data.history) ? data.history : []; 
-
-    }
-
-    // Getters básicos (mantienen nombres de BD)
-    get codigo_reserva() { return this._data.codigo_reserva; }
-    get origen_reserva() { return this._data.origen_reserva; }
-    get destino_reserva() { return this._data.destino_reserva; }
-    get fecha_reserva() { return this._data.fecha_reserva; }
-    // Getters de relaciones (nombres en inglés)
-    get driver() { return this._data.driver; }
-    get taxi() { return this._data.taxi; }
-    get trip() { return this._data.trip; }
-    get client() { return this._data.client; }
-    get service() { return this._data.service; }
-    get history() { return this._data.history; }
-    
-
-    // Métodos de estado
-    isPending() { return this._data.estado_reserva === 'PENDIENTE'; }
-    isConfirmed() { return this._data.estado_reserva === 'CONFIRMADO'; }
-    canBeAssigned() { return this._data.estado_reserva === 'EN_REVISION'; }
-    canBeCancelled() { return ['EN_REVISION', 'PENDIENTE'].includes(this._data.estado_reserva); }
-    
-    // Métodos de relaciones
-    hasDriver() { return !!this._data.driver; }
-    hasTaxi() { return !!this._data.taxi; }
-    hasTrip() { return !!this._data.trip; }
+    static VALID_TIPOS = ['NORMAL', 'PROGRAMADO'];
+    static VALID_ESTADOS = ['EN_REVISION', 'PENDIENTE', 'CONFIRMADO', 'CANCELADO', 'COMPLETADO'];
+    static VALID_RIDE_TYPES = ['CIUDAD', 'AEROPUERTO'];
 
     /**
-     * Creates a BookingModel instance from a database entity
-     * @param {BookingData} entity - Database entity object
-     * @returns {BookingModel|null} - Returns null if entity is null/undefined
+     * Default values for a new booking instance
+     * @type {BookingModelData}
      */
-    static fromEntity(entity) {
-        if (!entity) return null;
-        
-        const booking = new BookingModel({
-            codigo_reserva: entity.codigo_reserva,
-            rut_cliente: entity.rut_cliente,
-            id_oferta: entity.id_oferta,
-            id_asignacion_taxis: entity.id_asignacion_taxis,
-            origen_reserva: entity.origen_reserva,
-            destino_reserva: entity.destino_reserva,
-            fecha_reserva: entity.fecha_reserva,
-            fecha_realizado: entity.fecha_realizado,
-            tipo_reserva: entity.tipo_reserva,
-            observacion_reserva: entity.observacion_reserva,
-            estado_reserva: entity.estado_reserva,
-            deleted_at_reserva: entity.deleted_at_reserva,
-            createdAt: entity.createdAt,
-            updatedAt: entity.updatedAt
-        });
-        
-        return booking;
-    }
+    static defaultData = {
+        codigo_reserva: null,
+        origen_reserva: '',
+        destino_reserva: '',
+        fecha_reserva: null,
+        fecha_realizado: null,
+        tipo_reserva: 'NORMAL',
+        observacion_reserva: '',
+        estado_reserva: 'EN_REVISION',
+        deleted_at_reserva: null,
+        created_at: null,
+        updated_at: null,
+        driver: null,
+        taxi: null,
+        cliente: null,
+        service: null,
+        history: [],
+    };
 
-    // Métodos para relaciones ternarias
-    addGenerate(trip, Receipt = null) {
-        const generateRecord = {
-            codigo_viaje: trip.codigo_viaje,
-            codigo_reserva: this.codigo_reserva,
-            codigoboleta: Receipt?.codigoboleta || null,
-            fechagenerada: new Date()
-        };
-        this._data.genera.push(generateRecord);
-        return generateRecord;
-    }
-
-    // Método para calcular costo estimado
-    calculateEstimatedCost() {
-        if (this._data.service.rate) {
-            this._data.costo_estimado = this._data.service.rate.precio;
+    /**
+     * Creates a new BookingModel instance
+     * @param {Partial<BookingModelData>} data - Initial booking data
+     * @throws {Error} If validation fails
+     */
+    constructor(data = {}) {
+        super(data, BookingModel.defaultData);
+        this.validate();
+        
+        // Initialize related models if raw data is provided
+        if (data.driver) {
+            this.driver = data.driver;
         }
-        return this._data.costo_estimado;
+        if (data.taxi) {
+            this.taxi = data.taxi;
+        }
+        if (data.trip) {
+            this.trip = data.trip;
+        }
+        if (data.cliente) {
+            this.cliente = data.cliente;
+        }
+        if (data.service) {
+            this.service = data.service;
+        }
     }
 
+    /**
+     * Validates the booking data
+     * @private
+     * @throws {Error} If validation fails
+     */
+    validate() {
+        this.clearErrors();
+
+        this.validateEnum('tipo_reserva', this._data.tipo_reserva, BookingModel.VALID_RIDE_TYPES);
+        this.validateEnum('estado_reserva', this._data.estado_reserva, BookingModel.VALID_ESTADOS);
+        this.validateDate('fecha_reserva', this._data.fecha_reserva);
+        this.validateString('origen_reserva', this._data.origen_reserva);
+        this.validateString('destino_reserva', this._data.destino_reserva);
+
+        this.throwIfErrors();
+    }
+
+    // Setters with validation
+    /** @param {string} value */
+    set origen_reserva(value) {
+        if (typeof value !== 'string' || value.trim().length === 0) {
+            throw new Error('Origen debe ser una dirección válida');
+        }
+        this._data.origen_reserva = value.trim();
+    }
+
+    /** @param {string} value */
+    set destino_reserva(value) {
+        if (typeof value !== 'string' || value.trim().length === 0) {
+            throw new Error('Destino debe ser una dirección válida');
+        }
+        this._data.destino_reserva = value.trim();
+    }
+
+    /** @param {Date|string} value */
+    set fecha_reserva(value) {
+        const date = value instanceof Date ? value : new Date(value);
+        if (isNaN(date.getTime())) {
+            throw new Error('Fecha de reserva debe ser una fecha válida');
+        }
+        this._data.fecha_reserva = date;
+    }
+
+    /** @param {string} value */
+    set tipo_reserva(value) {
+        if (!BookingModel.VALID_RIDE_TYPES.includes(value)) {
+            throw new Error(`Tipo de reserva debe ser uno de: ${BookingModel.VALID_RIDE_TYPES.join(', ')}`);
+        }
+        this._data.tipo_reserva = value;
+    }
+
+    /** @param {string} value */
+    set estado_reserva(value) {
+        if (!BookingModel.VALID_ESTADOS.includes(value)) {
+            throw new Error(`Estado de reserva debe ser uno de: ${BookingModel.VALID_ESTADOS.join(', ')}`);
+        }
+        this._data.estado_reserva = value;
+    }
+
+    /** @param {UserModel|Object} value */
+    set driver(value) {
+        this._data.driver = value instanceof UserModel ? value : new UserModel(value);
+        if (!this._data.driver.isDriver()) {
+            throw new Error('El conductor asignado debe tener rol de conductor');
+        }
+    }
+
+    /** @param {TaxiModel|Object} value */
+    set taxi(value) {
+        this._data.taxi = value instanceof TaxiModel ? value : new TaxiModel(value);
+    }
+
+    /** @param {ServiceModel|Object} value */
+    set service(value) {
+        this._data.service = value instanceof ServiceModel ? value : new ServiceModel(value);
+    }
+
+    /** @param {UserModel|Object} value */
+    set cliente(value) {
+        this._data.cliente = value instanceof UserModel ? value : new UserModel(value);
+    }
+
+    // Getters
+    /** @returns {number} Booking ID */
+    get codigo_reserva() { return this._data.codigo_reserva; }
+    /** @returns {string} Origin location */
+    get origen_reserva() { return this._data.origen_reserva; }
+    /** @returns {string} Destination location */
+    get destino_reserva() { return this._data.destino_reserva; }
+    /** @returns {Date} Booking date */
+    get fecha_reserva() { return this._data.fecha_reserva; }
+    /** @returns {Date} Completion date */
+    get fecha_realizado() { return this._data.fecha_realizado; }
+    /** @returns {string} Booking type */
+    get tipo_reserva() { return this._data.tipo_reserva; }
+    /** @returns {string} Booking status */
+    get estado_reserva() { return this._data.estado_reserva; }
+    /** @returns {UserModel} Associated driver */
+    get driver() { return this._data.driver; }
+    /** @returns {TaxiModel} Associated taxi */
+    get taxi() { return this._data.taxi; }
+    /** @returns {TripModel} Associated trip */
+    get trip() { return this._data.trip; }
+    /** @returns {UserModel} Associated cliente */
+    get cliente() { return this._data.cliente; }
+    /** @returns {ServiceModel} Associated service */
+    get service() { return this._data.service; }
+    /** @returns {import('./HistoryModel.js').HistoryModel[]} Booking history */
+    get history() { return this._data.history; }
+
+    // Status check methods
+    /**
+     * Checks if the booking is pending
+     * @returns {boolean} True if booking is pending
+     */
+    isPending() { return this._data.estado_reserva === 'PENDIENTE'; }
+
+    /**
+     * Checks if the booking is confirmed
+     * @returns {boolean} True if booking is confirmed
+     */
+    isConfirmed() { return this._data.estado_reserva === 'CONFIRMADO'; }
+
+    /**
+     * Checks if the booking can be assigned
+     * @returns {boolean} True if booking can be assigned
+     */
+    canBeAssigned() { return this._data.estado_reserva === 'EN_REVISION'; }
+
+    /**
+     * Converts the booking model to a JSON object
+     * @returns {Object} Booking data as JSON
+     */
     toJSON() {
         const json = {
             codigo_reserva: this._data.codigo_reserva,
-            rut_conductor: this._data.rut_conductor,
-            patente_taxi: this._data.patente_taxi,
             origen_reserva: this._data.origen_reserva,
             destino_reserva: this._data.destino_reserva,
             fecha_reserva: this._data.fecha_reserva,
@@ -165,101 +234,19 @@ export class BookingModel extends BaseModel {
             observacion_reserva: this._data.observacion_reserva,
             estado_reserva: this._data.estado_reserva,
             deleted_at_reserva: this._data.deleted_at_reserva,
-            genera: this._data.genera,
-            costo_estimado: this._data.costo_estimado,
+            created_at: this._data.created_at,
+            updated_at: this._data.updated_at,
         };
 
-        // Add related models
         if (this._data.driver) json.driver = this._data.driver.toJSON();
         if (this._data.taxi) json.taxi = this._data.taxi.toJSON();
-        if (this._data.client) json.client = this._data.client.toJSON();
-        if (this._data.service) json.service = this._data.service.toJSON();
         if (this._data.trip) json.trip = this._data.trip.toJSON();
-        if (this._data.history) json.history = this._data.history.map(history => history.toJSON());
+        if (this._data.cliente) json.cliente = this._data.cliente.toJSON();
+        if (this._data.service) json.service = this._data.service.toJSON();
+        if (this._data.history?.length) {
+            json.history = this._data.history;
+        }
 
         return json;
-    }
-
-    static fromDB(data) {
-        if (!data) return null;
-        return new BookingModel(data);
-    }
-
-    // Add missing getters
-    get rut_conductor() { return this._data.rut_conductor; }
-    get patente_taxi() { return this._data.patente_taxi; }
-    get tipo_reserva() { return this._data.tipo_reserva; }
-    get estado_reserva() { return this._data.estado_reserva; }
-    get fecha_realizado() { return this._data.fecha_realizado; }
-    get codigo_servicio() { return this._data.codigo_servicio; }
-    get genera() { return this._data.genera; }
-    get costo_estimado() { return this._data.costo_estimado; }
-
-    // Add missing setters for model relationships
-    set driver(value) { 
-        this._data.driver = value instanceof UserModel ? value : new UserModel(value); 
-    }
-
-    set taxi(value) { 
-        this._data.taxi = value instanceof TaxiModel ? value : new TaxiModel(value); 
-    }
-
-
-    set client(value) { 
-        this._data.client = value instanceof UserModel ? value : new UserModel(value); 
-    }
-
-    // Add missing domain methods
-    isActive() {
-        return !this._data.deleted_at_reserva;
-    }
-
-    canBeStarted() {
-        return this._data.estado_reserva === 'PENDIENTE' && this.hasDriver();
-    }
-
-    canBeCompleted() {
-        return this._data.estado_reserva === 'EN_CAMINO';
-    }
-
-    // Add missing model-specific methods
-    isDriverAvailable() {
-        return this._data.driver?.isActive() && 
-               this._data.driver?.hasRole('CONDUCTOR');
-    }
-
-    isTaxiAvailable() {
-        return this._data.taxi?.isAvailable();
-    }
-
-    getServiceType() {
-        return this._data.service?.tipo_servicio;
-    }
-
-    associateTrip(tripModel) {
-        this._data.trip = tripModel;
-        this._data.trip_info = {
-            duracion_viaje: tripModel.duracion_viaje,
-            observacion_viaje: tripModel.observacion_viaje,
-            fecha_viaje: tripModel.fecha_viaje
-        };
-    }
-
-    associateReceipt(receiptModel) {
-        this._data.boleta = receiptModel;
-        this._data.boleta_info = {
-            total: receiptModel.total,
-            fecha_emision: receiptModel.fecha_emision,
-            metodo_pago: receiptModel.metodo_pago,
-            descripcion_tarifa: receiptModel.descripcion_tarifa
-        };
-    }
-
-    // Método para agregar relación servicio-tarifa
-    addServiceRate(serviceId, rateId) {
-        this._data.service_rate = {
-            codigo_servicio: serviceId,
-            id_tarifa: rateId,
-        };
     }
 }

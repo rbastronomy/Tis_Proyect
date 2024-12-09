@@ -16,18 +16,17 @@ class BookingController extends BaseController {
      */
     async createBooking(request, reply) {
         try {
-            const userId = request.user.rut; // From auth middleware
             const bookingData = {
+                rut_cliente: request.user.rut,
                 origen_reserva: request.body.origen_reserva,
                 destino_reserva: request.body.destino_reserva,
                 fecha_reserva: request.body.fecha_reserva,
-                tipo_reserva: request.body.tipo_reserva || 'NORMAL',
+                tipo_reserva: request.body.tipo_reserva,
                 observacion_reserva: request.body.observacion_reserva || '',
                 codigo_servicio: request.body.codigo_servicio,
-                tarifa_id: request.body.tarifa_id
+                id_tarifa: request.body.id_tarifa
             };
-
-            const booking = await this.service.createBooking(bookingData, userId);
+            const booking = await this.service.createBooking(bookingData);
             
             return reply.code(201).send({
                 message: 'Reserva creada exitosamente',
@@ -72,15 +71,15 @@ class BookingController extends BaseController {
     }
 
     /**
-     * Gets a specific booking by ID
+     * Gets a specific booking by code
      * @param {Object} request - Fastify request object
      * @param {Object} reply - Fastify reply object
      * @returns {Promise<Object>} Response object containing booking data
      */
-    async getBookingById(request, reply) {
+    async getBookingByCode(request, reply) {
         try {
-            const bookingId = request.params.bookingId;
-            const booking = await this.service.getBookingById(bookingId);
+            const codigoReserva = request.params.codigoreserva;
+            const booking = await this.service.getBookingByCode(codigoReserva);
             
             if (!booking) {
                 return reply.code(404).send({ 
@@ -90,7 +89,7 @@ class BookingController extends BaseController {
 
             return reply.send({
                 message: 'Reserva recuperada exitosamente',
-                booking: booking.toJSON()
+                reserva: booking.toJSON()
             });
         } catch (error) {
             request.log.error(error);
