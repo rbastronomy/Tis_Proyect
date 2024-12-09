@@ -3,7 +3,7 @@ import { RateModel } from '../models/RateModel.js';
 
 export class RateRepository extends BaseRepository {
   constructor() {
-    super('tarifa', RateModel, 'id_tarifa');
+    super('tarifa', 'id_tarifa');
   }
 
   /**

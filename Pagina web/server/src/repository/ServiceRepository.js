@@ -3,7 +3,7 @@ import { ServiceModel } from '../models/ServiceModel.js';
 
 export class ServiceRepository extends BaseRepository {
   constructor() {
-    super('servicio', ServiceModel, 'codigo_servicio');
+    super('servicio', 'codigo_servicio');
   }
 
   /**

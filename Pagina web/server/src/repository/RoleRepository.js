@@ -1,16 +1,9 @@
 import { BaseRepository } from '../core/BaseRepository.js';
-import { RoleModel } from '../models/RoleModel.js';
 
 export class RoleRepository extends BaseRepository {
   constructor() {
-    super('roles', RoleModel, 'id_roles');
+    super('roles', 'id_roles');
   }
-
-  _toModel(data) {
-    if (!data) return null;
-    return new RoleModel(data);
-  }
-
   /**
    * Finds a role by its ID
    * @param {string|number} roleId - The ID of the role

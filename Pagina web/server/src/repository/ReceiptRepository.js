@@ -3,7 +3,7 @@ import { ReceiptModel } from '../models/ReceiptModel.js';
 
 export class ReceiptRepository extends BaseRepository {
   constructor() {
-    super('boleta', ReceiptModel, 'codigo_boleta');
+    super('boleta', 'codigo_boleta');
   }
 
   /**

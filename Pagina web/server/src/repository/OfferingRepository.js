@@ -4,7 +4,7 @@ import { RateModel } from '../models/RateModel.js';
 
 export class OfferingRepository extends BaseRepository {
     constructor() {
-        super('oferta', OfferingModel, 'id_oferta');
+        super('oferta', 'id_oferta');
     }
 
     /**

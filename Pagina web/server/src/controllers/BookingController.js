@@ -56,6 +56,7 @@ class BookingController extends BaseController {
             };
 
             const bookings = await this.service.getBookings(filters);
+            console.log(bookings);
             
             return reply.send({
                 message: 'Reservas recuperadas exitosamente',

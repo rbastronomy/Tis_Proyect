@@ -3,7 +3,7 @@ import { TaxiModel } from '../models/TaxiModel.js';
 
 export class TaxiRepository extends BaseRepository {
   constructor() {
-    super('taxi', TaxiModel, 'patente');
+    super('taxi', 'patente');
   }
 
   /**

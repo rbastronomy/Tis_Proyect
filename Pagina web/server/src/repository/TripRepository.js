@@ -3,7 +3,7 @@ import { TripModel } from '../models/TripModel.js';
 
 export class TripRepository extends BaseRepository {
   constructor() {
-    super('viaje', TripModel, 'codigo_viaje');
+    super('viaje', 'codigo_viaje');
   }
 
   /**

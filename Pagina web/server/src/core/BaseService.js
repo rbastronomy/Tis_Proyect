@@ -1,23 +1,10 @@
 
 export class BaseService {
   /**
-   * @param {class} model - Model class
    * @param {class} repository - Repository class
    */
-    constructor(model, repository) {
-      this.model = model;
+    constructor(repository) {
       this.repository = repository;
-    }
-
-    /**
-   * Convierte datos de la DB al modelo correspondiente
-   * @param {Object} data - Datos crudos de la base de datos
-   * @returns {Object|null} - Instancia del modelo o null
-   * @protected
-   */
-    _toModel(data) {
-      if (!data) return null;
-      return new this.ModelClass(data);
     }
   
     async getAll(filters = {}, options = {}) {

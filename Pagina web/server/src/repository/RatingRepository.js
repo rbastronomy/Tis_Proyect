@@ -3,7 +3,7 @@ import { RatingModel } from "../models/RatingModel.js";
 
 export class RatingRepository extends BaseRepository{
     constructor(){
-        super('valoracion', RatingModel, 'id_valoracion');
+        super('valoracion', 'id_valoracion');
     }
 
     async create(ratingData){

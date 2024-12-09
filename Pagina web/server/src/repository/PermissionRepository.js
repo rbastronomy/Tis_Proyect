@@ -3,7 +3,7 @@ import { PermissionModel } from '../models/PermissionModel.js';
 
 export class PermissionRepository extends BaseRepository {
     constructor() {
-        super('permiso', PermissionModel, 'id_permiso');
+        super('permiso', 'id_permiso');
     }
 
     _toModel(data) {

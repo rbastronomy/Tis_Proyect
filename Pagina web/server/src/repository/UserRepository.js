@@ -3,7 +3,7 @@ import { UserModel } from '../models/UserModel.js';
 
 export class UserRepository extends BaseRepository {
   constructor() {
-    super('persona', UserModel, 'rut');
+    super('persona', 'rut');
   }
 
   /**
@@ -39,6 +39,7 @@ export class UserRepository extends BaseRepository {
    * @returns {Promise<UserModel|null>} Found user or null
    */
   async findByEmail(email) {
+    console.log('findByEmail', email);
     try {
       const userData = await this.db.select('*')
         .from(this.tableName)
