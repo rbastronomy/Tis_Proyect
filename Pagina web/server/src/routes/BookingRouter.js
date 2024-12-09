@@ -22,28 +22,34 @@ export class BookingRouter extends BaseRouter {
       schema: {
         body: {
           type: 'object',
-          required: ['origenv', 'destinov', 'freserva', 'codigo_servicio', 'tarifa_id'],
+          required: [
+            'origen_reserva', 
+            'destino_reserva', 
+            'fecha_reserva', 
+            'codigo_servicio', 
+            'id_tarifa',
+            'tipo_reserva'
+          ],
           properties: {
-            origenv: { 
+            origen_reserva: { 
               type: 'string',
               minLength: 1,
               maxLength: 256
             },
-            destinov: { 
+            destino_reserva: { 
               type: 'string',
               minLength: 1,
               maxLength: 256
             },
-            freserva: { 
+            fecha_reserva: { 
               type: 'string', 
               format: 'date-time' 
             },
-            tipo: {
+            tipo_reserva: {
               type: 'string',
-              enum: ['NORMAL', 'URGENTE', 'PROGRAMADO'],
-              default: 'NORMAL'
+              enum: ['CIUDAD', 'AEROPUERTO']
             },
-            observacion: { 
+            observacion_reserva: { 
               type: 'string',
               maxLength: 256
             },
@@ -51,9 +57,9 @@ export class BookingRouter extends BaseRouter {
               type: 'integer',
               description: 'Código del servicio solicitado'
             },
-            tarifa_id: {
+            id_tarifa: {
               type: 'integer',
-              description: 'ID de la tarifa seleccionada'
+              description: 'ID de la tarifa seleccionada del servicio'
             }
           }
         },
@@ -65,20 +71,26 @@ export class BookingRouter extends BaseRouter {
               reserva: {
                 type: 'object',
                 properties: {
-                  codigoreserva: { type: 'integer' },
-                  origenv: { type: 'string' },
-                  destinov: { type: 'string' },
-                  freserva: { type: 'string' },
-                  tipo: { type: 'string' },
-                  observacion: { type: 'string' },
-                  estados: { type: 'string', enum: ['EN_REVISION'] },
-                  tarifa: {
+                  codigo_reserva: { type: 'integer' },
+                  origen_reserva: { type: 'string' },
+                  destino_reserva: { type: 'string' },
+                  fecha_reserva: { type: 'string' },
+                  tipo_reserva: { type: 'string' },
+                  observacion_reserva: { type: 'string' },
+                  estado_reserva: { type: 'string', enum: ['EN_REVISION'] },
+                  servicio: {
                     type: 'object',
                     properties: {
-                      id: { type: 'integer' },
-                      tipo: { type: 'string' },
-                      descripciont: { type: 'string' },
-                      precio: { type: 'number' }
+                      codigo_servicio: { type: 'integer' },
+                      tipo_servicio: { type: 'string' },
+                      tarifa: {
+                        type: 'object',
+                        properties: {
+                          id_tarifa: { type: 'integer' },
+                          tipo_tarifa: { type: 'string' },
+                          precio_tarifa: { type: 'number' }
+                        }
+                      }
                     }
                   }
                 }
@@ -267,6 +279,61 @@ export class BookingRouter extends BaseRouter {
         this.controller.getReservasPendientes.bind(this.controller),
         ['ver_reservas'],
         ['ADMINISTRADOR', 'CONDUCTOR']
+      )
+    });
+
+    // Get single reserva by code
+    this.addRoute('GET', '/:codigoreserva', {
+      schema: {
+        params: {
+          type: 'object',
+          required: ['codigoreserva'],
+          properties: {
+            codigoreserva: { type: 'integer' }
+          }
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              message: { type: 'string' },
+              reserva: {
+                type: 'object',
+                properties: {
+                  codigo_reserva: { type: 'integer' },
+                  origen_reserva: { type: 'string' },
+                  destino_reserva: { type: 'string' },
+                  fecha_reserva: { type: 'string' },
+                  tipo_reserva: { type: 'string' },
+                  observacion_reserva: { type: 'string' },
+                  estado_reserva: { type: 'string' },
+                  rut_conductor: { type: 'integer', nullable: true },
+                  patente_taxi: { type: 'string', nullable: true },
+                  servicio: {
+                    type: 'object',
+                    properties: {
+                      tipo: { type: 'string' },
+                      descripcion: { type: 'string' }
+                    }
+                  },
+                  tarifa: {
+                    type: 'object',
+                    properties: {
+                      precio: { type: 'number' },
+                      descripcion: { type: 'string' },
+                      tipo: { type: 'string' }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      handler: this.withAuth(
+        this.controller.getBookingByCode.bind(this.controller),
+        ['ver_reservas'],
+        ['USUARIO', 'ADMINISTRADOR', 'CONDUCTOR']
       )
     });
   }

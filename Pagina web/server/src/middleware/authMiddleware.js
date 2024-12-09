@@ -20,7 +20,7 @@ export class AuthMiddleware {
 
     /**
      * Validates if a user has the required roles and permissions
-     * @param {Object} user - User object with role and permissions
+     * @param {Object} user - User object with role
      * @param {string[]} permissions - Array of required permission names
      * @param {string[]} roles - Array of required role names
      * @returns {boolean} True if user has required permissions/roles
@@ -34,11 +34,10 @@ export class AuthMiddleware {
                 message: 'Forbidden: User has no role assigned' 
             };
         }
-
         // Check for required roles
         if (roles.length > 0) {
             const hasRequiredRole = roles.some(role => 
-                user.role.nombre_rol.toLowerCase() === role.toLowerCase()
+                user.role.nombre.toLowerCase() === role.toLowerCase()
             );
             
             if (!hasRequiredRole) {
@@ -48,20 +47,19 @@ export class AuthMiddleware {
                 };
             }
         }
-
-        // Check if user has permissions array
-        if (!Array.isArray(user.permissions)) {
-            throw { 
-                statusCode: 403, 
-                message: 'Forbidden: User has no permissions' 
-            };
-        }
-
-        // Check for required permissions
+        // Check for required permissions through role's permission models
         if (permissions.length > 0) {
+            // Ensure role has permissions array
+            if (!Array.isArray(user.role.permissions)) {
+                throw { 
+                    statusCode: 403, 
+                    message: 'Forbidden: Role has no permissions' 
+                };
+            }
+
             const hasRequiredPermission = permissions.some(requiredPermission => 
-                user.permissions.some(userPermission => 
-                    userPermission.toLowerCase() === requiredPermission.toLowerCase()
+                user.role.permissions.some(permissionModel => 
+                    permissionModel.nombre.toLowerCase() === requiredPermission.toLowerCase()
                 )
             );
 

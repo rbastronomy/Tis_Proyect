@@ -80,9 +80,7 @@ class Auth {
                 throw AuthError.InvalidSession();
             }
 
-            console.log('Validating session:', sessionId);
             const { session, user } = await this.provider.validateSession(sessionId);
-            console.log('Session validation result:', { session, user });
             
             if (!session || !user) {
                 console.log('Invalid session result:', { session, user });
