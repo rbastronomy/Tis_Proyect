@@ -146,7 +146,7 @@ export class ServiceService extends BaseService {
             if (!service) {
                 throw new Error('Servicio no encontrado');
             }
-            return service;
+            return ServiceModel.toModel(service);
         } catch (error) {
             throw new Error(`Error retrieving service: ${error.message}`);
         }
