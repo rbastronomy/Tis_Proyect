@@ -1,17 +1,18 @@
 import { BaseController } from '../core/BaseController.js';
-import { BoletaService } from '../services/BoletaService.js';
+import { ReceiptService } from '../services/ReceiptService.js';
 
 export default class ReceiptController extends BaseController {
     constructor() {
-        const boletaService = new BoletaService();
-        super(boletaService);
+        const receiptService = new ReceiptService();
+        super(receiptService);
+        this.service = receiptService;
     }
   
     // Route handler for getting a specific boleta
     async getBoleta(request, reply) {
       try {
-        const { codigoboleta } = request.params;
-        const boleta = await this.boletaService.getBoletaById(codigoboleta);
+        const { codigo_boleta } = request.params;
+        const boleta = await this.service.getBoletaById(codigo_boleta);
         
         return reply.code(200).send(boleta);
       } catch (error) {
@@ -28,7 +29,7 @@ export default class ReceiptController extends BaseController {
     async createBoleta(request, reply) {
       try {
         const boletaData = request.body;
-        const newBoleta = await this.boletaService.createBoleta(boletaData);
+        const newBoleta = await this.service.createBoleta(boletaData);
         
         return reply.code(201).send(newBoleta);
       } catch (error) {
@@ -40,14 +41,15 @@ export default class ReceiptController extends BaseController {
         });
       }
     }
-  
+    
+    /*
     // Route handler for updating boleta status
     async updateBoletaStatus(request, reply) {
       try {
-        const { codigoboleta } = request.params;
-        const { methodoPago } = request.body;
+        const { codigo_boleta } = request.params;
+        const { metodo_pago } = request.body;
         
-        await this.boletaService.updateBoletaStatus(codigoboleta, methodoPago);
+        await this.service.updateBoletaStatus(codigo_boleta, metodo_pago);
         
         return reply.code(200).send({ 
           message: 'Boleta status updated successfully' 
@@ -61,13 +63,13 @@ export default class ReceiptController extends BaseController {
         });
       }
     }
-  
+    */
     // Route handler for cancelling a boleta
     async cancelBoleta(request, reply) {
       try {
-        const { codigoboleta } = request.params;
+        const { codigo_boleta } = request.params;
         
-        await this.boletaService.cancelBoleta(codigoboleta);
+        await this.service.cancelBoleta(codigo_boleta);
         
         return reply.code(200).send({ 
           message: 'Boleta cancelled successfully' 
