@@ -5,7 +5,6 @@ export class TaxiController extends BaseController {
     constructor() {
       const taxiService = new TaxiService();
       super(taxiService);
-      this.service = taxiService;
     }
     
     /*

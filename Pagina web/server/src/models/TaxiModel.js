@@ -22,18 +22,59 @@ export class TaxiModel extends BaseModel{
   }
 
   get patente() { return this._data.patente; }
+  set patente(value) { this._data.patente = value; }
+
   get marca() { return this._data.marca; }
+  set marca(value) { this._data.marca = value; }
+
   get modelo() { return this._data.modelo; }
+  set modelo(value) { this._data.modelo = value; }
+
   get codigo_taxi() { return this._data.codigo_taxi; }
+  set codigo_taxi(value) { this._data.codigo_taxi = value; }
+  
   get vencimiento_revision_tecnica() { return this._data.vencimiento_revision_tecnica; }
+  set vencimiento_revision_tecnica(value) { this._data.vencimiento_revision_tecnica = value; }
+  
   get vencimiento_permiso_circulacion() { return this._data.vencimiento_permiso_circulacion; }
+  set vencimiento_permiso_circulacion(value) { this._data.vencimiento_permiso_circulacion = value; }
+  
   get estado_taxi() { return this._data.estado_taxi; }
+  set estado_taxi(value) { this._data.estado_taxi = value; }
 
   isAvailable(){
     return this._data.estado_taxi === 'DISPONIBLE';
   }
 
-  
+  isFueraDeServicio(){
+    return this._data.estado_taxi === 'FUERA DE SERVICIO';
+  }
+
+  isEnServicio(){
+    return this._data.estado_taxi === 'EN SERVICIO';
+  }
+
+  isMantenimiento(){
+    return this._data.estado_taxi === 'MANTENIMIENTO';
+  }
+
+  static toModel(data){
+    if(!data) return null;
+
+    return new TaxiModel({
+      patente: data.patente,
+      marca: data.marca,
+      modelo: data.modelo,
+      color: data.color,
+      ano: data.ano,
+      estado: data.estado,
+      codigo_taxi: data.codigo_taxi,
+      vencimiento_revision_tecnica: data.vencimiento_revision_tecnica,
+      vencimiento_permiso_circulacion: data.vencimiento_permiso_circulacion,
+      deleted_at_taxi: data.deleted_at_taxi,
+      estado_taxi: data.estado_taxi
+    });
+  }
 
   toJSON(){
     return {
