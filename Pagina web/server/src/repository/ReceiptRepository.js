@@ -16,25 +16,25 @@ export class ReceiptRepository extends BaseRepository {
       const result = await this.db(this.tableName)
         .where('codigo_boleta', codigo_boleta)
         .first();
-      return ReceiptModel.fromDB(result);
+      return ReceiptModel.toModel(result);
     } catch (error) {
-      throw new Error(`Error finding invoice by ID: ${error.message}`);
+      throw new Error(`Error buscando boleta por id: ${error.message}`);
     }
   }
 
   /**
    * Create new invoice
-   * @param {Object} invoiceData - Invoice data
+   * @param {Object} receiptData - Invoice data
    * @returns {Promise<Object>} Created invoice
    */
-  async create(invoiceData) {
+  async create(receiptData) {
     try {
       const [created] = await this.db(this.tableName)
-        .insert(invoiceData)
+        .insert(receiptData)
         .returning('*');
-      return ReceiptModel.fromDB(created);
+      return ReceiptModel.toModel(created);
     } catch (error) {
-      throw new Error(`Error creating invoice: ${error.message}`);
+      throw new Error(`Error creando boleta: ${error.message}`);
     }
   }
 
@@ -50,9 +50,9 @@ export class ReceiptRepository extends BaseRepository {
         .where('codigo_boleta', codigo_boleta)
         .update(updateData)
         .returning('*');
-      return updated ? ReceiptModel.fromDB(updated) : null;
+      return updated ? ReceiptModel.toModel(updated) : null;
     } catch (error) {
-      throw new Error(`Error updating invoice: ${error.message}`);
+      throw new Error(`Error actualizando una boleta: ${error.message}`);
     }
   }
 
@@ -70,7 +70,7 @@ export class ReceiptRepository extends BaseRepository {
           deleted_at_boleta: new Date()
         })
         .returning('*');
-      return deletedInvoice ? ReceiptModel.fromDB(deletedInvoice) : null;
+      return deletedInvoice ? ReceiptModel.toModel(deletedInvoice) : null;
     } catch (error) {
       throw new Error(`Error soft deleting invoice: ${error.message}`);
     }
@@ -86,7 +86,7 @@ export class ReceiptRepository extends BaseRepository {
       const result = await this.db(this.tableName)
         .where('codigo_viaje', codigo_viaje)
         .first();
-      return result ? ReceiptModel.fromDB(result) : null;
+      return result ? ReceiptModel.toModel(result) : null;
     } catch (error) {
       throw new Error(`Error finding invoice by trip: ${error.message}`);
     }
@@ -102,7 +102,7 @@ export class ReceiptRepository extends BaseRepository {
       const result = await this.db(this.tableName)
         .where('codigo_reserva', codigo_reserva)
         .first();
-      return result ? ReceiptModel.fromDB(result) : null;
+      return result ? ReceiptModel.toModel(result) : null;
     } catch (error) {
       throw new Error(`Error finding invoice by reservation: ${error.message}`);
     }
@@ -128,7 +128,7 @@ export class ReceiptRepository extends BaseRepository {
         .where('boleta.codigo_boleta', codigo_boleta)
         .first();
 
-      return result ? ReceiptModel.fromDB(result) : null;
+      return result ? ReceiptModel.toModel(result) : null;
     } catch (error) {
       throw new Error(`Error finding invoice with details: ${error.message}`);
     }
@@ -146,7 +146,7 @@ export class ReceiptRepository extends BaseRepository {
         .where('estado_boleta', status)
         .whereNull('deleted_at_boleta');
 
-      return results.map(result => ReceiptModel.fromDB(result));
+      return results.map(result => ReceiptModel.toModel(result));
     } catch (error) {
       throw new Error(`Error finding invoices by status: ${error.message}`);
     }

@@ -1,6 +1,12 @@
 import { AuthMiddleware } from '../middleware/authMiddleware.js';
 
 /**
+ * @typedef {Object} AuthenticatedRequest
+ * @property {import('../models/UserModel.js').UserModel} user - The authenticated user instance
+ * @augments {import('fastify').FastifyRequest}
+ */
+
+/**
  * Base router class that provides common functionality for all routers
  * @class BaseRouter
  */
@@ -57,13 +63,13 @@ export class BaseRouter {
 
   /**
    * Helper method to verify session
-   * @param {Function} handler - Route handler function
+   * @param {(request: AuthenticatedRequest, reply: import('fastify').FastifyReply) => Promise<any>} handler 
    */
   withSession(handler) {
     return async (request, reply) => {
       try {
         const user = await AuthMiddleware.verifySession(request);
-        request.user = user; // Attach user to request for later use
+        request.user = user;
         return await handler(request, reply);
       } catch (error) {
         return reply

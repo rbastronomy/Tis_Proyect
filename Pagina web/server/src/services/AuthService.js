@@ -2,6 +2,12 @@ import { AuthError } from '../auth/auth.js';
 import authInstance from '../auth/auth.js';
 import * as argon2 from 'argon2';
 
+/**
+ * @typedef {Object} SessionValidationResult
+ * @property {Object} session - The validated session object
+ * @property {UserModel} user - The authenticated user model
+ */
+
 export class AuthService {
   constructor(userService) {
     this.userService = userService;
@@ -104,6 +110,7 @@ export class AuthService {
       // Create new session
       const session = await this.auth.createSession(user.rut.toString());
 
+
       //log successful login
       console.log('Login successful for user:', correo);
       return { user, session };
@@ -136,9 +143,9 @@ export class AuthService {
 
   /**
    * Validates a session and returns the associated user
-   * @param {string} sessionId - Session ID to validate
-   * @returns {Promise<{session: Session, user: UserModel}>}
-   * @throws {AuthError} When session is invalid
+   * @param {string} sessionId - The session ID to validate
+   * @returns {Promise<SessionValidationResult>} The validated session and user
+   * @throws {AuthError} If session is invalid or user not found
    */
   async validateSession(sessionId) {
     try {
@@ -147,9 +154,9 @@ export class AuthService {
       }
 
       // First verify the session
-      const { session, user } = await this.auth.verifySession(sessionId);
-      
-      if (!user || !user.correo) {
+      const { session, user: sessionUser } = await this.auth.verifySession(sessionId);
+
+      if (!sessionUser || !sessionUser.correo) {
         throw AuthError.InvalidSession('Invalid user data in session');
       }
 
@@ -161,9 +168,10 @@ export class AuthService {
 
       try {
         // Get full user details including roles and permissions
-        console.log('Validating session for user:', user.correo);
-        const fullUser = await this.userService.getUserWithAuth(user.correo);
-        
+        console.log('Validating session for user:', sessionUser.correo);
+        /** @type {UserModel} */
+        const fullUser = await this.userService.getUserWithAuth(sessionUser.correo);
+
         if (!fullUser) {
           throw AuthError.UserNotFound();
         }

@@ -16,9 +16,9 @@ export class TaxiRepository extends BaseRepository {
       const [createdTaxi] = await this.db(this.tableName)
         .insert(taxiData)
         .returning('*');
-      return TaxiModel.fromDB(createdTaxi);
+      return TaxiModel.toModel(createdTaxi);
     } catch (error) {
-      throw new Error(`Error creating taxi: ${error.message}`);
+      throw new Error(`Error creando un taxi: ${error.message}`);
     }
   }
 
@@ -34,9 +34,9 @@ export class TaxiRepository extends BaseRepository {
         .where({ patente })
         .update(updateData)
         .returning('*');
-      return updatedTaxi ? TaxiModel.fromDB(updatedTaxi) : null;
+      return updatedTaxi ? TaxiModel.toModel(updatedTaxi) : null;
     } catch (error) {
-      throw new Error(`Error updating taxi: ${error.message}`);
+      throw new Error(`Error actualizando un taxi: ${error.message}`);
     }
   }
 
@@ -54,9 +54,9 @@ export class TaxiRepository extends BaseRepository {
           deleted_at_taxi: new Date()
         })
         .returning('*');
-      return deletedTaxi ? TaxiModel.fromDB(deletedTaxi) : null;
+      return deletedTaxi ? TaxiModel.toModel(deletedTaxi) : null;
     } catch (error) {
-      throw new Error(`Error soft deleting taxi: ${error.message}`);
+      throw new Error(`Error realizando uns softdeleted de taxi: ${error.message}`);
     }
   }
 
@@ -64,7 +64,6 @@ export class TaxiRepository extends BaseRepository {
    * Find taxi by driver
    * @param {number} rut_conductor - Driver's RUT
    * @returns {Promise<Array>} List of taxis
-   */
   async findByDriver(rut_conductor) {
     try {
       const results = await this.db(this.tableName)
@@ -76,7 +75,20 @@ export class TaxiRepository extends BaseRepository {
       throw new Error(`Error finding taxi by driver: ${error.message}`);
     }
   }
+  */
 
+  async findByPatente(patente){
+    try {
+      const taxi = await this.db(this.tableName)
+        .select('*')
+        .where({ patente })
+        .whereNull('deleted_at_taxi')
+        .first();
+      return taxi ? TaxiModel.toModel(taxi) : null;
+    } catch (error) {
+      throw new Error(`Error buscando un taxi por patente: ${error.message}`);
+    }
+  }
   /**
    * Find taxi with details
    * @param {string} patente - Taxi license plate
@@ -95,9 +107,20 @@ export class TaxiRepository extends BaseRepository {
         .whereNull('taxi.deleted_at_taxi')
         .first();
 
-      return result ? TaxiModel.fromDB(result) : null;
+      return result ? TaxiModel.toModel(result) : null;
     } catch (error) {
-      throw new Error(`Error finding taxi with details: ${error.message}`);
+      throw new Error(`Error buscando un taxi con detalles: ${error.message}`);
+    }
+  }
+
+  async getAll(query) {
+    try {
+      const taxis = await this.db(this.tableName)
+        .select('*')
+        .whereNull('deleted_at_taxi');
+      return taxis.map(taxi => TaxiModel.toModel(taxi));
+    } catch (error) {
+      throw new Error(`Error buscando todos los taxis: ${error.message}`);
     }
   }
 }

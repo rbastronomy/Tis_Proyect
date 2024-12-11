@@ -5,12 +5,13 @@ export default class RatingController extends BaseController {
     constructor() {
         const ratingService = new RatingService();
         super(ratingService);
+        this.service = ratingService;
     }
 
     async getRating(request, reply) {
         try {
             const { id_valoracion } = request.params;
-            const rating = await this.ratingService.getRatingById(id_valoracion);
+            const rating = await this.service.getRatingById(id_valoracion);
             return reply.code(200).send(rating);
         } catch (error) {
             request.log.error(error);
@@ -25,7 +26,7 @@ export default class RatingController extends BaseController {
     async getRatingForTrip(request, reply) {
         try {
             const { codigo_viaje } = request.params;
-            const ratings = await this.ratingService.getRatingForTrip(codigo_viaje);
+            const ratings = await this.service.getRatingForTrip(codigo_viaje);
             return reply.code(200).send(ratings);
         } catch (error) {
             request.log.error(error);
@@ -40,7 +41,7 @@ export default class RatingController extends BaseController {
     async createRating(request, reply) {
         try {
             const ratingData = request.body;
-            const newRating = await this.ratingService.createRating(ratingData);
+            const newRating = await this.service.createRating(ratingData);
             return reply.code(201).send(newRating);
         } catch (error) {
             request.log.error(error);
@@ -56,7 +57,7 @@ export default class RatingController extends BaseController {
         try {
             const { id_valoracion } = request.params;
             const ratingData = request.body;
-            await this.ratingService.updateRating(id_valoracion, ratingData);
+            await this.service.updateRating(id_valoracion, ratingData);
             return reply.code(200).send({
                 message: 'Rating updated successfully'
             });
@@ -73,7 +74,7 @@ export default class RatingController extends BaseController {
     async deleteRating(request, reply) {
         try {
             const { id_valoracion } = request.params;
-            await this.ratingService.deleteRating(id_valoracion);
+            await this.service.deleteRating(id_valoracion);
             return reply.code(200).send({
                 message: 'Rating deleted successfully'
             });
@@ -90,7 +91,7 @@ export default class RatingController extends BaseController {
     async getRatingByTrip(request, reply) {
         try {
             const { codigo_viaje } = request.params;
-            const rating = await this.ratingService.getRatingByTrip(codigo_viaje);
+            const rating = await this.service.getRatingForTrip(codigo_viaje);
             return reply.code(200).send(rating);
         } catch (error) {
             request.log.error(error);
@@ -105,7 +106,7 @@ export default class RatingController extends BaseController {
     async getRatingByUser(request, reply) {
         try {
             const { id_usuario } = request.params;
-            const rating = await this.ratingService.getRatingByUser(id_usuario);
+            const rating = await this.service.getRatingForUser(id_usuario);
             return reply.code(200).send(rating);
         } catch (error) {
             request.log.error(error);
@@ -120,7 +121,7 @@ export default class RatingController extends BaseController {
     async getRatingById(request, reply) {
         try {
             const { id_valoracion } = request.params;
-            const rating = await this.ratingService.getRatingById(id_valoracion);
+            const rating = await this.service.getRatingById(id_valoracion);
             return reply.code(200).send(rating);
         } catch (error) {
             request.log.error(error);

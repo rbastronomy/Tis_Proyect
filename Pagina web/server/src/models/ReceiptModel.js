@@ -49,6 +49,20 @@ export class ReceiptModel extends BaseModel {
         };
     }
 
+    static toModel(data) {
+        if(!data) return null;
+
+        return new ReceiptModel({
+            codigo_boleta: data.codigo_boleta,
+            total: data.total,
+            fecha_emision: data.fecha_emision,
+            metodo_pago: data.metodo_pago,
+            descripcion_boleta: data.descripcion_boleta,
+            estado_boleta: data.estado_boleta,
+            deleted_at_boleta: data.deleted_at_boleta
+        });
+    }
+
     static fromDB(data) {
         return new ReceiptModel(data);
     }

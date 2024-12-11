@@ -11,7 +11,7 @@ export class RatingRepository extends BaseRepository{
             const [created] = await this.db(this.tableName)
                 .insert(ratingData)
                 .returning('*');
-            return RatingModel.fromDB(created);
+            return RatingModel.toModel(created);
         } catch (error) {
             throw new Error(`Error creating rating: ${error.message}`);
         }
@@ -23,7 +23,7 @@ export class RatingRepository extends BaseRepository{
                 .where('id_valoracion', id_valoracion)
                 .update(updateData)
                 .returning('*');
-            return updated ? RatingModel.fromDB(updated) : null;
+            return updated ? RatingModel.toModel(updated) : null;
         } catch (error) {
             throw new Error(`Error updating rating: ${error.message}`);
         }
@@ -38,9 +38,34 @@ export class RatingRepository extends BaseRepository{
                     deleted_at_valoracion: new Date()
                 })
                 .returning('*');
-            return deletedRating ? RatingModel.fromDB(deletedRating) : null;
+            return deletedRating ? RatingModel.toModel(deletedRating) : null;
         } catch (error) {
             throw new Error(`Error soft deleting rating: ${error.message}`);
+        }
+    }
+
+    async findById(id_valoracion){
+        try {
+            const rating = await this.db(this.tableName)
+                .select('*')
+                .where('id_valoracion', id_valoracion)
+                .whereNull('deleted_at_valoracion')
+                .first();
+            return rating ? RatingModel.toModel(rating) : null;
+        } catch (error) {
+            throw new Error(`Error getting rating by id: ${error.message}`);
+        }
+    }
+
+    async findByUser(rut){
+        try {
+            const ratings = await this.db(this.tableName)
+                .select('*')
+                .where('rut_usuario', rut)
+                .whereNull('deleted_at_valoracion');
+            return ratings.map((rating) => RatingModel.toModel(rating));
+        } catch (error) {
+            throw new Error(`Error getting ratings for user: ${error.message}`);
         }
     }
 
@@ -61,7 +86,7 @@ export class RatingRepository extends BaseRepository{
                 .select('*')
                 .where('codigo_viaje', codigo_viaje)
                 .whereNull('deleted_at_valoracion');
-            return ratings.map((rating) => RatingModel.fromDB(rating));
+            return ratings.map((rating) => RatingModel.toModel(rating));
         } catch (error) {
             throw new Error(`Error getting ratings for trip: ${error.message}`);
         }

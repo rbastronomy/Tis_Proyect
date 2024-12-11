@@ -20,12 +20,13 @@ export class RatingModel extends BaseModel{
 
     constructor(data = {}) {
         const modelData = {
+            ...RatingModel.ratingData,
             ...data,
             trip: data.trip instanceof TripModel ? data.trip : null,
             user: data.user instanceof UserModel ? data.user : null
         };
 
-        super(modelData, RatingModel.defaultData);
+        super(modelData, RatingModel.ratingData);
 
         // Inicializar modelos si se proporcionan datos crudos
         if (data.trip && !(data.trip instanceof TripModel)) {
@@ -90,6 +91,21 @@ export class RatingModel extends BaseModel{
         if (this._data.user) json.user = this._data.user.toJSON();
 
         return json;
+    }
+
+    static toModel(data){
+        if(!data) return null;
+
+        return new RatingModel({
+            id_valoracion: data.id_valoracion,
+            comentario_valoracion: data.comentario_valoracion,
+            calificacion: data.calificacion,
+            fecha_valoracion: data.fecha_valoracion,
+            estado_valoracion: data.estado_valoracion,
+            user: data.user,
+            trip: data.trip,
+            rating_details: data.rating_details
+        });
     }
 
     static fromDB(data) {

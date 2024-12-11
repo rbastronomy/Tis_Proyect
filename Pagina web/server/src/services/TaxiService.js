@@ -1,5 +1,5 @@
 import { BaseService } from "../core/BaseService.js"
-import TaxiRepository from "../repository/TaxiRepository.js";
+import { TaxiRepository } from "../repository/TaxiRepository.js";
 
 export class TaxiService extends BaseService {
     constructor() {
@@ -29,7 +29,7 @@ export class TaxiService extends BaseService {
         try {
             const deletedTaxi = await this.repository.softDelete(patente);
             if (!deletedTaxi) {
-                throw new Error('Taxi not found');
+                throw new Error('Taxi encontrado');
             }
             return deletedTaxi;
         } catch (error) {
@@ -37,15 +37,29 @@ export class TaxiService extends BaseService {
         }
     }
 
-    async getTaxi(patente) {
+    async getTaxiByLicensePlate(patente) {
         try {
-            const taxi = await this.repository.get(patente);
+            const taxi = await this.repository.findByPatente(patente);
             if (!taxi) {
-                throw new Error('Taxi not found');
+                throw new Error('Taxi encontrado');
             }
             return taxi;
         } catch (error) {
             throw error;
+        }
+    }
+
+    async checkTechnicalReview(patente) {
+        try {
+            const taxi = await this.repository.findByPatente(patente);
+            if (!taxi) {
+                throw new Error('Taxi no encontrado');
+            }
+            const currentDate = new Date();
+            const reviewDate = new Date(taxi.vencimiento_revision_tecnica);
+            return reviewDate >= currentDate;
+        } catch (error) {
+            throw new Error(`Error checking technical review: ${error.message}`);
         }
     }
 
