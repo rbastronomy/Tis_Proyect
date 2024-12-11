@@ -1,10 +1,20 @@
 import { BaseRouter } from '../core/BaseRouter.js';
 import { ExampleController } from '../controllers/ExampleController.js';
 
+
+/**
+ * Router for example related endpoints
+ * @class ExampleRouter
+ * @extends BaseRouter
+ */
 export class ExampleRouter extends BaseRouter {
+  /**
+   * @param {Object} provider - The HTTP server provider instance
+   */
   constructor(provider) {
     super(provider, '/api/examples');
     this.controller = new ExampleController();
+    this.setupRoutes();
   }
 
   setupRoutes() {

@@ -1,5 +1,5 @@
 import { BaseModel } from '../core/BaseModel.js';
-
+import { GeolocalizationModel } from './GeolocalizationModel.js';
 export class TaxiModel extends BaseModel{
 
   static taxiData = {
@@ -14,11 +14,13 @@ export class TaxiModel extends BaseModel{
     vencimiento_permiso_circulacion: null,
     codigo_taxi: null,
     deleted_at_taxi: null,
-    estado_taxi: 'DISPONIBLE'
+    estado_taxi: 'DISPONIBLE',
+    geolocalizacion: null
   }
   
   constructor(data = {}){
     super(data, TaxiModel.taxiData);
+    this._data.geolocalizacion = new GeolocalizationModel(data.geolocalizacion);
   }
 
   get patente() { return this._data.patente; }

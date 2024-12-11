@@ -37,9 +37,14 @@ export class BookingService extends BaseService {
             
             // Remove service and rate IDs from booking data since they're not part of the domain model
             const { codigo_servicio, id_tarifa, ...bookingModelData } = bookingData;
+            console.log(bookingData)
             
             // Create and validate booking model before saving
             const bookingModel = BookingModel.toModel(bookingModelData);
+
+            const bookingJSON = bookingModel.toJSON()
+
+            console.log(bookingJSON)
 
             return await this.repository.transaction(async (trx) => {
                 // The repository will handle mapping the model to DB structure including id_oferta
