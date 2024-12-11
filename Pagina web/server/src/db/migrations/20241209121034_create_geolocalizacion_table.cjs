@@ -7,9 +7,9 @@ exports.up = function(knex) {
         table.timestamps(true, true);
 
         //fk to taxi
-        table.integer('id_taxi')
+        table.string('patente')
             .unsigned()
-            .references('id_taxi')
+            .references('patente')
             .inTable('taxi')
             .onDelete('RESTRICT')
             .onUpdate('CASCADE');
