@@ -48,6 +48,20 @@ export class RateModel extends BaseModel{
         };
     }
 
+    static toModel(data){
+        if(!data) return null;
+
+        return new RateModel({
+            id_tarifa: data.id_tarifa,
+            descripcion_tarifa: data.descripcion_tarifa,
+            precio: data.precio,
+            tipo_tarifa: data.tipo_tarifa,
+            created_at_tarifa: data.created_at_tarifa,
+            estado_tarifa: data.estado_tarifa,
+            delete_at_tarifa: data.delete_at_tarifa,
+        })
+    }
+
     static fromDB(data){
         return new RateModel(data);
     }

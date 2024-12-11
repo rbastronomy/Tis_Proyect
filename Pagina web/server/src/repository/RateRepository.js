@@ -14,38 +14,31 @@ export class RateRepository extends BaseRepository {
   async create(rateData) {
     try {
       const [createdRate] = await this.db(this.tableName)
-        .insert({
-          ...rateData,
-          created_at: new Date(),
-          updated_at: new Date()
-        })
+        .insert(rateData)
         .returning('*');
-      return RateModel.fromDB(createdRate);
+      return RateModel.toModel(createdRate);
     } catch (error) {
       throw new Error(`Error creating rate: ${error.message}`);
     }
   }
 
   /**
-   * Update rate
-   * @param {number} id_tarifa - Rate ID
-   * @param {Object} updateData - Updated rate data
-   * @returns {Promise<Object|null>} Updated rate or null
-   */
-  async update(id_tarifa, updateData) {
-    try {
-      const [updatedRate] = await this.db(this.tableName)
-        .where({ id_tarifa })
-        .update({
-          ...updateData,
-          updated_at: new Date()
-        })
-        .returning('*');
-      return updatedRate ? RateModel.fromDB(updatedRate) : null;
-    } catch (error) {
-      throw new Error(`Error updating rate: ${error.message}`);
+     * Update invoice
+     * @param {number} id_tarifa - Invoice ID
+     * @param {Object} updateData - Updated invoice data
+     * @returns {Promise<Object|null>} Updated invoice or null
+     */
+    async update(id_tarifa, updateData) {
+      try {
+        const [updated] = await this.db(this.tableName)
+          .where('id_tarifa', id_tarifa)
+          .update(updateData)
+          .returning('*');
+        return updated ? RateModel.toModel(updated) : null;
+      } catch (error) {
+        throw new Error(`Error actualizando una tarifa: ${error.message}`);
+      }
     }
-  }
 
   /**
    * Soft delete rate
@@ -59,10 +52,10 @@ export class RateRepository extends BaseRepository {
         .update({
           estado_tarifa: 'ELIMINADO',
           fecha_eliminacion_tarifa: new Date(),
-          updated_at: new Date()
+          delete_at_tarifa: new Date()
         })
         .returning('*');
-      return deletedRate ? RateModel.fromDB(deletedRate) : null;
+      return deletedRate ? RateModel.toModel(deletedRate) : null;
     } catch (error) {
       throw new Error(`Error soft deleting rate: ${error.message}`);
     }
@@ -78,7 +71,7 @@ export class RateRepository extends BaseRepository {
         .where('estado_tarifa', 'ACTIVO')
         .whereNull('fecha_eliminacion_tarifa')
         .select('*');
-      return results.map(result => RateModel.fromDB(result));
+      return results.map(result => RateModel.toModel(result));
     } catch (error) {
       throw new Error(`Error finding active rates: ${error.message}`);
     }
@@ -107,7 +100,7 @@ export class RateRepository extends BaseRepository {
       }
 
       const results = await query;
-      return results.map(result => RateModel.fromDB(result));
+      return results.map(result => RateModel.toModel(result));
     } catch (error) {
       throw new Error(`Error finding rates by ride type: ${error.message}`);
     }
@@ -137,9 +130,20 @@ export class RateRepository extends BaseRepository {
       }
 
       const results = await query;
-      return results.map(result => RateModel.fromDB(result));
+      return results.map(result => RateModel.toModel(result));
     } catch (error) {
       throw new Error(`Error finding rates by service and type: ${error.message}`);
+    }
+  }
+
+  async findAll() {
+    try {
+      const rates = await this.db(this.tableName)
+        .select('*')
+        .whereNull('fecha_eliminacion_tarifa');
+      return rates.map(rate => RateModel.toModel(rate));
+    } catch (error) {
+      throw new Error(`Error getting all rates: ${error.message}`);
     }
   }
 
@@ -157,7 +161,7 @@ export class RateRepository extends BaseRepository {
         })
         .whereNull('fecha_eliminacion_tarifa')
         .first();
-      return result ? RateModel.fromDB(result) : null;
+      return result ? RateModel.toModel(result) : null;
     } catch (error) {
       throw new Error(`Error finding rate by type: ${error.message}`);
     }

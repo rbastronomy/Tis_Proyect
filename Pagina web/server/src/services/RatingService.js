@@ -69,7 +69,7 @@ export class RatingService extends BaseService {
             throw new Error('Failed to delete rating');
         }
     }
-    //revisar
+    /*//revisar
     async createRating(ratingData) {
         try {
             this.validateRatingData(ratingData);
@@ -79,6 +79,7 @@ export class RatingService extends BaseService {
             throw new Error('Failed to create rating');
         }
     }
+    */
 
     async findAll() {
         try {
