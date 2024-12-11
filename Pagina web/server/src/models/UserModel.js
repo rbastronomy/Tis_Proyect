@@ -43,6 +43,10 @@ import { BaseModel } from '../core/BaseModel.js';
  */
 
 /**
+ * @typedef {import('./UserModel.js').UserModel} UserModel
+ */
+
+/**
  * Class representing a User in the system
  * @extends {BaseModel<UserModelData>}
  */
@@ -219,6 +223,31 @@ export class UserModel extends BaseModel {
 
   getRoleId() {
     return this._data.role?.id;
+  }
+
+  /**
+   * Checks if the user has all the specified permissions
+   * @param {string[]} requiredPermissions - Array of required permissions (names)
+   * @returns {boolean} - True if user has all required permissions, false otherwise
+   */
+  hasPermissions(requiredPermissions) {
+    if (!this.role || !this.role.permissions) return false;
+
+    return requiredPermissions.every(requiredPermission =>
+      this.role.permissions.some(
+        permission => permission.nombre === requiredPermission
+      )
+    );
+  }
+
+  /**
+   * Checks if the user has at least one of the specified roles
+   * @param {string[]} requiredRoles - Array of required roles (names)
+   * @returns {boolean} - True if user has at least one of the required roles, false otherwise
+   */
+  hasRoles(requiredRoles) {
+    if (!this.role) return false;
+    return requiredRoles.some(requiredRole => this.role.nombre === requiredRole);
   }
 }
 

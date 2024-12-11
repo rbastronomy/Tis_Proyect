@@ -58,7 +58,7 @@ export class AuthController {
       const { user, session } = await this.authService.login(correo, contrasena);
       
       const sessionCookie = this.authService.auth.createSessionCookie(session);
-      reply.header('Set-Cookie', sessionCookie.serialize());
+      reply.header('Set-Cookie', sessionCookie);
       
       return reply.send({ 
         message: 'Login successful', 
@@ -89,22 +89,19 @@ export class AuthController {
    */
   async logout(request, reply) {
     try {
-      // Accede al encabezado de cookies directamente
       const cookieHeader = request.headers.cookie || '';
-
       console.log('Cookie header:', cookieHeader);
-      // Extrae el ID de sesión usando el método del proveedor
+
       const sessionId = this.authService.auth.provider.readSessionCookie(cookieHeader);
-      
+
       if (!sessionId) {
         return reply.status(401).send({ error: 'No session found' });
       }
 
-      // Invalida la sesión
       await this.authService.logout(sessionId);
-      
-      // Limpia la cookie de sesión
-      const cookieName = this.authService.auth.provider.sessionCookieName;
+
+      // Clear the session cookie using the cookie name from the provider
+      const cookieName = this.authService.auth.provider.getSessionCookieName();
       clearCookie(reply, cookieName);
 
       return reply.send({ message: 'Logout successful' });
@@ -138,7 +135,6 @@ export class AuthController {
       console.log('Session ID from cookie:', sessionId);
 
       const { session, user } = await this.authService.validateSession(sessionId);
-      
       if (!session) {
         return reply.status(401).send({ error: 'Invalid session' });
       }

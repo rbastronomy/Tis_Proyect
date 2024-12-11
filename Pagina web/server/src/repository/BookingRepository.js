@@ -13,7 +13,7 @@ export class BookingRepository extends BaseRepository {
    */
   async create(bookingData, trx = null) {
     try {
-      const { codigo_reserva, ...dataToInsert } = bookingData;
+      const { codigo_reserva, history, ...dataToInsert } = bookingData;
       dataToInsert.created_at = new Date();
       dataToInsert.updated_at = new Date();
       

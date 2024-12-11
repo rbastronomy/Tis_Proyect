@@ -13,7 +13,7 @@ export class UserService extends BaseService {
   /**
    * Gets user with auth details
    * @param {string} correo - User email
-   * @returns {Promise<UserModel|null>} User with role and permissions
+   * @returns {Promise<import('../models/UserModel.js').UserModel|null>} User with role and permissions
    */
   async getUserWithAuth(correo) {
     try {
@@ -21,14 +21,14 @@ export class UserService extends BaseService {
       const UserData = await this.repository.findByEmail(correo);
       if (!UserData) return null;
 
+      // Convert raw data to UserModel
+      const user = UserModel.toModel(UserData);
+
       // Get user's role with permissions already loaded
       const role = await this.roleService.findById(UserData.id_roles);
       if (!role) {
         return null;
       }
-
-      //creamos el modelo de usuario
-      const user = UserModel.toModel(UserData);
 
       user.role = role;
 

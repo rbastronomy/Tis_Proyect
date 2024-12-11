@@ -1,6 +1,8 @@
 import { BaseController } from "../core/BaseController.js";
 import { BookingService } from "../services/BookingService.js";
 
+/** @typedef {import('../core/BaseRouter.js').AuthenticatedRequest} AuthenticatedRequest */
+
 class BookingController extends BaseController {
     constructor() {
         const bookingService = new BookingService();
@@ -9,9 +11,8 @@ class BookingController extends BaseController {
 
     /**
      * Creates a new booking
-     * @param {Object} request - Fastify request object
-     * @param {Object} request.body - Booking data
-     * @param {Object} reply - Fastify reply object
+     * @param {AuthenticatedRequest} request - Fastify request object with authenticated user
+     * @param {import('fastify').FastifyReply} reply - Fastify reply object
      * @returns {Promise<Object>} Response object containing new booking data
      */
     async createBooking(request, reply) {

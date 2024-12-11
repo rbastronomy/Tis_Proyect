@@ -1,9 +1,5 @@
-import { Lucia } from 'lucia';
-import { CustomPostgresAdapter } from './CustomPostgresAdapter.js';
-import { db } from '../db/database.js';
+import AuthProvider from './AuthProvider.js';
 import dotenv from 'dotenv';
-import process from 'process';
-import pg from 'pg';
 import UserRepository from '../repository/UserRepository.js';
 
 dotenv.config();
@@ -35,6 +31,10 @@ export class AuthError extends Error {
     static DatabaseError(message) {
         return new AuthError(message, 'DATABASE_ERROR');
     }
+
+    static Forbidden() {
+        return new AuthError('Forbidden', 'FORBIDDEN');
+    }
 }
 
 class Auth {
@@ -43,34 +43,7 @@ class Auth {
 
     constructor() {
         this.userRepository = new UserRepository();
-        const pgPool = new pg.Pool(db.client.config.connection);
-
-        const adapter = new CustomPostgresAdapter(pgPool, {
-            user: 'persona',
-            session: 'user_session'
-        });
-
-        const isProduction = process.env.NODE_ENV === 'production';
-
-        this.provider = new Lucia(adapter, {
-            env: isProduction ? 'PROD' : 'DEV',
-            sessionCookie: {
-                attributes: {
-                    secure: isProduction,
-                    sameSite: 'lax',
-                    domain: process.env.COOKIE_DOMAIN || undefined,
-                    path: '/'
-                }
-            },
-            getUserAttributes: (attributes) => ({
-                rut: attributes.id,
-                nombre: attributes.nombre,
-                apellido_paterno: attributes.apellido_paterno,
-                apellido_materno: attributes.apellido_materno,
-                correo: attributes.correo,
-                role: attributes.role
-            })
-        });
+        this.provider = new AuthProvider();
     }
 
     async verifySession(sessionId) {
@@ -101,9 +74,7 @@ class Auth {
 
     async createSession(userId) {
         try {
-            const stringUserId = userId.toString();
-            const session = await this.provider.createSession(stringUserId);
-
+            const session = await this.provider.createSession(userId);
             return session;
         } catch (error) {
             console.error('Detailed session creation error:', {

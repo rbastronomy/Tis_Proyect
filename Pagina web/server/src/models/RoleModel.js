@@ -80,8 +80,8 @@ export class RoleModel extends BaseModel {
    * @returns {boolean} True if the role has the specified permission
    */
   hasPermission(permissionName) {
-    return this._data.permissions.some(p => 
-      p.nombrepermiso === permissionName || p.name === permissionName
+    return this._data.permissions.some(
+      p => p.nombre === permissionName
     );
   }
 

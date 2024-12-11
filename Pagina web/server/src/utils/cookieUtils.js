@@ -1,3 +1,6 @@
+import cookie from 'cookie';
+import process from 'process';
+
 /**
  * Sets a cookie in the response
  * @param {Object} reply - Fastify reply object
@@ -16,14 +19,24 @@ export function setCookie(reply, name, value, options = {}) {
 }
 
 /**
- * Clears a cookie in the response
+ * Clears a cookie by setting its expiration to a past date
  * @param {Object} reply - Fastify reply object
- * @param {string} name - Cookie name
- * @param {Object} options - Cookie options
+ * @param {string} name - Name of the cookie to clear
  */
-export function clearCookie(reply, name, options = {}) {
-  setCookie(reply, name, '', { ...options, maxAge: 0 });
-}
+export const clearCookie = (reply, name) => {
+  const isProduction = process.env.NODE_ENV === 'production';
+  const cookieAttributes = {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: 'lax',
+    domain: process.env.COOKIE_DOMAIN || undefined,
+    path: '/',
+    expires: new Date(0) // Set expiration to a past date
+  };
+
+  const cookieString = cookie.serialize(name, '', cookieAttributes);
+  reply.header('Set-Cookie', cookieString);
+};
 
 /**
  * Serializes cookie options into a string
