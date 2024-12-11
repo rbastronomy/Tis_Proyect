@@ -1,15 +1,11 @@
 import { BaseService } from "../core/BaseService.js";
 import { RatingModel } from "../models/RatingModel.js";
 import { RatingRepository } from "../repository/RatingRepository.js";
-import { TripRepository } from "../repository/TripRepository.js";
-import { UserRepository } from "../repository/UserRepository.js";
 
 export class RatingService extends BaseService {
     constructor() {
-        const ratingRepository = new RatingRepository();
-        super(ratingRepository);
-        this.tripRepository = new TripRepository();
-        this.userRepository = new UserRepository();
+        super();
+        this.repository = new RatingRepository();
     }
 
     /**
@@ -19,7 +15,7 @@ export class RatingService extends BaseService {
      */
     async getRatingById(id_valoracion) {
         try {
-            const rating = await this.ratingRepository.findById(id_valoracion);
+            const rating = await this.repository.findById(id_valoracion);
             if (!rating) {
                 throw new Error('Rating not found');
             }
@@ -32,10 +28,20 @@ export class RatingService extends BaseService {
 
     async getRatingForTrip(codigo_viaje) {
         try {
-            const ratings = await this.tripRepository.findByTrip(codigo_viaje);
+            const ratings = await this.repository.findByTrip(codigo_viaje);
             return ratings;
         } catch (error) {
             console.error('Error getting ratings for trip:', error);
+            throw new Error('Failed to retrieve ratings');
+        }
+    }
+
+    async getRatingForUser(rut){
+        try {
+            const ratings = await this.repository.findByUser(rut);
+            return ratings;
+        } catch (error) {
+            console.error('Error getting ratings for user:', error);
             throw new Error('Failed to retrieve ratings');
         }
     }
@@ -55,6 +61,34 @@ export class RatingService extends BaseService {
         }
     }
 
+    async deleteRating(id_valoracion) {
+        try {
+            return await this.repository.softDelete(id_valoracion);
+        } catch (error) {
+            console.error('Error deleting rating:', error);
+            throw new Error('Failed to delete rating');
+        }
+    }
+    //revisar
+    async createRating(ratingData) {
+        try {
+            this.validateRatingData(ratingData);
+            return await this.repository.create(ratingData);
+        } catch (error) {
+            console.error('Error creating rating:', error);
+            throw new Error('Failed to create rating');
+        }
+    }
+
+    async findAll() {
+        try {
+            return await this.repository.findAll();
+        } catch (error) {
+            console.error('Error getting all ratings:', error);
+            throw new Error('Failed to retrieve ratings');
+        }
+    }
+
     /**
      * Update rating data
      * @param {string} id_valoracion - Rating ID
@@ -67,6 +101,15 @@ export class RatingService extends BaseService {
         } catch (error) {
             console.error('Error updating rating:', error);
             throw new Error('Failed to update rating');
+        }
+    }
+
+    validateRatingData(ratingData) {
+        const requieredFields = ['comentario_valoracion', 'calificacion'];
+        for (const field of requieredFields) {
+            if (!ratingData[field]) {
+                throw new Error(`Missing required field: ${field}`);
+            }
         }
     }
 }
