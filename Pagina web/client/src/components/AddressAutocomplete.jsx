@@ -25,7 +25,6 @@ function AddressAutocomplete({ onSelect, error, isInvalid, defaultValue }) {
   const [selectedValue, setSelectedValue] = useState(null);
   const debouncedQuery = useDebounce(query, 1000);
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-  const [value, setValue] = useState(defaultValue || '');
 
   const fetchSuggestions = useCallback(async (input) => {
     if (!input) return;
