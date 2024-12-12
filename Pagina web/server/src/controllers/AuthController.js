@@ -16,17 +16,56 @@ export class AuthController {
   /**
    * Handles user registration
    * @param {Object} request - Fastify request object
-   * @param {Object} request.body - Registration data
+   * @param {Object} request.body - Registration data including:
+   * @param {string} request.body.rut - User's RUT
+   * @param {string} request.body.nombre - User's name
+   * @param {string} request.body.correo - User's email
+   * @param {string} request.body.telefono - User's phone
+   * @param {string} request.body.nacionalidad - User's nationality
+   * @param {string} request.body.genero - User's gender
+   * @param {string} request.body.contrasena - User's password
+   * @param {Date} request.body.fecha_contratacion - Driver's hire date (optional)
+   * @param {Date} request.body.licencia_conducir - Driver's license expiry (optional)
+   * @param {number} request.body.id_roles - User's role ID
+   * @param {boolean} [request.body.createSession=true] - Whether to create a session
    * @param {Object} reply - Fastify reply object
    * @returns {Promise<Object>} Response object containing new user data
    * @throws {AuthError} When registration fails
    */
   async register(request, reply) {
     try {
-      const { user, session } = await this.authService.register(request.body);
+      // Validate required fields based on role
+      const isDriver = request.body.id_roles === 3; // Assuming 3 is the driver role ID
+      if (isDriver) {
+        const requiredFields = [
+          'rut', 
+          'nombre', 
+          'correo', 
+          'telefono', 
+          'nacionalidad', 
+          'genero',
+          'contrasena',
+          'fecha_contratacion',
+          'licencia_conducir'
+        ];
+
+        const missingFields = requiredFields.filter(field => !request.body[field]);
+        if (missingFields.length > 0) {
+          return reply.status(400).send({ 
+            error: `Missing required fields: ${missingFields.join(', ')}` 
+          });
+        }
+      }
+
+      // Only create session if explicitly requested (default true for backward compatibility)
+      const createSession = request.body.createSession !== false;
+      const { user, session } = await this.authService.register(request.body, createSession);
       
-      const sessionCookie = this.authService.auth.createSessionCookie(session);
-      reply.header('Set-Cookie', sessionCookie.serialize());
+      // Only set cookie if session was created
+      if (createSession && session) {
+        const sessionCookie = this.authService.auth.createSessionCookie(session);
+        reply.header('Set-Cookie', sessionCookie.serialize());
+      }
 
       return reply.send({ 
         message: 'Registration successful', 

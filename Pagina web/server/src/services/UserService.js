@@ -62,4 +62,32 @@ export class UserService extends BaseService {
     const userData = await this.repository.findByEmail(email);
     return UserModel.toModel(userData);
   }
+
+  /**
+   * Gets user by RUT
+   * @param {string|number} rut - User RUT
+   * @returns {Promise<import('../models/UserModel.js').UserModel|null>} User or null if not found
+   */
+  async getByRut(rut) {
+    const userData = await this.repository.findByRut(rut);
+    return UserModel.toModel(userData);
+  }
+
+  /**
+   * Find all users with optional filters
+   * @param {Object} [filters] - Optional filters to apply
+   * @param {number} [filters.id_roles] - Filter by role ID
+   * @param {string} [filters.estado_persona] - Filter by user status
+   * @returns {Promise<UserModel[]>} Array of user models
+   */
+  async findAll(filters = {}) {
+    try {
+      const users = await this.repository.findAll(filters);
+      console.log(users);
+      return users.map(user => UserModel.toModel(user));
+    } catch (error) {
+      console.error('Error finding users:', error);
+      throw error;
+    }
+  }
 }

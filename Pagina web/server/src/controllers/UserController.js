@@ -49,4 +49,20 @@ export class UserController extends BaseController {
       return reply.status(500).send({ error: 'Failed to list users' });
     }
   }
+
+  /**
+   * Gets all users with driver role
+   * @param {Object} request - Fastify request object
+   * @param {Object} reply - Fastify reply object
+   * @returns {Promise<Array>} Array of driver users
+   */
+  async getDrivers(request, reply) {
+    try {
+      const drivers = await this.service.findAll({ id_roles: 3 });
+      return reply.send({ drivers: drivers.map(driver => driver.toJSON()) });
+    } catch (error) {
+      request.log.error(error);
+      return reply.status(500).send({ error: 'Failed to retrieve drivers' });
+    }
+  }
 }

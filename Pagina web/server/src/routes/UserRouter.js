@@ -93,5 +93,16 @@ export class UserRouter extends BaseRouter {
         )
       )
     });
+
+    // Add new route to get all drivers
+    this.addRoute('GET', '/drivers', {
+      handler: this.withAuth(
+        async (request, reply) => {
+          return this.controller.getDrivers(request, reply);
+        },
+        [],
+        ['ADMINISTRADOR']
+      )
+    });
   }
 } 

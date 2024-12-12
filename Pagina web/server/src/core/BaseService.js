@@ -1,4 +1,3 @@
-
 export class BaseService {
   /**
    * @param {class} repository - Repository class
@@ -48,6 +47,16 @@ export class BaseService {
   
     async count(filters = {}) {
       return this.repository.count(filters);
+    }
+  
+    /**
+     * Find all records with optional filters
+     * @param {Object} [filters] - Optional filters to apply to the query
+     * @returns {Promise<Array>} Array of model instances
+     */
+    async findAll(filters = {}) {
+      const results = await this.repository.findAll(filters);
+      return results;
     }
   }
   

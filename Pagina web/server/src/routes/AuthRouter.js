@@ -24,7 +24,7 @@ export class AuthRouter extends BaseRouter {
       )
     });
 
-    // Register route
+    // Register route - This will handle both regular users and drivers
     this.addRoute('POST', '/register', {
       handler: this.withErrorHandler(
         this.controller.register.bind(this.controller)

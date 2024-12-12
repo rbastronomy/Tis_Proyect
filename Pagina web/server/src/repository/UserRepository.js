@@ -198,7 +198,7 @@ export class UserRepository extends BaseRepository {
       }
 
       const results = await query;
-      return results.map(row => this._toModel(row));
+      return results
     } catch (error) {
       console.error('Error finding all users:', error);
       throw error;

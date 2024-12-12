@@ -1,7 +1,6 @@
 import { createLazyFileRoute } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
-import { AdminLayout } from '../../components/AdminLayout';
 import { 
   Table, 
   TableHeader, 
@@ -26,10 +25,10 @@ import { FleetMap } from '../../components/FleetMap';
 import { Card, CardBody, CardHeader } from "@nextui-org/react";
 
 export const Route = createLazyFileRoute('/admin/dashboard')({
-  component: AdminDashboard,
+  component: DashboardPage
 });
 
-function AdminDashboard() {
+function DashboardPage() {
   const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   const [bookings, setBookings] = useState([]);
@@ -160,7 +159,7 @@ function AdminDashboard() {
   }
 
   return (
-    <AdminLayout>
+    <div>
       <div className="space-y-6 p-4">
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -295,6 +294,6 @@ function AdminDashboard() {
           </ModalContent>
         </Modal>
       </div>
-    </AdminLayout>
+    </div>
   );
 } 

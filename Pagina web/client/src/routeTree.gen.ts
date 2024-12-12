@@ -33,6 +33,7 @@ const ReservasCodigoReservaLazyImport = createFileRoute(
 )()
 const AdminDashboardLazyImport = createFileRoute('/admin/dashboard')()
 const AdminCreateBookingLazyImport = createFileRoute('/admin/create-booking')()
+const AdminConductoresLazyImport = createFileRoute('/admin/conductores')()
 
 // Create/Update Routes
 
@@ -116,6 +117,13 @@ const AdminCreateBookingLazyRoute = AdminCreateBookingLazyImport.update({
   import('./routes/admin/create-booking.lazy').then((d) => d.Route),
 )
 
+const AdminConductoresLazyRoute = AdminConductoresLazyImport.update({
+  path: '/admin/conductores',
+  getParentRoute: () => rootRoute,
+} as any).lazy(() =>
+  import('./routes/admin/conductores.lazy').then((d) => d.Route),
+)
+
 const TaxiRutaRoute = TaxiRutaImport.update({
   path: '/taxi/ruta',
   getParentRoute: () => rootRoute,
@@ -188,6 +196,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TaxiRutaImport
       parentRoute: typeof rootRoute
     }
+    '/admin/conductores': {
+      id: '/admin/conductores'
+      path: '/admin/conductores'
+      fullPath: '/admin/conductores'
+      preLoaderRoute: typeof AdminConductoresLazyImport
+      parentRoute: typeof rootRoute
+    }
     '/admin/create-booking': {
       id: '/admin/create-booking'
       path: '/admin/create-booking'
@@ -245,6 +260,7 @@ export interface FileRoutesByFullPath {
   '/registro': typeof RegistroLazyRoute
   '/sobre': typeof SobreLazyRoute
   '/taxi/ruta': typeof TaxiRutaRoute
+  '/admin/conductores': typeof AdminConductoresLazyRoute
   '/admin/create-booking': typeof AdminCreateBookingLazyRoute
   '/admin/dashboard': typeof AdminDashboardLazyRoute
   '/reservas/$codigoReserva': typeof ReservasCodigoReservaLazyRoute
@@ -263,6 +279,7 @@ export interface FileRoutesByTo {
   '/registro': typeof RegistroLazyRoute
   '/sobre': typeof SobreLazyRoute
   '/taxi/ruta': typeof TaxiRutaRoute
+  '/admin/conductores': typeof AdminConductoresLazyRoute
   '/admin/create-booking': typeof AdminCreateBookingLazyRoute
   '/admin/dashboard': typeof AdminDashboardLazyRoute
   '/reservas/$codigoReserva': typeof ReservasCodigoReservaLazyRoute
@@ -282,6 +299,7 @@ export interface FileRoutesById {
   '/registro': typeof RegistroLazyRoute
   '/sobre': typeof SobreLazyRoute
   '/taxi/ruta': typeof TaxiRutaRoute
+  '/admin/conductores': typeof AdminConductoresLazyRoute
   '/admin/create-booking': typeof AdminCreateBookingLazyRoute
   '/admin/dashboard': typeof AdminDashboardLazyRoute
   '/reservas/$codigoReserva': typeof ReservasCodigoReservaLazyRoute
@@ -302,6 +320,7 @@ export interface FileRouteTypes {
     | '/registro'
     | '/sobre'
     | '/taxi/ruta'
+    | '/admin/conductores'
     | '/admin/create-booking'
     | '/admin/dashboard'
     | '/reservas/$codigoReserva'
@@ -319,6 +338,7 @@ export interface FileRouteTypes {
     | '/registro'
     | '/sobre'
     | '/taxi/ruta'
+    | '/admin/conductores'
     | '/admin/create-booking'
     | '/admin/dashboard'
     | '/reservas/$codigoReserva'
@@ -336,6 +356,7 @@ export interface FileRouteTypes {
     | '/registro'
     | '/sobre'
     | '/taxi/ruta'
+    | '/admin/conductores'
     | '/admin/create-booking'
     | '/admin/dashboard'
     | '/reservas/$codigoReserva'
@@ -355,6 +376,7 @@ export interface RootRouteChildren {
   RegistroLazyRoute: typeof RegistroLazyRoute
   SobreLazyRoute: typeof SobreLazyRoute
   TaxiRutaRoute: typeof TaxiRutaRoute
+  AdminConductoresLazyRoute: typeof AdminConductoresLazyRoute
   AdminCreateBookingLazyRoute: typeof AdminCreateBookingLazyRoute
   AdminDashboardLazyRoute: typeof AdminDashboardLazyRoute
   ReservasCodigoReservaLazyRoute: typeof ReservasCodigoReservaLazyRoute
@@ -373,6 +395,7 @@ const rootRouteChildren: RootRouteChildren = {
   RegistroLazyRoute: RegistroLazyRoute,
   SobreLazyRoute: SobreLazyRoute,
   TaxiRutaRoute: TaxiRutaRoute,
+  AdminConductoresLazyRoute: AdminConductoresLazyRoute,
   AdminCreateBookingLazyRoute: AdminCreateBookingLazyRoute,
   AdminDashboardLazyRoute: AdminDashboardLazyRoute,
   ReservasCodigoReservaLazyRoute: ReservasCodigoReservaLazyRoute,
@@ -402,6 +425,7 @@ export const routeTree = rootRoute
         "/registro",
         "/sobre",
         "/taxi/ruta",
+        "/admin/conductores",
         "/admin/create-booking",
         "/admin/dashboard",
         "/reservas/$codigoReserva",
@@ -436,6 +460,9 @@ export const routeTree = rootRoute
     },
     "/taxi/ruta": {
       "filePath": "taxi/ruta.jsx"
+    },
+    "/admin/conductores": {
+      "filePath": "admin/conductores.lazy.jsx"
     },
     "/admin/create-booking": {
       "filePath": "admin/create-booking.lazy.jsx"

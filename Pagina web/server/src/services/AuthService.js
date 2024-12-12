@@ -47,15 +47,34 @@ export class AuthService {
   /**
    * Registers a new user with authentication
    * @param {Object} userData - User registration data
-   * @returns {Promise<{user: UserModel, session: Session}>}
+   * @param {string} userData.rut - User's RUT
+   * @param {string} userData.nombre - User's name
+   * @param {string} userData.correo - User's email
+   * @param {string} userData.telefono - User's phone
+   * @param {string} userData.nacionalidad - User's nationality
+   * @param {string} userData.genero - User's gender
+   * @param {string} userData.contrasena - User's password
+   * @param {Date} [userData.fecha_contratacion] - Driver's hire date
+   * @param {Date} [userData.licencia_conducir] - Driver's license expiry
+   * @param {number} userData.id_roles - User's role ID
+   * @param {boolean} [createSession=true] - Whether to create a session
+   * @returns {Promise<{user: UserModel, session?: Session}>}
    * @throws {AuthError} When user already exists or registration fails
    */
-  async register(userData) {
+  async register(userData, createSession = true) {
     try {
-      // Check if user exists
-      const existingUser = await this.userService.getByEmail(userData.correo);
-      if (existingUser) {
-        throw AuthError.UserExists();
+      // Check if user exists by email or RUT
+      const [existingEmail, existingRut] = await Promise.all([
+        this.userService.getByEmail(userData.correo),
+        this.userService.getByRut(userData.rut)
+      ]);
+
+      if (existingEmail) {
+        throw AuthError.UserExists('Email already registered');
+      }
+
+      if (existingRut) {
+        throw AuthError.UserExists('RUT already registered');
       }
 
       // Hash password before user creation
@@ -64,12 +83,14 @@ export class AuthService {
       // Create user with hashed password
       const user = await this.userService.create({
         ...userData,
-        contrasena: hashedPassword
+        contrasena: hashedPassword,
+        estado_persona: 'ACTIVO' // Set default state
       });
 
       console.log('User created:', user);
-      // Create auth session
-      const session = await this.auth.createSession(user.rut.toString());
+      
+      // Create auth session only if requested
+      const session = createSession ? await this.auth.createSession(user.rut.toString()) : null;
 
       return { user, session };
     } catch (error) {

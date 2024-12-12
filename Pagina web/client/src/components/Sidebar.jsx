@@ -7,7 +7,7 @@ import {
   HardHat, 
   Users, 
 } from 'lucide-react'
-import { Link, useLocation } from '@tanstack/react-router'
+import { Link, useLocation, useRouter } from '@tanstack/react-router'
 import {
   Sidebar,
   SidebarContent,
@@ -32,12 +32,7 @@ const navigation = [
       {
         title: "Reservas",
         icon: CalendarRange,
-        url: "/admin/bookings",
-      },
-      {
-        title: "Tarifas",
-        icon: Receipt,
-        url: "/admin/rates",
+        url: "/admin/reservas",
       },
     ],
   },
@@ -47,12 +42,27 @@ const navigation = [
       {
         title: "Servicios",
         icon: Briefcase,
-        url: "/admin/services",
+        url: "/admin/servicios",
       },
+      {
+        title: "Tarifas",
+        icon: Receipt,
+        url: "/admin/tarifas",
+      },
+    ],
+  },
+  {
+    title: "Flota",
+    items: [
       {
         title: "Taxis",
         icon: Car,
         url: "/admin/taxis",
+      },
+      {
+        title: "Conductores",
+        icon: HardHat,
+        url: "/admin/conductores",
       },
     ],
   },
@@ -60,22 +70,27 @@ const navigation = [
     title: "Usuarios",
     items: [
       {
-        title: "Conductores",
-        icon: HardHat,
-        url: "/admin/drivers",
-      },
-      {
         title: "Usuarios",
         icon: Users,
-        url: "/admin/users",
+        url: "/admin/usuarios",
       },
     ],
   },
 ]
 
 export function AdminSidebar() {
-  const location = useLocation();
-  const [activeItem, setActiveItem] = useState(location.pathname);
+  const location = useLocation()
+  const router = useRouter()
+  const [activeItem, setActiveItem] = useState(location.pathname)
+
+  // Preload route data when hovering over link
+  const preloadRoute = (url) => {
+    router.preloadRoute({
+      to: url,
+      params: {},
+      search: {}
+    })
+  }
 
   return (
     <div className="h-full">
@@ -93,6 +108,8 @@ export function AdminSidebar() {
                       <Link 
                         to={item.url}
                         className="block"
+                        preload="intent" // Enable preloading on hover/touch
+                        onMouseEnter={() => preloadRoute(item.url)} // Manually preload on hover
                       >
                         <Button
                           className={`w-full justify-start h-auto py-2.5 px-3 font-medium rounded-lg

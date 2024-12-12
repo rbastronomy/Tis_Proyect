@@ -242,7 +242,16 @@ function CreateBooking() {
   }, [rideType, setValue]);
 
   if (!isAuthenticated || !['ADMINISTRADOR', 'USUARIO'].includes(user?.role?.nombre_rol)) {
-    return <div>Loading...</div>
+    //show a card with a message that says "No tienes permisos para acceder a esta página"and redirect to the home page
+    return (
+      <div className="flex justify-center items-center min-h-[calc(100vh-64px)] bg-gradient-to-b from-gray-50 to-white p-4 text-center"> 
+        <Card className="w-full max-w-xl">
+          <CardBody>
+            <p className='justify-center items-center text-center'>No tienes permisos para acceder a esta página</p>
+          </CardBody>
+        </Card>
+      </div>
+    )
   }
 
   /**
