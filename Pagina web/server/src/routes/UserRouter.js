@@ -104,5 +104,17 @@ export class UserRouter extends BaseRouter {
         ['ADMINISTRADOR']
       )
     });
+
+    // Add delete driver endpoint
+    this.addRoute('DELETE', '/drivers/:rut', {
+      handler: this.withAuth(
+        async (request, reply) => {
+          const { rut } = request.params;
+          return this.controller.deleteDriver(request, reply);
+        },
+        [],
+        ['ADMINISTRADOR']
+      )
+    });
   }
 } 

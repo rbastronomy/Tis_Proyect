@@ -9,6 +9,11 @@ import {
   Select,
   SelectItem,
   Chip,
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter
 } from "@nextui-org/react";
 import { Plus, Pencil, Trash2, Phone, Mail, IdCard } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
@@ -40,6 +45,12 @@ function Conductores() {
     estado_persona: 'ACTIVO'
   });
   const { rut, updateRut, isValid: isRutValid } = useRut();
+  const { 
+    isOpen: isDeleteModalOpen, 
+    onOpen: onDeleteModalOpen, 
+    onClose: onDeleteModalClose 
+  } = useDisclosure();
+  const [driverToDelete, setDriverToDelete] = useState(null);
 
   useEffect(() => {
     if (!isAuthenticated || user?.role?.nombre_rol !== 'ADMINISTRADOR') {
@@ -135,6 +146,8 @@ function Conductores() {
     }
 
     try {
+      onClose();
+
       if (!selectedDriver) {
         const accountResponse = await fetch('/api/auth/register', {
           method: 'POST',
@@ -162,16 +175,29 @@ function Conductores() {
           const error = await accountResponse.json();
           throw new Error(error.message || 'Error creating user account');
         }
+
+        await fetchConductores();
+        
+        setFormData({
+          nombre: '',
+          correo: '',
+          telefono: '',
+          nacionalidad: '',
+          genero: '',
+          contrasena: '',
+          confirmPassword: '',
+          fecha_contratacion: '',
+          licencia_conducir: '',
+          estado_persona: 'ACTIVO'
+        });
+        updateRut('');
+        
+        return;
       }
 
-      const url = selectedDriver 
-        ? `/api/conductores/${selectedDriver.rut}` 
-        : '/api/conductores';
-      
-      const method = selectedDriver ? 'PUT' : 'POST';
-
+      const url = `/api/users/drivers/${selectedDriver.rut}`;
       const driverResponse = await fetch(url, {
-        method,
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
         },
@@ -183,39 +209,48 @@ function Conductores() {
           telefono: formData.telefono,
           nacionalidad: formData.nacionalidad,
           genero: formData.genero,
-          contrasena: formData.contrasena,
           fecha_contratacion: formData.fecha_contratacion,
           licencia_conducir: formData.licencia_conducir,
           estado_persona: formData.estado_persona
         })
       });
 
-      if (driverResponse.ok) {
-        await fetchConductores();
-        onClose();
-      } else {
+      if (!driverResponse.ok) {
         const error = await driverResponse.json();
-        throw new Error(error.message || 'Error creating/updating driver');
+        throw new Error(error.message || 'Error updating driver');
       }
+
+      await fetchConductores();
+
     } catch (error) {
       console.error('Error:', error);
+      onOpen();
     }
   };
 
   const handleDelete = async (rut) => {
-    if (!window.confirm('¿Está seguro de eliminar este conductor?')) return;
+    setDriverToDelete(rut);
+    onDeleteModalOpen();
+  };
 
+  const confirmDelete = async () => {
     try {
-      const response = await fetch(`/api/conductores/${rut}`, {
+      const response = await fetch(`/api/users/drivers/${driverToDelete}`, {
         method: 'DELETE',
         credentials: 'include'
       });
 
       if (response.ok) {
         await fetchConductores();
+      } else {
+        const error = await response.json();
+        console.error('Error deleting driver:', error);
       }
     } catch (error) {
       console.error('Error:', error);
+    } finally {
+      onDeleteModalClose();
+      setDriverToDelete(null);
     }
   };
 
@@ -423,6 +458,35 @@ function Conductores() {
           )}
         </div>
       </FormModal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal 
+        isOpen={isDeleteModalOpen} 
+        onClose={onDeleteModalClose}
+        size="sm"
+      >
+        <ModalContent>
+          <ModalHeader className="flex flex-col gap-1">Confirmar Eliminación</ModalHeader>
+          <ModalBody>
+            <p>¿Está seguro que desea eliminar este conductor? Esta acción no se puede deshacer.</p>
+          </ModalBody>
+          <ModalFooter>
+            <Button 
+              color="default" 
+              variant="light" 
+              onPress={onDeleteModalClose}
+            >
+              Cancelar
+            </Button>
+            <Button 
+              color="danger" 
+              onPress={confirmDelete}
+            >
+              Eliminar
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </div>
   );
 } 

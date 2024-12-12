@@ -115,8 +115,13 @@ export class AuthService {
         throw AuthError.UserNotFound();
       }
 
+      // Check if user is deleted
+      if (user._data.deleted_at_persona) {
+        throw AuthError.UserNotFound('Account has been deleted');
+      }
+
       // Get password using the getter from UserModel
-      const hashedPassword = user._data.contrasena; // Access internal data directly since there's no getter
+      const hashedPassword = user._data.contrasena;
 
       // Validate password
       const isValidPassword = await this._validatePassword(
