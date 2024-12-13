@@ -23,4 +23,6 @@ const routeTree = RootRoute.addChildren([
 
 export const router = createRouter({
   routeTree,
-}); 
+  defaultPreload: 'intent',
+  defaultPreloadDelay: 100,
+});

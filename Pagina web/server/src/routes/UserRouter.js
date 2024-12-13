@@ -93,5 +93,28 @@ export class UserRouter extends BaseRouter {
         )
       )
     });
+
+    // Add new route to get all drivers
+    this.addRoute('GET', '/drivers', {
+      handler: this.withAuth(
+        async (request, reply) => {
+          return this.controller.getDrivers(request, reply);
+        },
+        [],
+        ['ADMINISTRADOR']
+      )
+    });
+
+    // Add delete driver endpoint
+    this.addRoute('DELETE', '/drivers/:rut', {
+      handler: this.withAuth(
+        async (request, reply) => {
+          const { rut } = request.params;
+          return this.controller.deleteDriver(request, reply);
+        },
+        [],
+        ['ADMINISTRADOR']
+      )
+    });
   }
 } 

@@ -49,4 +49,57 @@ export class UserController extends BaseController {
       return reply.status(500).send({ error: 'Failed to list users' });
     }
   }
+
+  /**
+   * Gets all users with driver role
+   * @param {Object} request - Fastify request object
+   * @param {Object} reply - Fastify reply object
+   * @returns {Promise<Array>} Array of driver users
+   */
+  async getDrivers(request, reply) {
+    try {
+      const drivers = await this.service.findAll({ id_roles: 3 });
+      return reply.send({ drivers: drivers.map(driver => driver.toJSON()) });
+    } catch (error) {
+      request.log.error(error);
+      return reply.status(500).send({ error: 'Failed to retrieve drivers' });
+    }
+  }
+
+  /**
+   * Soft deletes a driver user
+   * @param {Object} request - Fastify request object
+   * @param {Object} reply - Fastify reply object
+   * @returns {Promise<Object>} Response object
+   */
+  async deleteDriver(request, reply) {
+    const { rut } = request.params;
+
+    try {
+      // First check if the driver exists and is a driver
+      const driver = await this.service.findOne({ rut, id_roles: 3 });
+      if (!driver) {
+        request.log.error(`Driver not found with RUT: ${rut}`);
+        return reply.status(404).send({ error: 'Driver not found' });
+      }
+
+      const result = await this.service.softDelete(rut);
+      if (!result) {
+        request.log.error(`Failed to delete driver with RUT: ${rut}`);
+        return reply.status(500).send({ error: 'Failed to delete driver' });
+      }
+
+      request.log.info(`Successfully deleted driver with RUT: ${rut}`);
+      return reply.send({ 
+        message: 'Driver deleted successfully',
+        driver: result
+      });
+    } catch (error) {
+      request.log.error(error, `Error deleting driver with RUT: ${rut}`);
+      return reply.status(500).send({ 
+        error: 'Failed to delete driver',
+        details: error.message
+      });
+    }
+  }
 }

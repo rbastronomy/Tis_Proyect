@@ -18,7 +18,10 @@ export class UserRepository extends BaseRepository {
     let rutStr = rut.toString();
     rutStr = rutStr.replace(/\./g, '').replace(/-/g, '');
     
-    if (rutStr.length > 12) return parseInt(rutStr, 10);
+    // If it's already a number without verification digit, return as is
+    if (/^\d+$/.test(rutStr)) {
+      return parseInt(rutStr, 10);
+    }
     
     if (!/^\d{7,9}[\dkK]$/.test(rutStr)) {
       throw new Error(`Invalid RUT format: ${rut}`);
@@ -44,6 +47,7 @@ export class UserRepository extends BaseRepository {
       const userData = await this.db.select('*')
         .from(this.tableName)
         .where('correo', '=', email)
+        .whereNull('deleted_at_persona')
         .first();
       return userData
     } catch (error) {
@@ -64,6 +68,7 @@ export class UserRepository extends BaseRepository {
       const result = await this.db.select('*')
         .from(this.tableName)
         .where({ rut: formattedRut })
+        .whereNull('deleted_at_persona')
         .first();
       
       console.log('Found user by RUT:', result);
@@ -158,21 +163,38 @@ export class UserRepository extends BaseRepository {
   }
 
   /**
-   * Soft deletes a user
-   * @param {string} rut - User RUT
-   * @returns {Promise<UserModel|null>} Deleted user or null
+   * Soft deletes a user by setting deleted_at_persona timestamp
+   * @param {string|number} rut - User RUT
+   * @returns {Promise<Object|null>} Deleted user data or null
    */
   async softDelete(rut) {
     try {
+      const formattedRut = this._formatRut(rut);
+      console.log('Attempting to delete user with RUT:', formattedRut); // Debug log
+      
+      // First check if user exists and is not deleted
+      const existingUser = await this.db(this.tableName)
+        .where({ rut: formattedRut })
+        .whereNull('deleted_at_persona')
+        .first();
+
+      if (!existingUser) {
+        console.log('User not found or already deleted'); // Debug log
+        return null;
+      }
+
       const [deletedUser] = await this.db(this.tableName)
-        .where({ rut })
+        .where({ rut: formattedRut })
+        .whereNull('deleted_at_persona')
         .update({
           estado_persona: 'ELIMINADO',
+          deleted_at_persona: new Date(),
           updated_at: new Date()
         })
-        .returning('*');
+        .returning(['rut', 'nombre', 'estado_persona', 'deleted_at_persona']); // Specify which fields to return
 
-      return deletedUser ? this._toModel(deletedUser) : null;
+      console.log('Delete operation result:', deletedUser); // Debug log
+      return deletedUser || null;
     } catch (error) {
       console.error('Error soft deleting user:', error);
       throw error;
@@ -187,7 +209,8 @@ export class UserRepository extends BaseRepository {
   async findAll(filters = {}) {
     try {
       const query = this.db.select('*')
-        .from(this.tableName);
+        .from(this.tableName)
+        .whereNull('deleted_at_persona'); // Only get non-deleted users
 
       if (filters.estado_persona) {
         query.where('estado_persona', filters.estado_persona);
@@ -198,7 +221,7 @@ export class UserRepository extends BaseRepository {
       }
 
       const results = await query;
-      return results.map(row => this._toModel(row));
+      return results;
     } catch (error) {
       console.error('Error finding all users:', error);
       throw error;
@@ -225,6 +248,35 @@ export class UserRepository extends BaseRepository {
       return result ? this._toModel(result) : null;
     } catch (error) {
       console.error('Error finding user with details:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Find one user with filters
+   * @param {Object} filters - Filters to apply
+   * @returns {Promise<Object|null>} User data or null
+   */
+  async findOne(filters) {
+    try {
+      const queryFilters = { ...filters };
+      
+      // Format RUT if present in filters
+      if (queryFilters.rut) {
+        queryFilters.rut = this._formatRut(queryFilters.rut);
+      }
+
+      console.log('Finding user with filters:', queryFilters); // Debug log
+
+      const result = await this.db(this.tableName)
+        .where(queryFilters)
+        .whereNull('deleted_at_persona')
+        .first();
+      
+      console.log('Found user:', result); // Debug log
+      return result || null;
+    } catch (error) {
+      console.error('Error finding user:', error);
       throw error;
     }
   }
