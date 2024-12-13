@@ -11,15 +11,15 @@ export class BaseModel {
 
   /**
    * @protected
-   * @type {Array<{field: string, message: string}>}
+   * @type {Object}
    */
-  _errors = [];
+  _errors = {};
 
   /**
    * @param {Partial<T>} data - Initial data
    * @param {T} defaultData - Default values for the model
    */
-  constructor(data, defaultData) {
+  constructor(data = {}, defaultData = {}) {
     // Initialize with defaults, then override with provided data
     this._data = { ...defaultData, ...data };
     
@@ -39,7 +39,7 @@ export class BaseModel {
    * @param {string} message - The error message
    */
   addError(field, message) {
-    this._errors.push({ field, message });
+    this._errors[field] = message;
   }
 
   /**
@@ -47,22 +47,22 @@ export class BaseModel {
    * @returns {boolean} True if there are validation errors
    */
   hasErrors() {
-    return this._errors.length > 0;
+    return Object.keys(this._errors).length > 0;
   }
 
   /**
    * Gets all validation errors
-   * @returns {Array<{field: string, message: string}>} Array of validation errors
+   * @returns {Object} Validation errors
    */
   getErrors() {
-    return [...this._errors];
+    return this._errors;
   }
 
   /**
    * Clears all validation errors
    */
   clearErrors() {
-    this._errors = [];
+    this._errors = {};
   }
 
   /**
@@ -72,61 +72,107 @@ export class BaseModel {
    */
   throwIfErrors() {
     if (this.hasErrors()) {
-      throw new Error(
-        this._errors
-          .map(e => `${e.field}: ${e.message}`)
-          .join(', ')
-      );
+      throw new Error(Object.values(this._errors).join('; '));
     }
   }
 
   /**
-   * Validates a value against an array of valid options
-   * @protected
-   * @param {string} field - The field name
-   * @param {any} value - The value to validate
-   * @param {any[]} validOptions - Array of valid options
-   * @param {string} [message] - Custom error message
-   * @returns {boolean} True if validation passes
+   * Validates a string field
+   * @param {string} field - Field name
+   * @param {string} value - Value to validate
+   * @param {Object} options - Validation options
    */
-  validateEnum(field, value, validOptions, message) {
-    if (value && !validOptions.includes(value)) {
-      this.addError(field, message || `${field} must be one of: ${validOptions.join(', ')}`);
-      return false;
+  validateString(field, value, options = {}) {
+    const { required = true, minLength = 1, maxLength = undefined } = options;
+    
+    if (required && (!value || typeof value !== 'string' || !value.trim())) {
+      this._errors[field] = `${field} es requerido y debe ser texto`;
+      return;
     }
-    return true;
+
+    if (value && typeof value === 'string') {
+      if (minLength && value.trim().length < minLength) {
+        this._errors[field] = `${field} debe tener al menos ${minLength} caracteres`;
+      }
+      if (maxLength && value.trim().length > maxLength) {
+        this._errors[field] = `${field} no puede tener más de ${maxLength} caracteres`;
+      }
+    }
   }
 
   /**
-   * Validates that a value is a string and not empty
-   * @protected
-   * @param {string} field - The field name
-   * @param {any} value - The value to validate
-   * @param {string} [message] - Custom error message
-   * @returns {boolean} True if validation passes
+   * Validates a number field
+   * @param {string} field - Field name
+   * @param {number} value - Value to validate
+   * @param {Object} options - Validation options
    */
-  validateString(field, value, message) {
-    if (value && (typeof value !== 'string' || value.trim().length === 0)) {
-      this.addError(field, message || `${field} must be a non-empty string`);
-      return false;
+  validateNumber(field, value, options = {}) {
+    const { required = true, min = undefined, max = undefined } = options;
+    
+    if (required && (value === null || value === undefined || isNaN(value))) {
+      this._errors[field] = `${field} es requerido y debe ser un número`;
+      return;
     }
-    return true;
+
+    if (value !== null && value !== undefined) {
+      const numValue = Number(value);
+      if (min !== undefined && numValue < min) {
+        this._errors[field] = `${field} debe ser mayor o igual a ${min}`;
+      }
+      if (max !== undefined && numValue > max) {
+        this._errors[field] = `${field} debe ser menor o igual a ${max}`;
+      }
+    }
   }
 
   /**
-   * Validates that a value is a valid date
-   * @protected
-   * @param {string} field - The field name
-   * @param {any} value - The value to validate
-   * @param {string} [message] - Custom error message
-   * @returns {boolean} True if validation passes
+   * Validates a date field
+   * @param {string} field - Field name
+   * @param {Date|string} value - Value to validate
+   * @param {Object} options - Validation options
    */
-  validateDate(field, value, message) {
-    if (value && !(value instanceof Date) && isNaN(new Date(value).getTime())) {
-      this.addError(field, message || `${field} must be a valid date`);
-      return false;
+  validateDate(field, value, options = {}) {
+    const { required = true, minDate = undefined, maxDate = undefined } = options;
+    
+    if (required && !value) {
+      this._errors[field] = `${field} es requerido`;
+      return;
     }
-    return true;
+
+    if (value) {
+      const date = new Date(value);
+      if (isNaN(date.getTime())) {
+        this._errors[field] = `${field} debe ser una fecha válida`;
+        return;
+      }
+
+      if (minDate && date < new Date(minDate)) {
+        this._errors[field] = `${field} debe ser posterior a ${minDate}`;
+      }
+      if (maxDate && date > new Date(maxDate)) {
+        this._errors[field] = `${field} debe ser anterior a ${maxDate}`;
+      }
+    }
+  }
+
+  /**
+   * Validates an enum field
+   * @param {string} field - Field name
+   * @param {any} value - Value to validate
+   * @param {Array} validValues - Array of valid values
+   * @param {Object} options - Validation options
+   */
+  validateEnum(field, value, validValues, options = {}) {
+    const { required = true } = options;
+    
+    if (required && !value) {
+      this._errors[field] = `${field} es requerido`;
+      return;
+    }
+
+    if (value && !validValues.includes(value)) {
+      this._errors[field] = `${field} debe ser uno de: ${validValues.join(', ')}`;
+    }
   }
 
   /**

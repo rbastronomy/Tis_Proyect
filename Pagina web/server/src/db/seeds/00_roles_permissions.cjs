@@ -131,6 +131,30 @@
         nombre_permiso: 'ver_historial',
         descripcion_permiso: 'Ver historial de reservas y viajes',
         fecha_creacion: new Date()
+      },
+      {
+        id_permiso: 12,
+        nombre_permiso: 'ver_taxis',
+        descripcion_permiso: 'Ver información de taxis',
+        fecha_creacion: new Date()
+      },
+      {
+        id_permiso: 13,
+        nombre_permiso: 'crear_taxi',
+        descripcion_permiso: 'Crear nuevos taxis en el sistema',
+        fecha_creacion: new Date()
+      },
+      {
+        id_permiso: 14,
+        nombre_permiso: 'editar_taxi',
+        descripcion_permiso: 'Modificar información de taxis existentes',
+        fecha_creacion: new Date()
+      },
+      {
+        id_permiso: 15,
+        nombre_permiso: 'eliminar_taxi',
+        descripcion_permiso: 'Eliminar taxis del sistema',
+        fecha_creacion: new Date()
       }
     ]);
 
@@ -185,7 +209,13 @@
         id_roles: 3, 
         id_permiso: 11,
         fecha_cambio_permiso: new Date()
-      }
+      },
+      // Admin role permissions
+      ...Array.from({ length: 4 }, (_, i) => ({
+        id_roles: 1,
+        id_permiso: i + 12,
+        fecha_cambio_permiso: new Date()
+      }))
     ];
 
     await knex('posee').insert(rolePermissions);

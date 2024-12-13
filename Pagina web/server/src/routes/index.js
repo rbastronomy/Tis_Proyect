@@ -6,6 +6,7 @@ import { MapRouter } from './MapRouter.js';
 import { BookingRouter } from './BookingRouter.js';
 import { ServiceRouter } from './ServiceRouter.js';
 import { OfferingRouter } from './OfferingRouter.js';
+import { TaxiRouter } from './TaxiRouter.js';
 
 export function setupRoutes(fastify) {
   // Initialize and register all routers
@@ -18,6 +19,7 @@ export function setupRoutes(fastify) {
     new BookingRouter(fastify),
     new ServiceRouter(fastify),
     new OfferingRouter(fastify),
+    new TaxiRouter(fastify),
   ];
 
   // Register all routes
