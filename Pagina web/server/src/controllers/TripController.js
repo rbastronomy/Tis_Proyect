@@ -1,5 +1,5 @@
 import { BaseController } from "../core/BaseController.js";
-import { TripService } from "../services/TripServices.js";
+import { TripService } from "../services/TripService.js";
 
 export class TripController extends BaseController {
     constructor() {

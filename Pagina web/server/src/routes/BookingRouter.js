@@ -102,7 +102,7 @@ export class BookingRouter extends BaseRouter {
       handler: this.withAuth(
         this.controller.createBooking.bind(this.controller),
         ['crear_reserva'],
-        ['USUARIO', 'ADMINISTRADOR']
+        ['CLIENTE', 'ADMINISTRADOR']
       )
     });
 
@@ -269,7 +269,7 @@ export class BookingRouter extends BaseRouter {
       handler: this.withAuth(
         this.controller.cancelBooking.bind(this.controller),
         ['cancelar_reserva'],
-        ['USUARIO', 'ADMINISTRADOR']
+        ['CLIENTE', 'ADMINISTRADOR']
       )
     });
 
@@ -333,7 +333,7 @@ export class BookingRouter extends BaseRouter {
       handler: this.withAuth(
         this.controller.getBookingByCode.bind(this.controller),
         ['ver_reservas'],
-        ['USUARIO', 'ADMINISTRADOR', 'CONDUCTOR']
+        ['CLIENTE', 'ADMINISTRADOR', 'CONDUCTOR']
       )
     });
   }

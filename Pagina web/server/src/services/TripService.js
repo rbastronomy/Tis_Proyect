@@ -1,5 +1,6 @@
 import { BaseService } from "../core/BaseService.js";
 import TripRepository from "../repository/TripRepository.js";
+import TripModel from "../models/TripModel.js";
 
 export class TripService extends BaseService {
     constructor() {     
@@ -93,13 +94,29 @@ export class TripService extends BaseService {
     }
 
     /**
+     * Get trips by user
+     * @param {string} userId - User's ID
+     * @returns {Promise<Array<TripModel>>} List of trips
+     */
+    async getTripsByUser(userId) {
+        try {   
+            const trips = await this.repository.findByUser(userId);
+            return TripModel.toModels(trips);
+        } catch (error) {
+            console.error('Error getting trips by user:', error);
+            throw new Error('Failed to retrieve trips for the user');
+        }
+    }
+
+    /**
      * Get trips by driver
      * @param {string} driverId - Driver's ID
      * @returns {Promise<Array<TripModel>>} List of trips
      */
     async getTripsByDriver(driverId) {
         try {
-            return await this.repository.findByDriver(driverId);
+            const trips = await this.repository.findByDriver(driverId);
+            return TripModel.toModels(trips);
         } catch (error) {
             console.error('Error getting trips by driver:', error);
             throw new Error('Failed to retrieve trips for the driver');
@@ -163,12 +180,8 @@ export class TripService extends BaseService {
      * @returns {Promise<TripModel>} Updated trip
      */
     async updateTrip(code, tripData) {
-        try {
-            const updatedTrip = await this.repository.update(code, tripData);
-            return updatedTrip;
-        } catch (error) {
-            throw error;
-        }
+        const updatedTrip = await this.repository.update(code, tripData);
+        return updatedTrip;
     }
 
     /**
@@ -177,15 +190,11 @@ export class TripService extends BaseService {
      * @returns {Promise<TripModel>} Deleted trip
      */
     async deleteTrip(code) {
-        try {
-            const deletedTrip = await this.repository.softDelete(code);
-            if (!deletedTrip) {
-                throw new Error('Trip not found');
-            }
-            return deletedTrip;
-        } catch (error) {
-            throw error;
+        const deletedTrip = await this.repository.softDelete(code);
+        if (!deletedTrip) {
+            throw new Error('Trip not found');
         }
+        return deletedTrip;
     }
 
     /**
@@ -194,12 +203,8 @@ export class TripService extends BaseService {
      * @returns {Promise<Array<TripModel>>} List of trips
      */
     async getAll(query) {
-        try {
-            const trips = await this.repository.getAll(query);
-            return trips;
-        } catch (error) {
-            throw error;
-        }
+        const trips = await this.repository.getAll(query);
+        return trips;
     }
 }
 

@@ -241,7 +241,7 @@ function CreateBooking() {
     }
   }, [rideType, setValue]);
 
-  if (!isAuthenticated || !['ADMINISTRADOR', 'USUARIO'].includes(user?.role?.nombre_rol)) {
+  if (!isAuthenticated || !['ADMINISTRADOR', 'CLIENTE'].includes(user?.role?.nombre_rol)) {
     return <div>Loading...</div>
   }
 

@@ -79,21 +79,42 @@ export class TripRepository extends BaseRepository {
   /**
    * Find trips by driver RUT
    * @param {number} rut_conductor - Driver's RUT
-   * @returns {Promise<Array>} Driver's trips
+   * @returns {Promise<Array>} Driver's trips with basic details
    */
   async findByDriver(rut_conductor) {
-    const results = await this.db(this.tableName)
-      .select(
-        'viaje.*',
-        'reserva.origen_reserva',
-        'reserva.destino_reserva',
-        'reserva.tipo_reserva'
-      )
-      .join('reserva', 'viaje.codigo_reserva', 'reserva.codigo_reserva')
-      .where('reserva.rut_conductor', rut_conductor)
-      .orderBy('viaje.fecha_viaje', 'desc');
+      const query = this.db(this.tableName)
+        .select([
+          // Solo los campos esenciales
+          'viaje.codigo_viaje',
+          'viaje.fecha_viaje',
+          'viaje.estado_viaje',
+          'viaje.duracion',
+          // Datos de la reserva
+          'reserva.origen_reserva',
+          'reserva.destino_reserva',
+          'reserva.tipo_reserva',
+          // Datos del cliente
+          'cliente.nombre as cliente_nombre',
+          'cliente.apellido as cliente_apellido',
+          'cliente.telefono as cliente_telefono',
+          // Datos del taxi
+          'taxi.patente',
+          // Datos de pago
+          'tarifa.precio',
+          'boleta.total as boleta_total'
+        ])
+        .join('reserva', 'viaje.codigo_reserva', 'reserva.codigo_reserva')
+        .leftJoin('persona as cliente', 'reserva.rut_cliente', 'cliente.rut')
+        .leftJoin('taxi', 'reserva.patente_taxi', 'taxi.patente')
+        .leftJoin('oferta', 'reserva.id_oferta', 'oferta.id_oferta')
+        .leftJoin('tarifa', 'oferta.id_tarifa', 'tarifa.id_tarifa')
+        .leftJoin('boleta', 'viaje.codigo_viaje', 'boleta.codigo_viaje')
+        .where('reserva.rut_conductor', rut_conductor)
+        .whereNull('viaje.deleted_at_viaje')
+        .orderBy('viaje.fecha_viaje', 'desc');
 
-    return results.map(result => new this.modelClass(result));
+      const results = await query;
+    return results;
   }
 
   /**
@@ -120,22 +141,39 @@ export class TripRepository extends BaseRepository {
     return results.map(result => new this.modelClass(result));
   }
 
+  /**
+   * Find trips by user RUT with full details
+   * @param {string} rut - User's RUT
+   * @returns {Promise<Array<TripModel>>} User's trips with full details
+   */
   async findByUser(rut) {
-    const results = await this.db(this.tableName)
-      .select(
-        'viaje.*',
-        'reserva.origen_reserva',
-        'reserva.destino_reserva',
-        'reserva.tipo_reserva',
-        'persona.nombre as conductor_nombre',
-        'persona.apellido as conductor_apellido'
-      )
-      .join('reserva', 'viaje.codigo_reserva', 'reserva.codigo_reserva')
-      .join('persona', 'reserva.rut_conductor', 'persona.rut')
-      .where('reserva.rut_pasajero', rut)
-      .orderBy('viaje.fecha_viaje', 'desc');
+      const query = this.db(this.tableName)
+        .select([
+          // Solo los campos esenciales
+          'viaje.codigo_viaje',
+          'viaje.fecha_viaje',
+          'viaje.estado_viaje',
+          'viaje.duracion',
+          'reserva.origen_reserva',
+          'reserva.destino_reserva',
+          'reserva.tipo_reserva',
+          'conductor.nombre as conductor_nombre',
+          'conductor.apellido as conductor_apellido',
+          'tarifa.precio',
+          'boleta.total as boleta_total'
+        ])
+        .join('reserva', 'viaje.codigo_reserva', 'reserva.codigo_reserva')
+        .leftJoin('persona as conductor', 'reserva.rut_conductor', 'conductor.rut')
+        .leftJoin('oferta', 'reserva.id_oferta', 'oferta.id_oferta')
+        .leftJoin('tarifa', 'oferta.id_tarifa', 'tarifa.id_tarifa')
+        .leftJoin('boleta', 'viaje.codigo_viaje', 'boleta.codigo_viaje')
+        .where('reserva.rut_cliente', rut)
+        .whereNull('viaje.deleted_at_viaje')
+        .orderBy('viaje.fecha_viaje', 'desc');
 
-    return results.map(result => new this.modelClass(result));
+      const results = await query;
+
+      return results;
   }
 
   /**
@@ -179,6 +217,13 @@ export class TripRepository extends BaseRepository {
 
     return results.map(result => new this.modelClass(result));
   }
+
+  /**
+   * Find summarized trips by user RUT
+   * @param {string} rut - User's RUT
+   * @returns {Promise<Array<TripModel>>} User's trips with basic details
+   */
+    
 }
 
 export default TripRepository;

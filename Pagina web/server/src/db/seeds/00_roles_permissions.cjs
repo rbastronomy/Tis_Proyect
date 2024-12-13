@@ -17,8 +17,8 @@
     await knex('roles')
         .where('id_roles', 2)
         .update({
-            nombre_rol: 'USUARIO',
-            descripcion_rol: 'Usuario regular del sistema',
+            nombre_rol: 'CLIENTE',
+            descripcion_rol: 'Cliente del sistema',
             fecha_creada_rol: new Date(),
             estado_rol: 'ACTIVO'
         });
@@ -46,8 +46,8 @@
         },
         { 
             id_roles: 2,
-            nombre_rol: 'USUARIO',
-            descripcion_rol: 'Usuario regular del sistema',
+            nombre_rol: 'CLIENTE',
+            descripcion_rol: 'Cliente del sistema',
             fecha_creada_rol: new Date(),
             estado_rol: 'ACTIVO'
         },

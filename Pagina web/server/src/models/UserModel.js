@@ -157,59 +157,16 @@ export class UserModel extends BaseModel {
   }
 
   /**
-   * Creates a UserModel instance from a database entity
-   * @param {UserEntity} entity - Database entity object
-   * @returns {UserModel|null} A new UserModel instance or null if entity is invalid
-   */
-  static toModel(data) {
-    if (!data) return null;
-    
-    return new UserModel({
-      rut: data.rut,
-      nombre: data.nombre,
-      apellido_paterno: data.apellido_paterno,
-      apellido_materno: data.apellido_materno,
-      fecha_nacimiento: data.fecha_nacimiento,
-      correo: data.correo,
-      telefono: data.telefono,
-      nacionalidad: data.nacionalidad,
-      genero: data.genero,
-      contrasena: data.contrasena,
-      estado_persona: data.estado_persona,
-      role: null,
-      fecha_contratacion: data.fecha_contratacion,
-      licencia_conducir: data.licencia_conducir,
-      createdAt: data.createdAt,
-      updatedAt: data.updatedAt,
-      deletedAt: data.deletedAt
-    });
-  }
-
-  /**
    * Converts the user model to a JSON object, excluding sensitive data
    * @returns {Omit<UserEntity, 'contrasena'|'id_roles'> & { role?: RoleModel }} User data without password
    */
   toJSON() {
-    const json = {
-      rut: this._data.rut,
-      nombre: this._data.nombre,
-      apellido_paterno: this._data.apellido_paterno,
-      apellido_materno: this._data.apellido_materno,
-      fecha_nacimiento: this._data.fecha_nacimiento,
-      correo: this._data.correo,
-      telefono: this._data.telefono,
-      nacionalidad: this._data.nacionalidad,
-      genero: this._data.genero,
-      estado_persona: this._data.estado_persona,
-      role: this._data.role,
-      fecha_contratacion: this._data.fecha_contratacion,
-      licencia_conducir: this._data.licencia_conducir,
-      createdAt: this._data.createdAt,
-      updatedAt: this._data.updatedAt,
-      deletedAt: this._data.deletedAt
+    const baseData = super.toJSON();
+    const { contrasena, ...safeData } = baseData;
+    
+    return {
+      ...safeData
     };
-
-    return json;
   }
 
   toAuthAttributes() {

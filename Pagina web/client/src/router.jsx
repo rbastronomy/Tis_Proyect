@@ -7,6 +7,8 @@ import { Route as ContactoRoute } from './routes/contacto.lazy';
 import { Route as AdminDashboardRoute } from './routes/admin/dashboard.lazy';
 import { Route as ReservasRoute } from './routes/reservas/index.lazy';
 import { Route as ReservaDetailRoute } from './routes/reservas/$codigoReserva.lazy';
+import { viajes  as viajesRoute} from './routes/viajes/index.lazy';
+
 
 const routeTree = RootRoute.addChildren([
   AyudaRoute,
@@ -16,6 +18,7 @@ const routeTree = RootRoute.addChildren([
   AdminDashboardRoute,
   ReservasRoute,
   ReservaDetailRoute,
+  viajesRoute,
 ]);
 
 export const router = createRouter({

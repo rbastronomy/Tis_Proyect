@@ -327,6 +327,22 @@ class BookingController extends BaseController {
             });
         }
     }
+
+    /**
+     * Get booking history for authenticated user
+     * @param {Request} req - Express request object
+     * @param {Response} res - Express response object
+     * @returns {Promise<void>}
+     */
+    async getHistory(req, res) {
+        try {
+            const userId = req.user.id_usuario
+            const viajes = await this.bookingService.getUserHistory(userId)
+            res.json({ viajes })
+        } catch (error) {
+            this.handleError(res, error)
+        }
+    }
 }
 
 export default BookingController;

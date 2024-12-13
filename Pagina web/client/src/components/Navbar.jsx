@@ -40,6 +40,11 @@ function Navbar() {
       ? [{ key: "/admin/dashboard", label: "Panel Admin" }] 
       : []
     ),
+    // Nuevo botón para ADMINISTRADOR y CONDUCTOR
+    ...(isAuthenticated && (user?.role?.nombre_rol === 'ADMINISTRADOR' || user?.role?.nombre_rol === 'CONDUCTOR')
+    ? [{ key: "/viajes", label: "Mis Viajes" }]
+    : []
+    ),
   ];
 
   const authMenuItems = isAuthenticated && isUserValid
@@ -70,6 +75,19 @@ function Navbar() {
         >
           Inicio
         </Button>
+        {/* Botón Mis Viajes para ADMINISTRADOR y CONDUCTOR */}
+        {isAuthenticated && (user?.role?.nombre_rol === 'ADMINISTRADOR' || user?.role?.nombre_rol === 'CONDUCTOR') && (
+          <Button
+            auto
+            bordered
+            color="warning"
+            className="hover:bg-yellow-500 hover:text-black"
+            as="a"
+            href="/viajes"
+          >
+            Mis Viajes
+          </Button>
+        )}
         {isAuthenticated && (
           <>
             <Button

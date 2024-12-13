@@ -1,4 +1,9 @@
+import { BaseModel } from './BaseModel.js';
 
+/**
+ * Clase base para servicios
+ * @class BaseService
+ */
 export class BaseService {
   /**
    * @param {class} repository - Repository class
@@ -9,22 +14,22 @@ export class BaseService {
   
     async getAll(filters = {}, options = {}) {
       const data = await this.repository.findAll(filters, options);
-      return data.map(this._toModel);
+      return data.map(BaseModel.toModel);
     }
   
     async getById(id) {
       const data = await this.repository.findById(id);
-      return this._toModel(data);
+      return BaseModel.toModel(data);
     }
   
     async create(data) {
       const newRecord = await this.repository.create(data);
-      return this._toModel(newRecord);
+      return BaseModel.toModel(newRecord);
     }
   
     async update(id, data) {
       const updated = await this.repository.update(id, data);
-      return this._toModel(updated);
+      return BaseModel.toModel(updated);
     }
   
     async delete(id) {

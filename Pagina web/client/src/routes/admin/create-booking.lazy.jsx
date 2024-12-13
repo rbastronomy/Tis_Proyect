@@ -33,8 +33,8 @@ function CreateBooking() {
     codigo_servicio: 1 // Default service code
   });
 
-  // Protect the route but allow USUARIO and ADMINISTRADOR roles
-  if (!isAuthenticated || !['ADMINISTRADOR', 'USUARIO'].includes(user?.role?.nombre_rol)) {
+  // Protect the route but allow CLIENTE and ADMINISTRADOR roles
+  if (!isAuthenticated || !['ADMINISTRADOR', 'CLIENTE'].includes(user?.role?.nombre_rol)) {
     navigate({ to: '/login' });
     return null;
   }

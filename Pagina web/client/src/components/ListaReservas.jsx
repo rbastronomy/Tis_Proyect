@@ -56,7 +56,7 @@ export default function ReservationGrid() {
     <div className="container mx-auto px-4 py-8 bg-gray-100 min-h-screen">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-800">Mis Reservas</h1>
-        {['USUARIO', 'ADMINISTRADOR'].includes(user?.role?.nombre_rol) && (
+        {['CLIENTE', 'ADMINISTRADOR'].includes(user?.role?.nombre_rol) && (
           <button 
             onClick={() => navigate({ to: '/reservas/create' })}
             className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105"

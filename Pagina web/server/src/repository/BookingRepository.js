@@ -259,6 +259,24 @@ export class BookingRepository extends BaseRepository {
       throw new Error(`Error finding booking by code: ${error.message}`);
     }
   }
+
+  /**
+   * Find booking history for a user
+   * @param {number} userId - User ID
+   * @returns {Promise<Array>} Array of bookings
+   */
+  async findUserHistory(userId) {
+    const query = `
+      SELECT r.*, t.precio, t.descripcion as descripcion_tarifa
+      FROM reservas r
+      LEFT JOIN tarifas t ON r.id_tarifa = t.id_tarifa
+      WHERE r.id_usuario = $1
+      AND r.estado_reserva IN ('COMPLETADO', 'CANCELADO')
+      ORDER BY r.fecha_reserva DESC
+    `
+    const result = await this.pool.query(query, [userId])
+    return result.rows
+  }
 }
 
 export default BookingRepository;
