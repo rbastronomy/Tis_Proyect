@@ -1,6 +1,14 @@
 import { BaseRepository } from '../core/BaseRepository.js';
 
+/**
+ * Repository class for taxi-related database operations
+ * @class TaxiRepository
+ * @extends BaseRepository
+ */
 export class TaxiRepository extends BaseRepository {
+    /**
+     * Creates an instance of TaxiRepository
+     */
     constructor() {
         super('taxi', 'patente');
     }
@@ -41,7 +49,12 @@ export class TaxiRepository extends BaseRepository {
                     updated_at: new Date()
                 })
                 .returning('*');
-            return updatedTaxi || null;
+
+            if (!updatedTaxi) {
+                throw new Error('Taxi not found');
+            }
+
+            return updatedTaxi;
         } catch (error) {
             throw new Error(`Database error updating taxi: ${error.message}`);
         }
@@ -87,18 +100,49 @@ export class TaxiRepository extends BaseRepository {
 
     /**
      * Get all taxis
+     * @param {Object} query - Query parameters
      * @returns {Promise<Object[]>} Array of raw taxi data
      */
-    async getAll() {
+    async getAll(query = {}) {
         try {
-            const taxis = await this.db(this.tableName)
+            let queryBuilder = this.db(this.tableName)
                 .select('*')
                 .whereNull('deleted_at_taxi');
-            return taxis;
+
+            // Add status filter if provided
+            if (query.status) {
+                queryBuilder = queryBuilder.where('estado_taxi', query.status);
+            }
+
+            return await queryBuilder;
         } catch (error) {
             throw new Error(`Database error fetching taxis: ${error.message}`);
         }
     }
-}
 
-export default TaxiRepository;
+    /**
+     * Get all taxis assigned to a specific driver
+     * @param {string} rut - Driver's RUT
+     * @returns {Promise<Array>} Array of raw taxi data
+     */
+    async getTaxisByDriver(rut) {
+        try {
+            const taxis = await this.db(this.tableName)
+                .where('rut_conductor', rut)
+                .whereNull('deleted_at_taxi');
+            
+            return taxis;
+        } catch (error) {
+            throw new Error(`Database error: ${error.message}`);
+        }
+    }
+
+    /**
+     * Find taxi by ID (alias for findByPatente)
+     * @param {string} patente - Taxi's license plate
+     * @returns {Promise<Object|null>} Raw taxi data or null
+     */
+    async findById(patente) {
+        return this.findByPatente(patente);
+    }
+}

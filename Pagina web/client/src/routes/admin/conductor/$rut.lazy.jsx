@@ -9,7 +9,22 @@ import {
   Chip,
   Divider,
   Avatar,
-  Button
+  Button,
+  Table,
+  TableHeader,
+  TableBody,
+  TableColumn,
+  TableRow,
+  TableCell,
+  Tooltip,
+  useDisclosure,
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  Select,
+  SelectItem,
 } from "@nextui-org/react";
 import { 
   User, 
@@ -20,7 +35,10 @@ import {
   IdCard, 
   Shield, 
   Clock,
-  ArrowLeft
+  ArrowLeft,
+  Car,
+  Link,
+  UnlinkIcon
 } from 'lucide-react';
 
 export const Route = createLazyFileRoute('/admin/conductor/$rut')({
@@ -33,6 +51,15 @@ function ConductorDetail() {
   const [conductor, setConductor] = useState(null);
   const [loading, setLoading] = useState(true);
   const params = Route.useParams();
+  const [availableTaxis, setAvailableTaxis] = useState([]);
+  const [assignedTaxis, setAssignedTaxis] = useState([]);
+  const { 
+    isOpen: isAssignModalOpen, 
+    onOpen: onAssignModalOpen, 
+    onClose: onAssignModalClose 
+  } = useDisclosure();
+  const [selectedTaxiToAssign, setSelectedTaxiToAssign] = useState(null);
+  const [isLoadingTaxis, setIsLoadingTaxis] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated || user?.role?.nombre_rol !== 'ADMINISTRADOR') {
@@ -41,6 +68,13 @@ function ConductorDetail() {
     }
     fetchConductor();
   }, [isAuthenticated, user, navigate, params.rut]);
+
+  useEffect(() => {
+    if (conductor) {
+      fetchAssignedTaxis();
+      fetchAvailableTaxis();
+    }
+  }, [conductor, params.rut]);
 
   const fetchConductor = async () => {
     try {
@@ -57,6 +91,178 @@ function ConductorDetail() {
       setLoading(false);
     }
   };
+
+  const fetchAssignedTaxis = async () => {
+    setIsLoadingTaxis(true);
+    try {
+      const response = await fetch(`/api/taxis/driver/${params.rut}`, {
+        credentials: 'include'
+      });
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Assigned taxis response:', data);
+        setAssignedTaxis(data.taxis || []);
+      }
+    } catch (error) {
+      console.error('Error fetching assigned taxis:', error);
+    } finally {
+      setIsLoadingTaxis(false);
+    }
+  };
+
+  const fetchAvailableTaxis = async () => {
+    try {
+      const response = await fetch('/api/taxis?status=DISPONIBLE', {
+        credentials: 'include'
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setAvailableTaxis(Array.isArray(data.taxis) ? data.taxis : data);
+      }
+    } catch (error) {
+      console.error('Error fetching available taxis:', error);
+    }
+  };
+
+  const refreshTaxiData = () => {
+    fetchAssignedTaxis();
+    fetchAvailableTaxis();
+  };
+
+  const handleAssignTaxi = async () => {
+    try {
+      const response = await fetch(`/api/taxis/driver/${params.rut}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ patente: selectedTaxiToAssign }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to assign taxi');
+      }
+
+      refreshTaxiData();
+      onAssignModalClose();
+      setSelectedTaxiToAssign(null);
+    } catch (error) {
+      console.error('Error assigning taxi:', error);
+    }
+  };
+
+  const getStatusColor = (status) => {
+    const statusColors = {
+      'DISPONIBLE': 'success',
+      'EN SERVICIO': 'primary',
+      'FUERA DE SERVICIO': 'danger',
+      'MANTENIMIENTO': 'warning'
+    }
+    return statusColors[status] || 'default'
+  }
+
+  const handleUnassignTaxi = async (patente) => {
+    try {
+      const response = await fetch(`/api/taxis/driver/${params.rut}/${patente}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to unassign taxi');
+      }
+
+      refreshTaxiData();
+    } catch (error) {
+      console.error('Error unassigning taxi:', error);
+    }
+  };
+
+  const renderTaxisSection = () => (
+    <Card className="mt-6">
+      <CardHeader className="flex justify-between items-center">
+        <div className="flex items-center gap-2">
+          <Car className="w-5 h-5" />
+          <h2 className="text-xl font-semibold">Taxis Asignados</h2>
+        </div>
+        <Button
+          color="primary"
+          variant="flat"
+          startContent={<Link />}
+          onPress={onAssignModalOpen}
+        >
+          Asignar Taxi
+        </Button>
+      </CardHeader>
+      <Divider/>
+      <CardBody>
+        <Table aria-label="Taxis asignados">
+          <TableHeader>
+            <TableColumn>PATENTE</TableColumn>
+            <TableColumn>MARCA</TableColumn>
+            <TableColumn>MODELO</TableColumn>
+            <TableColumn>ESTADO</TableColumn>
+            <TableColumn>ACCIONES</TableColumn>
+          </TableHeader>
+          <TableBody>
+            {isLoadingTaxis ? (
+              <TableRow key="loading">
+                <TableCell aria-colspan={5} colSpan={5} className="text-center">
+                  Cargando...
+                </TableCell>
+                <TableCell className="hidden"></TableCell>
+                <TableCell className="hidden"></TableCell>
+                <TableCell className="hidden"></TableCell>
+                <TableCell className="hidden"></TableCell>
+              </TableRow>
+            ) : assignedTaxis && Array.isArray(assignedTaxis) && assignedTaxis.length > 0 ? (
+              assignedTaxis.map((taxi) => (
+                <TableRow key={taxi.patente}>
+                  <TableCell>{taxi.patente}</TableCell>
+                  <TableCell>{taxi.marca}</TableCell>
+                  <TableCell>{taxi.modelo}</TableCell>
+                  <TableCell>
+                    <Chip
+                      color={getStatusColor(taxi.estado_taxi)}
+                      variant="flat"
+                      size="sm"
+                    >
+                      {taxi.estado_taxi}
+                    </Chip>
+                  </TableCell>
+                  <TableCell>
+                    <Tooltip content="Desasignar taxi">
+                      <Button
+                        isIconOnly
+                        color="danger"
+                        variant="light"
+                        onPress={() => handleUnassignTaxi(taxi.patente)}
+                      >
+                        <UnlinkIcon className="w-4 h-4" />
+                      </Button>
+                    </Tooltip>
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow key="empty">
+                <TableCell aria-colspan={5} colSpan={5} className="text-center">
+                  No hay taxis asignados
+                </TableCell>
+                <TableCell className="hidden"></TableCell>
+                <TableCell className="hidden"></TableCell>
+                <TableCell className="hidden"></TableCell>
+                <TableCell className="hidden"></TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </CardBody>
+    </Card>
+  );
 
   if (loading) {
     return <div>Cargando...</div>;
@@ -194,6 +400,40 @@ function ConductorDetail() {
           </CardBody>
         </Card>
       </div>
+
+      {renderTaxisSection()}
+
+      <Modal isOpen={isAssignModalOpen} onClose={onAssignModalClose}>
+        <ModalContent>
+          <ModalHeader>Asignar Taxi</ModalHeader>
+          <ModalBody>
+            <Select
+              label="Seleccionar Taxi"
+              placeholder="Seleccione un taxi disponible"
+              value={selectedTaxiToAssign}
+              onChange={(e) => setSelectedTaxiToAssign(e.target.value)}
+            >
+              {availableTaxis.map((taxi) => (
+                <SelectItem key={taxi.patente} value={taxi.patente}>
+                  {taxi.patente} - {taxi.marca} {taxi.modelo}
+                </SelectItem>
+              ))}
+            </Select>
+          </ModalBody>
+          <ModalFooter>
+            <Button color="danger" variant="light" onPress={onAssignModalClose}>
+              Cancelar
+            </Button>
+            <Button
+              color="primary"
+              onPress={handleAssignTaxi}
+              isDisabled={!selectedTaxiToAssign}
+            >
+              Asignar
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </div>
   );
 } 

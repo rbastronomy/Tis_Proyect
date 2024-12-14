@@ -128,4 +128,81 @@ export class TaxiService extends BaseService {
             throw new Error(`Error fetching taxis: ${error.message}`);
         }
     }
+
+    /**
+     * Get all taxis assigned to a specific driver
+     * @param {string} rut - Driver's RUT
+     * @returns {Promise<Array>} Array of taxi objects
+     */
+    async getTaxisByDriver(rut) {
+        try {
+            const taxis = await this.repository.getTaxisByDriver(rut);
+            return taxis.map(taxi => new TaxiModel(taxi));
+        } catch (error) {
+            throw new Error(`Error getting taxis for driver: ${error.message}`);
+        }
+    }
+
+    /**
+     * Assign a taxi to a driver
+     * @param {string} patente - Taxi's license plate
+     * @param {string} rut - Driver's RUT
+     * @returns {Promise<TaxiModel>} Updated taxi model
+     */
+    async assignTaxiToDriver(patente, rut) {
+        try {
+            // First check if the taxi is available
+            const taxiData = await this.repository.findById(patente);
+            if (!taxiData) {
+                throw new Error('Taxi not found');
+            }
+            const taxi = new TaxiModel(taxiData);
+            if (taxi.rut_conductor) {
+                throw new Error('Taxi is already assigned to a driver');
+            }
+            if (taxi.estado_taxi !== 'DISPONIBLE') {
+                throw new Error('Taxi is not available for assignment');
+            }
+
+            // Update the taxi with the driver's RUT and change status
+            const updatedTaxiData = await this.repository.update(patente, {
+                rut_conductor: rut,
+                estado_taxi: 'EN SERVICIO'
+            });
+
+            return new TaxiModel(updatedTaxiData);
+        } catch (error) {
+            throw new Error(`Error assigning taxi: ${error.message}`);
+        }
+    }
+
+    /**
+     * Unassign a taxi from a driver
+     * @param {string} patente - Taxi's license plate
+     * @param {string} rut - Driver's RUT
+     * @returns {Promise<TaxiModel>} Updated taxi model
+     */
+    async unassignTaxiFromDriver(patente, rut) {
+        try {
+            // Check if the taxi exists and is assigned to this driver
+            const taxiData = await this.repository.findById(patente);
+            if (!taxiData) {
+                throw new Error('Taxi not found');
+            }
+            const taxi = new TaxiModel(taxiData);
+            if (taxi.rut_conductor !== rut) {
+                throw new Error('Taxi is not assigned to this driver');
+            }
+
+            // Update the taxi to remove driver assignment and change status
+            const updatedTaxiData = await this.repository.update(patente, {
+                rut_conductor: null,
+                estado_taxi: 'DISPONIBLE'
+            });
+
+            return new TaxiModel(updatedTaxiData);
+        } catch (error) {
+            throw new Error(`Error unassigning taxi: ${error.message}`);
+        }
+    }
 }
