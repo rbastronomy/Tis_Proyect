@@ -51,6 +51,8 @@ function Registro() {
           telefono: data.telefono,
           contrasena: data.contrasena,
           estado_persona: 'ACTIVO',
+          id_roles: 2,
+          createSession: true
         }),
       });
 
@@ -62,6 +64,23 @@ function Registro() {
 
       const result = await response.json();
       console.log('Registro exitoso:', result);
+      
+      const loginResponse = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          correo: data.correo,
+          contrasena: data.contrasena
+        })
+      });
+
+      if (!loginResponse.ok) {
+        throw new Error('Error al iniciar sesión automáticamente');
+      }
+
       await refreshAuth();
       setSuccess(true);
     } catch (error) {

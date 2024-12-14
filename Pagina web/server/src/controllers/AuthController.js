@@ -61,13 +61,13 @@ export class AuthController {
       const createSession = request.body.createSession !== false;
       const { user, session } = await this.authService.register(request.body, createSession);
       
-      // Only set cookie if session was created
-      if (createSession && session) {
+      // Always set cookie if session was created
+      if (session) {
         const sessionCookie = this.authService.auth.createSessionCookie(session);
-        reply.header('Set-Cookie', sessionCookie.serialize());
+        reply.header('Set-Cookie', sessionCookie);
       }
 
-      return reply.send({ 
+      return reply.code(201).send({ 
         message: 'Registration successful', 
         user: user.toJSON() 
       });

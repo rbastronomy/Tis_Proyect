@@ -68,10 +68,11 @@ export class BookingRouter extends BaseRouter {
             type: 'object',
             properties: {
               message: { type: 'string' },
-              reserva: {
+              booking: {
                 type: 'object',
                 properties: {
                   codigo_reserva: { type: 'integer' },
+                  rut_cliente: { type: 'integer' },
                   origen_reserva: { type: 'string' },
                   destino_reserva: { type: 'string' },
                   fecha_reserva: { type: 'string' },
@@ -233,6 +234,47 @@ export class BookingRouter extends BaseRouter {
       )
     });
 
+    // Get client's own bookings
+    this.addRoute('GET', '/my-bookings', {
+      schema: {
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              message: { type: 'string' },
+              reservas: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    codigo_reserva: { type: 'integer' },
+                    origen_reserva: { type: 'string' },
+                    destino_reserva: { type: 'string' },
+                    fecha_reserva: { type: 'string' },
+                    tipo_reserva: { type: 'string' },
+                    observacion_reserva: { type: 'string' },
+                    estado_reserva: { type: 'string' },
+                    tarifa: {
+                      type: 'object',
+                      properties: {
+                        precio: { type: 'number' },
+                        descripcion: { type: 'string' }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      handler: this.withAuth(
+        this.controller.getClientBookings.bind(this.controller),
+        ['ver_reservas'],
+        ['CLIENTE']
+      )
+    });
+
     // Get reservas with filters
     this.addRoute('GET', '/', {
       schema: {
@@ -307,8 +349,17 @@ export class BookingRouter extends BaseRouter {
                   tipo_reserva: { type: 'string' },
                   observacion_reserva: { type: 'string' },
                   estado_reserva: { type: 'string' },
-                  rut_conductor: { type: ['integer', 'null'] },
-                  patente_taxi: { type: ['string', 'null'] },
+                  rut_cliente: { type: 'integer' },
+                  cliente: {
+                    type: 'object',
+                    properties: {
+                      rut: { type: 'integer' },
+                      nombre: { type: 'string' },
+                      apellido: { type: 'string' },
+                      correo: { type: 'string' },
+                      telefono: { type: 'string' }
+                    }
+                  },
                   taxi: {
                     type: ['object', 'null'],
                     properties: {
@@ -367,6 +418,79 @@ export class BookingRouter extends BaseRouter {
         this.controller.getBookingByCode.bind(this.controller),
         ['ver_reservas'],
         ['CLIENTE', 'ADMINISTRADOR', 'CONDUCTOR']
+      )
+    });
+
+    // Get single reserva by code (client version with limited data)
+    this.addRoute('GET', '/:codigoreserva/client', {
+      schema: {
+        params: {
+          type: 'object',
+          required: ['codigoreserva'],
+          properties: {
+            codigoreserva: { type: 'integer' }
+          }
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              message: { type: 'string' },
+              reserva: {
+                type: 'object',
+                properties: {
+                  codigo_reserva: { type: 'integer' },
+                  origen_reserva: { type: 'string' },
+                  destino_reserva: { type: 'string' },
+                  fecha_reserva: { type: 'string' },
+                  tipo_reserva: { type: 'string' },
+                  observacion_reserva: { type: 'string' },
+                  estado_reserva: { type: 'string' },
+                  taxi: {
+                    type: ['object', 'null'],
+                    properties: {
+                      patente: { type: 'string' },
+                      marca: { type: 'string' },
+                      modelo: { type: 'string' },
+                      color: { type: 'string' }
+                    }
+                  },
+                  servicio: {
+                    type: 'object',
+                    properties: {
+                      tipo: { type: 'string' },
+                      descripcion: { type: 'string' }
+                    }
+                  },
+                  tarifa: {
+                    type: 'object',
+                    properties: {
+                      precio: { type: 'number' },
+                      descripcion: { type: 'string' },
+                      tipo: { type: 'string' }
+                    }
+                  },
+                  history: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        id_historial: { type: 'integer' },
+                        estado_historial: { type: 'string' },
+                        fecha_cambio: { type: 'string' }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      handler: this.withAuth(
+        this.controller.getClientBookingByCode.bind(this.controller),
+        ['ver_reservas', 'ver_historial'],
+        ['CLIENTE']
       )
     });
   }

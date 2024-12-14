@@ -16,16 +16,27 @@ export class UserRepository extends BaseRepository {
   _formatRut(rut) {
     if (!rut) throw new Error('Invalid RUT format: RUT is empty');
     
+    // Special case for admin ID
+    if (rut === 1 || rut === '1') {
+        return 1;
+    }
+    
     let rutStr = rut.toString().replace(/\./g, '').replace(/-/g, '');
     
     // If it's already a number without verification digit, return as is
-    if (/^\d{7,8}$/.test(rutStr)) {
-      return parseInt(rutStr, 10);
+    if (/^\d{1,8}$/.test(rutStr)) {  // Changed from {7,8} to {1,8} to allow admin ID
+        return parseInt(rutStr, 10);
     }
     
     // Validate RUT format (7-8 digits + verifier)
     if (!/^\d{7,8}[\dkK]$/.test(rutStr)) {
-      throw new Error(`Invalid RUT format: ${rut}`);
+        console.log('Invalid RUT format, trying as simple ID:', rut);
+        // Try to parse as simple number before failing
+        const simpleId = parseInt(rut.toString(), 10);
+        if (!isNaN(simpleId) && simpleId > 0) {
+            return simpleId;
+        }
+        throw new Error(`Invalid RUT format: ${rut}`);
     }
     
     // Always remove last digit (verifier)
@@ -66,26 +77,39 @@ export class UserRepository extends BaseRepository {
    */
   async findByRut(rut) {
     try {
-      const formattedRut = this._formatRut(rut);
-      console.log('Formatted RUT for query:', formattedRut);
-      const result = await this.db.select('*')
-        .from(this.tableName)
-        .where({ rut: formattedRut })
-        .whereNull('deleted_at_persona')
-        .first();
-      
-      console.log('Found user by RUT:', result);
-      return this._toModel(result);
-    } catch (error) {
-      console.error('Error in findByRut:', error);
-      if (error.message.includes('Invalid RUT format')) {
+        // Special case for admin ID
+        if (rut === 1 || rut === '1') {
+            const result = await this.db.select('*')
+                .from(this.tableName)
+                .where({ rut: 1 })
+                .whereNull('deleted_at_persona')
+                .first();
+            
+            console.log('Found admin by RUT:', result);
+            return this._toModel(result);
+        }
+
+        const formattedRut = this._formatRut(rut);
+        console.log('Formatted RUT for query:', formattedRut);
         const result = await this.db.select('*')
-          .from(this.tableName)
-          .where({ rut: rut.toString() })
-          .first();
+            .from(this.tableName)
+            .where({ rut: formattedRut })
+            .whereNull('deleted_at_persona')
+            .first();
+        
+        console.log('Found user by RUT:', result);
         return this._toModel(result);
-      }
-      throw error;
+    } catch (error) {
+        console.error('Error in findByRut:', error);
+        if (error.message.includes('Invalid RUT format')) {
+            // Try one last time with raw value
+            const result = await this.db.select('*')
+                .from(this.tableName)
+                .where({ rut: rut.toString() })
+                .first();
+            return this._toModel(result);
+        }
+        throw error;
     }
   }
 

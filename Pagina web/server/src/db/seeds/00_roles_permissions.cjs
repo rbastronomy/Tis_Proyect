@@ -219,4 +219,34 @@
     ];
 
     await knex('posee').insert(rolePermissions);
+
+    // Verify client permissions include both needed permissions
+    const clientPermissions = [
+      { 
+        id_roles: 2, // CLIENTE role
+        id_permiso: 5, // crear_reserva
+        fecha_cambio_permiso: new Date()
+      },
+      { 
+        id_roles: 2, 
+        id_permiso: 6, // cancelar_reserva
+        fecha_cambio_permiso: new Date()
+      },
+      { 
+        id_roles: 2, 
+        id_permiso: 7, // ver_reservas
+        fecha_cambio_permiso: new Date()
+      },
+      { 
+        id_roles: 2, 
+        id_permiso: 11, // ver_historial
+        fecha_cambio_permiso: new Date()
+      }
+    ];
+
+    // Make sure these permissions are included in the posee table insert
+    await knex('posee').insert([
+      ...clientPermissions,
+      // ... other role permissions
+    ]);
   };

@@ -23,26 +23,40 @@ export default function ReservationGrid() {
 
   const fetchBookings = async () => {
     try {
-      const endpoint =
-        user?.role?.nombre_rol === 'CONDUCTOR'
-          ? '/api/bookings/pending'
-          : '/api/bookings/'
+      let endpoint;
+      
+      // Select endpoint based on user role
+      switch (user?.role?.nombre_rol) {
+        case 'CONDUCTOR':
+          endpoint = '/api/bookings/pending';
+          break;
+        case 'CLIENTE':
+          endpoint = '/api/bookings/my-bookings';
+          break;
+        case 'ADMINISTRADOR':
+          endpoint = '/api/bookings/';
+          break;
+        default:
+          throw new Error('Rol no autorizado');
+      }
 
       const response = await fetch(endpoint, {
         credentials: 'include',
-      })
+      });
 
       if (response.ok) {
-        const data = await response.json()
-        setBookings(data.reservas || [])
+        const data = await response.json();
+        setBookings(data.reservas || []);
+      } else {
+        throw new Error('Error al obtener las reservas');
       }
     } catch (error) {
-      console.error('Error fetching bookings:', error)
-      setBookings([])
+      console.error('Error fetching bookings:', error);
+      setBookings([]);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleCardClick = (codigo_reserva) => {
     navigate({ to: `/reservas/${codigo_reserva}` })

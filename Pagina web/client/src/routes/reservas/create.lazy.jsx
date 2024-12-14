@@ -203,6 +203,30 @@ function CreateBooking() {
     }
   });
 
+  // Check for specific permission in the nested structure
+  const hasCreatePermission = user?.role?.permissions?.some(
+    permission => permission.nombre_permiso === 'crear_reserva'
+  );
+
+  if (!isAuthenticated || !hasCreatePermission) {
+    return (
+      <div className="flex justify-center items-center min-h-[calc(100vh-64px)] bg-gradient-to-b from-gray-50 to-white p-4 text-center"> 
+        <Card className="w-full max-w-xl">
+          <CardBody>
+            <p className='justify-center items-center text-center'>No tienes permisos para crear reservas</p>
+            <Button 
+              color="primary" 
+              className="mt-4"
+              onClick={() => navigate({ to: '/' })}
+            >
+              Volver al inicio
+            </Button>
+          </CardBody>
+        </Card>
+      </div>
+    )
+  }
+
   // Fetch services when ride type changes
   useEffect(() => {
     if (rideType) {
@@ -240,19 +264,6 @@ function CreateBooking() {
       setValue('destino_reserva', '');
     }
   }, [rideType, setValue]);
-
-  if (!isAuthenticated || !['ADMINISTRADOR', 'CLIENTE'].includes(user?.role?.nombre_rol)) {
-    //show a card with a message that says "No tienes permisos para acceder a esta página"and redirect to the home page
-    return (
-      <div className="flex justify-center items-center min-h-[calc(100vh-64px)] bg-gradient-to-b from-gray-50 to-white p-4 text-center"> 
-        <Card className="w-full max-w-xl">
-          <CardBody>
-            <p className='justify-center items-center text-center'>No tienes permisos para acceder a esta página</p>
-          </CardBody>
-        </Card>
-      </div>
-    )
-  }
 
   /**
    * Handles form submission.

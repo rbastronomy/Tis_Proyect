@@ -80,17 +80,21 @@ export class AuthService {
       // Hash password before user creation
       const hashedPassword = await this._hashPassword(userData.contrasena);
       
-      // Create user with hashed password
+      // Create user with hashed password and default role if not specified
       const user = await this.userService.create({
         ...userData,
+        id_roles: userData.id_roles || 2, // Default to CLIENTE role if not specified
         contrasena: hashedPassword,
-        estado_persona: 'ACTIVO' // Set default state
+        estado_persona: 'ACTIVO'
       });
 
       console.log('User created:', user);
       
-      // Create auth session only if requested
-      const session = createSession ? await this.auth.createSession(user.rut.toString()) : null;
+      let session = null;
+      if (createSession) {
+        session = await this.auth.createSession(user.rut.toString());
+        console.log('Session created:', session);
+      }
 
       return { user, session };
     } catch (error) {

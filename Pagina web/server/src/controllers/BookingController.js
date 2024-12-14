@@ -27,11 +27,14 @@ class BookingController extends BaseController {
                 codigo_servicio: request.body.codigo_servicio,
                 id_tarifa: request.body.id_tarifa
             };
+
+            console.log('Creating booking with data:', bookingData);
+            
             const booking = await this.service.createBooking(bookingData);
             
             return reply.code(201).send({
                 message: 'Reserva creada exitosamente',
-                booking
+                booking: booking.toJSON()
             });
         } catch (error) {
             request.log.error(error);
@@ -335,6 +338,89 @@ class BookingController extends BaseController {
                 statusCode: 400,
                 error: 'Bad Request',
                 message: error.message
+            });
+        }
+    }
+
+    /**
+     * Gets a specific booking by code with limited data for clients
+     * @param {Object} request - Fastify request object
+     * @param {Object} reply - Fastify reply object
+     * @returns {Promise<Object>} Response object containing booking data
+     */
+    async getClientBookingByCode(request, reply) {
+        try {
+            const codigoReserva = request.params.codigoreserva;
+            const clientRut = request.user.rut;
+            
+            console.log('BookingController - Getting client booking:', codigoReserva);
+            
+            const booking = await this.service.getClientBookingByCode(codigoReserva, clientRut);
+            
+            if (!booking) {
+                return reply.code(404).send({ 
+                    error: 'Reserva no encontrada' 
+                });
+            }
+
+            return reply.send({
+                message: 'Reserva recuperada exitosamente',
+                reserva: booking.toJSON()
+            });
+        } catch (error) {
+            console.error('BookingController - Error:', error);
+            
+            if (error.message.includes('No autorizado')) {
+                return reply.code(403).send({ 
+                    error: error.message 
+                });
+            }
+            
+            return reply.code(500).send({ 
+                error: 'Error al recuperar la reserva',
+                details: error.message 
+            });
+        }
+    }
+
+    /**
+     * Gets bookings for the authenticated client
+     * @param {AuthenticatedRequest} request - Fastify request object with authenticated user
+     * @param {Object} reply - Fastify reply object
+     * @returns {Promise<Object>} Response object containing client's bookings
+     */
+    async getClientBookings(request, reply) {
+        try {
+            const clientRut = request.user.rut;
+            console.log('Getting bookings for client:', clientRut);
+
+            // Get bookings with a filter for the client's RUT
+            const bookings = await this.service.getBookings({ 
+                userId: clientRut,
+                role: 'CLIENTE'
+            });
+
+            return reply.send({
+                message: 'Reservas recuperadas exitosamente',
+                reservas: bookings.map(booking => ({
+                    codigo_reserva: booking.codigo_reserva,
+                    origen_reserva: booking.origen_reserva,
+                    destino_reserva: booking.destino_reserva,
+                    fecha_reserva: booking.fecha_reserva,
+                    tipo_reserva: booking.tipo_reserva,
+                    observacion_reserva: booking.observacion_reserva,
+                    estado_reserva: booking.estado_reserva,
+                    tarifa: booking.tarifa ? {
+                        precio: booking.tarifa.precio,
+                        descripcion: booking.tarifa.descripcion
+                    } : null
+                }))
+            });
+        } catch (error) {
+            request.log.error(error);
+            return reply.code(500).send({ 
+                error: 'Error al recuperar las reservas',
+                details: error.message 
             });
         }
     }

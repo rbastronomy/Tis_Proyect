@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../hooks/useAuth'
-import { MapPin, Calendar, DollarSign, History, User, Phone, Mail, Car } from 'lucide-react'
+import { MapPin, Calendar, DollarSign, History, User, Phone, Mail, Car, CreditCard } from 'lucide-react'
 import {
   Button,
   Card,
@@ -277,7 +277,7 @@ export default function AdminReservationDetail() {
                     onClick={() => handleOpenAssignModal(false)}
                     className="text-white font-bold"
                   >
-                    Asignar Taxi
+                    {reservation.taxi?.conductor ? 'Cambiar Conductor' : 'Asignar Taxi'}
                   </Button>
                 )}
                 <Button
@@ -367,6 +367,51 @@ export default function AdminReservationDetail() {
         </Card>
       )}
 
+      {reservation?.cliente && (
+        <Card className="w-full max-w-3xl mx-auto mt-8">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <User className="w-5 h-5" />
+              <h2 className="text-xl font-bold">Información del Cliente</h2>
+            </div>
+          </CardHeader>
+          <CardBody>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-3">
+                <p className="flex items-center text-sm text-gray-600">
+                  <User className="w-4 h-4 mr-2 text-gray-400" />
+                  <span>
+                    <strong className="text-gray-700">Nombre:</strong>{' '}
+                    {reservation.cliente.nombre} {reservation.cliente.apellido}
+                  </span>
+                </p>
+                <p className="flex items-center text-sm text-gray-600">
+                  <Mail className="w-4 h-4 mr-2 text-gray-400" />
+                  <span>
+                    <strong className="text-gray-700">Email:</strong>{' '}
+                    {reservation.cliente.correo}
+                  </span>
+                </p>
+                <p className="flex items-center text-sm text-gray-600">
+                  <Phone className="w-4 h-4 mr-2 text-gray-400" />
+                  <span>
+                    <strong className="text-gray-700">Teléfono:</strong>{' '}
+                    {reservation.cliente.telefono}
+                  </span>
+                </p>
+                <p className="flex items-center text-sm text-gray-600">
+                  <CreditCard className="w-4 h-4 mr-2 text-gray-400" />
+                  <span>
+                    <strong className="text-gray-700">RUT:</strong>{' '}
+                    {reservation.cliente.rut}
+                  </span>
+                </p>
+              </div>
+            </div>
+          </CardBody>
+        </Card>
+      )}
+
       <Card className="w-full max-w-3xl mx-auto mt-8">
         <CardHeader>
           <div className="flex items-center gap-2">
@@ -427,7 +472,7 @@ export default function AdminReservationDetail() {
           {(onClose) => (
             <>
               <ModalHeader className="flex flex-col gap-1">
-                {isApprovalFlow ? 'Aprobar y Asignar Taxi' : 'Asignar Taxi'}
+                {reservation.taxi?.conductor ? 'Cambiar Conductor' : 'Asignar Taxi'}
               </ModalHeader>
               <ModalBody className="gap-4">
                 <Select
@@ -459,13 +504,13 @@ export default function AdminReservationDetail() {
                 <Button
                   color="primary"
                   onPress={() => {
-                    handleConfirmAssignment()
-                    onClose()
+                    handleConfirmAssignment();
+                    onClose();
                   }}
                   isDisabled={!reservation?.patente_taxi}
                   className="text-white font-bold"
                 >
-                  {isApprovalFlow ? 'Aprobar y Confirmar' : 'Confirmar Asignación'}
+                  {reservation.taxi?.conductor ? 'Confirmar Cambio' : 'Confirmar Asignación'}
                 </Button>
               </ModalFooter>
             </>
