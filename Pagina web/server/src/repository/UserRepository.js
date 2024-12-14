@@ -15,19 +15,21 @@ export class UserRepository extends BaseRepository {
   _formatRut(rut) {
     if (!rut) throw new Error('Invalid RUT format: RUT is empty');
     
-    let rutStr = rut.toString();
-    rutStr = rutStr.replace(/\./g, '').replace(/-/g, '');
+    let rutStr = rut.toString().replace(/\./g, '').replace(/-/g, '');
     
     // If it's already a number without verification digit, return as is
-    if (/^\d+$/.test(rutStr)) {
+    if (/^\d{7,8}$/.test(rutStr)) {
       return parseInt(rutStr, 10);
     }
     
-    if (!/^\d{7,9}[\dkK]$/.test(rutStr)) {
+    // Validate RUT format (7-8 digits + verifier)
+    if (!/^\d{7,8}[\dkK]$/.test(rutStr)) {
       throw new Error(`Invalid RUT format: ${rut}`);
     }
     
+    // Always remove last digit (verifier)
     const numbers = rutStr.slice(0, -1);
+    console.log('RUT before format:', rut, 'After format:', numbers);
     return parseInt(numbers, 10);
   }
 
@@ -93,10 +95,12 @@ export class UserRepository extends BaseRepository {
    */
   async create(userData) {
     try {
+      // Format RUT by removing verification digit
       const formattedRut = this._formatRut(userData.rut);
+      console.log('Creating user with formatted RUT:', formattedRut); // Debug log
       
       const dbData = {
-        rut: formattedRut,
+        rut: formattedRut, // This will be the RUT without verifier digit
         nombre: userData.nombre,
         apellido_paterno: userData.apellido_paterno,
         apellido_materno: userData.apellido_materno,
@@ -122,11 +126,11 @@ export class UserRepository extends BaseRepository {
 
       const userDB = await this.db.select('*')
         .from(this.tableName)
-        .where({ rut: formattedRut })
+        .where({ rut: formattedRut }) // Use the formatted RUT here too
         .first();
 
       console.log('Found user after insert:', userDB);
-      return userDB
+      return userDB;
     } catch (error) {
       console.error('Error creating user:', error);
       if (error.code === '42P01') {
@@ -261,19 +265,21 @@ export class UserRepository extends BaseRepository {
     try {
       const queryFilters = { ...filters };
       
-      // Format RUT if present in filters
+      // Format RUT if present in filters, but don't remove verifier digit again
+      // since it was already removed during creation
       if (queryFilters.rut) {
-        queryFilters.rut = this._formatRut(queryFilters.rut);
+        // Just convert to integer without removing any digits
+        queryFilters.rut = parseInt(queryFilters.rut.toString().replace(/\./g, '').replace(/-/g, ''));
       }
 
-      console.log('Finding user with filters:', queryFilters); // Debug log
+      console.log('Finding user with filters:', queryFilters);
 
       const result = await this.db(this.tableName)
         .where(queryFilters)
         .whereNull('deleted_at_persona')
         .first();
       
-      console.log('Found user:', result); // Debug log
+      console.log('Found user:', result);
       return result || null;
     } catch (error) {
       console.error('Error finding user:', error);

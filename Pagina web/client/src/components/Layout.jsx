@@ -14,7 +14,7 @@ function Layout() {
         <Navbar />
         <SidebarProvider>
           <div className="flex flex-1">
-            <div className="h-[calc(100vh-64px)] sticky top-16">
+            <div className="h-[calc(100vh-64px)] sticky top-0">
               <AdminSidebar />
             </div>
             <SidebarInset className="flex-1 overflow-auto">

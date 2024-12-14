@@ -1,101 +1,195 @@
 import { BaseModel } from '../core/BaseModel.js';
 import { GeolocalizationModel } from './GeolocalizationModel.js';
-export class TaxiModel extends BaseModel{
+import { UserModel } from './UserModel.js';
 
-  static taxiData = {
+/**
+ * Represents the internal data structure of TaxiModel
+ * @typedef {Object} TaxiModelData
+ * @property {string|null} patente - License plate (primary key)
+ * @property {number|null} rut_conductor - Driver's RUT
+ * @property {string} marca - Car brand
+ * @property {string} modelo - Car model
+ * @property {string} color - Car color
+ * @property {number|null} ano - Car year
+ * @property {Date|null} vencimiento_revision_tecnica - Technical inspection expiration date
+ * @property {Date|null} vencimiento_permiso_circulacion - Circulation permit expiration date
+ * @property {number|null} codigo_taxi - Unique taxi code
+ * @property {string} estado_taxi - Taxi status
+ * @property {Date|null} deleted_at_taxi - Soft delete timestamp
+ * @property {Date|null} created_at - Creation timestamp
+ * @property {Date|null} updated_at - Last update timestamp
+ * @property {UserModel|null} conductor - Associated driver
+ * @property {GeolocalizationModel|null} geolocalizacion - Current location
+ */
+
+/**
+ * Class representing a Taxi in the system
+ * @extends {BaseModel<TaxiModelData>}
+ */
+export class TaxiModel extends BaseModel {
+  static VALID_ESTADOS = ['DISPONIBLE', 'EN SERVICIO', 'FUERA DE SERVICIO', 'MANTENIMIENTO'];
+
+  /**
+   * Default values for a new taxi instance
+   * @type {TaxiModelData}
+   */
+  static defaultData = {
     patente: null,
     rut_conductor: null,
     marca: '',
     modelo: '',
     color: '',
     ano: null,
-    estado: '',
     vencimiento_revision_tecnica: null,
     vencimiento_permiso_circulacion: null,
     codigo_taxi: null,
-    deleted_at_taxi: null,
     estado_taxi: 'DISPONIBLE',
+    deleted_at_taxi: null,
+    created_at: null,
+    updated_at: null,
+    conductor: null,
     geolocalizacion: null
-  }
+  };
   
-  constructor(data = {}){
-    super(data, TaxiModel.taxiData);
-    this._data.geolocalizacion = new GeolocalizationModel(data.geolocalizacion);
+  /**
+   * Creates a new TaxiModel instance
+   * @param {Partial<TaxiModelData>} data - Initial taxi data
+   * @throws {Error} If validation fails
+   */
+  constructor(data = {}) {
+    super(data, TaxiModel.defaultData);
+    this.validate();
+    
+    if (data.conductor) {
+      this.conductor = data.conductor;
+    }
+    if (data.geolocalizacion) {
+      this.geolocalizacion = new GeolocalizationModel(data.geolocalizacion);
+    }
   }
 
+  /**
+   * Validates the taxi data
+   * @private
+   * @throws {Error} If validation fails
+   */
+  validate() {
+    // Bind the validation methods to this instance
+    const validate = {
+      string: this.validateString.bind(this),
+      number: this.validateNumber.bind(this),
+      date: this.validateDate.bind(this),
+      enum: this.validateEnum.bind(this)
+    };
+
+    this.clearErrors();
+
+    validate.string('patente', this._data.patente);
+    validate.string('marca', this._data.marca);
+    validate.string('modelo', this._data.modelo);
+    validate.string('color', this._data.color);
+    validate.number('ano', this._data.ano, { min: 1900, max: new Date().getFullYear() + 1 });
+    validate.enum('estado_taxi', this._data.estado_taxi, TaxiModel.VALID_ESTADOS);
+    validate.date('vencimiento_revision_tecnica', this._data.vencimiento_revision_tecnica);
+    validate.date('vencimiento_permiso_circulacion', this._data.vencimiento_permiso_circulacion);
+
+    this.throwIfErrors();
+  }
+
+  // Setters with validation
+  /** @param {string} value */
+  set patente(value) {
+    if (typeof value !== 'string' || value.trim().length === 0) {
+      throw new Error('Patente debe ser una cadena válida');
+    }
+    this._data.patente = value.trim().toUpperCase();
+  }
+
+  /** @param {string} value */
+  set estado_taxi(value) {
+    if (!TaxiModel.VALID_ESTADOS.includes(value)) {
+      throw new Error(`Estado debe ser uno de: ${TaxiModel.VALID_ESTADOS.join(', ')}`);
+    }
+    this._data.estado_taxi = value;
+  }
+
+  /** @param {UserModel|Object} value */
+  set conductor(value) {
+    this._data.conductor = value instanceof UserModel ? value : new UserModel(value);
+    if (!this._data.conductor.isDriver()) {
+      throw new Error('El conductor asignado debe tener rol de conductor');
+    }
+    this._data.rut_conductor = this._data.conductor.rut;
+  }
+
+  // Getters
+  /** @returns {string} License plate */
   get patente() { return this._data.patente; }
-  set patente(value) { this._data.patente = value; }
-
+  /** @returns {string} Car brand */
   get marca() { return this._data.marca; }
-  set marca(value) { this._data.marca = value; }
-
+  /** @returns {string} Car model */
   get modelo() { return this._data.modelo; }
-  set modelo(value) { this._data.modelo = value; }
-
+  /** @returns {string} Car color */
+  get color() { return this._data.color; }
+  /** @returns {number} Car year */
+  get ano() { return this._data.ano; }
+  /** @returns {number} Taxi code */
   get codigo_taxi() { return this._data.codigo_taxi; }
-  set codigo_taxi(value) { this._data.codigo_taxi = value; }
-  
-  get vencimiento_revision_tecnica() { return this._data.vencimiento_revision_tecnica; }
-  set vencimiento_revision_tecnica(value) { this._data.vencimiento_revision_tecnica = value; }
-  
-  get vencimiento_permiso_circulacion() { return this._data.vencimiento_permiso_circulacion; }
-  set vencimiento_permiso_circulacion(value) { this._data.vencimiento_permiso_circulacion = value; }
-  
+  /** @returns {string} Taxi status */
   get estado_taxi() { return this._data.estado_taxi; }
-  set estado_taxi(value) { this._data.estado_taxi = value; }
+  /** @returns {Date} Technical inspection expiration */
+  get vencimiento_revision_tecnica() { return this._data.vencimiento_revision_tecnica; }
+  /** @returns {Date} Circulation permit expiration */
+  get vencimiento_permiso_circulacion() { return this._data.vencimiento_permiso_circulacion; }
+  /** @returns {UserModel} Associated driver */
+  get conductor() { return this._data.conductor; }
+  /** @returns {GeolocalizationModel} Current location */
+  get geolocalizacion() { return this._data.geolocalizacion; }
 
-  isAvailable(){
-    return this._data.estado_taxi === 'DISPONIBLE';
-  }
+  // Status check methods
+  /** @returns {boolean} */
+  isAvailable() { return this._data.estado_taxi === 'DISPONIBLE'; }
+  /** @returns {boolean} */
+  isFueraDeServicio() { return this._data.estado_taxi === 'FUERA DE SERVICIO'; }
+  /** @returns {boolean} */
+  isEnServicio() { return this._data.estado_taxi === 'EN SERVICIO'; }
+  /** @returns {boolean} */
+  isMantenimiento() { return this._data.estado_taxi === 'MANTENIMIENTO'; }
 
-  isFueraDeServicio(){
-    return this._data.estado_taxi === 'FUERA DE SERVICIO';
-  }
-
-  isEnServicio(){
-    return this._data.estado_taxi === 'EN SERVICIO';
-  }
-
-  isMantenimiento(){
-    return this._data.estado_taxi === 'MANTENIMIENTO';
-  }
-
-  static toModel(data){
-    if(!data) return null;
-
-    return new TaxiModel({
-      patente: data.patente,
-      marca: data.marca,
-      modelo: data.modelo,
-      color: data.color,
-      ano: data.ano,
-      estado: data.estado,
-      codigo_taxi: data.codigo_taxi,
-      vencimiento_revision_tecnica: data.vencimiento_revision_tecnica,
-      vencimiento_permiso_circulacion: data.vencimiento_permiso_circulacion,
-      deleted_at_taxi: data.deleted_at_taxi,
-      estado_taxi: data.estado_taxi
-    });
-  }
-
-  toJSON(){
-    return {
+  /**
+   * Converts the taxi model to a JSON object
+   * @returns {Object} Taxi data as JSON
+   */
+  toJSON() {
+    const json = {
       patente: this._data.patente,
+      rut_conductor: this._data.rut_conductor,
       marca: this._data.marca,
       modelo: this._data.modelo,
       color: this._data.color,
       ano: this._data.ano,
-      estado: this._data.estado,
-      codigo_taxi: this._data.codigo_taxi,
       vencimiento_revision_tecnica: this._data.vencimiento_revision_tecnica,
       vencimiento_permiso_circulacion: this._data.vencimiento_permiso_circulacion,
+      codigo_taxi: this._data.codigo_taxi,
+      estado_taxi: this._data.estado_taxi,
       deleted_at_taxi: this._data.deleted_at_taxi,
-      estado_taxi: this._data.estado_taxi
+      created_at: this._data.created_at,
+      updated_at: this._data.updated_at
     };
+
+    if (this._data.conductor) json.conductor = this._data.conductor.toJSON();
+    if (this._data.geolocalizacion) json.geolocalizacion = this._data.geolocalizacion.toJSON();
+
+    return json;
   }
 
-  static fromDB(data){
+  /**
+   * Creates a TaxiModel instance from database data
+   * @param {Object} data - Raw database data
+   * @returns {TaxiModel|null} New TaxiModel instance or null
+   */
+  static fromDB(data) {
+    if (!data) return null;
     return new TaxiModel(data);
   }
-
 }

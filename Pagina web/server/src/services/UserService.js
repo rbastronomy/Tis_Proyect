@@ -82,9 +82,12 @@ export class UserService extends BaseService {
    */
   async findAll(filters = {}) {
     try {
-      const users = await this.repository.findAll(filters);
-      console.log(users);
-      return users.map(user => UserModel.toModel(user));
+      const usersData = await this.repository.findAll(filters);
+      for (const user of usersData) {
+        const role = await this.roleService.findById(user.id_roles);
+        user.role = role;
+      }
+      return usersData.map(user => UserModel.toModel(user));
     } catch (error) {
       console.error('Error finding users:', error);
       throw error;
@@ -118,6 +121,53 @@ export class UserService extends BaseService {
       return user ? UserModel.toModel(user) : null;
     } catch (error) {
       console.error('Error finding user:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Find a driver by their RUT with optional include options
+   * @param {string|number} rut - The driver's RUT (can include verifier digit)
+   * @param {Object} options - Additional query options (like include)
+   * @returns {Promise<Object|null>} The driver object or null if not found
+   */
+  async findDriverByRut(rut, options = {}) {
+    try {
+      // Clean the format first
+      const cleanRut = rut.toString().replace(/\./g, '').replace(/-/g, '');
+      
+      // Determine if the RUT includes verifier digit
+      // Chilean RUT without verifier is typically 7-8 digits
+      // With verifier it's 8-9 digits
+      let searchRut;
+      if (cleanRut.length > 8) { // Has verifier digit
+        searchRut = parseInt(cleanRut.slice(0, -1));
+        console.log('Searching with RUT (removed verifier):', searchRut);
+      } else { // Already without verifier
+        searchRut = parseInt(cleanRut);
+        console.log('Searching with RUT (no verifier):', searchRut);
+      }
+      
+      const driver = await this.repository.findOne({
+        rut: searchRut,
+        id_roles: 3,
+        deleted_at_persona: null
+      });
+
+      if (!driver) {
+        console.log('No driver found with RUT:', searchRut);
+        return null;
+      }
+
+      console.log('Found driver:', driver);
+
+      // Get role with permissions
+      const role = await this.roleService.findById(driver.id_roles);
+      driver.role = role;
+
+      return UserModel.toModel(driver);
+    } catch (error) {
+      console.error('Error in findDriverByRut:', error);
       throw error;
     }
   }

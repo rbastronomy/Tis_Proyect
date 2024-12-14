@@ -63,7 +63,7 @@ function Navbar() {
         <div id="logo-text" className="text-lg font-bold">Aeropuerto Iquique Tarapacá</div>
       </div>
 
-      {/* Desktop Navigation */}
+      {/* Desktop Navigation - Reorganized with grouped dropdowns */}
       <nav className="hidden md:flex space-x-4">
         <Button
           auto
@@ -75,43 +75,48 @@ function Navbar() {
         >
           Inicio
         </Button>
-        {/* Botón Mis Viajes para ADMINISTRADOR y CONDUCTOR */}
-        {isAuthenticated && (user?.role?.nombre_rol === 'ADMINISTRADOR' || user?.role?.nombre_rol === 'CONDUCTOR') && (
-          <Button
-            auto
-            bordered
-            color="warning"
-            className="hover:bg-yellow-500 hover:text-black"
-            as="a"
-            href="/viajes"
-          >
-            Mis Viajes
-          </Button>
-        )}
+
+        {/* Reservas Dropdown */}
         {isAuthenticated && (
-          <>
-            <Button
-              auto
-              bordered
-              color="warning"
-              className="hover:bg-yellow-500 hover:text-black"
-              as="a"
-              href="/reservas"
+          <Dropdown>
+            <DropdownTrigger>
+              <Button
+                auto
+                bordered
+                color="warning"
+                className="hover:bg-yellow-500 hover:text-black"
+              >
+                Reservas
+              </Button>
+            </DropdownTrigger>
+            <DropdownMenu
+              aria-label="Reservas Options"
+              className="bg-black border border-yellow-500"
+              itemClasses={{
+                base: "data-[hover=true]:bg-yellow-500 data-[hover=true]:text-black",
+              }}
             >
-              Mis Reservas
-            </Button>
-            <Button
-              auto
-              bordered
-              color="warning"
-              className="hover:bg-yellow-500 hover:text-black"
-              as="a"
-              href="/reservas/create"
-            >
-              Nueva Reserva
-            </Button>
-          </>
+              <DropdownItem
+                key="mis-reservas"
+                as="a"
+                href="/reservas"
+                className="text-yellow-500 hover:bg-yellow-500 hover:text-black"
+              >
+                Mis Reservas
+              </DropdownItem>
+              <DropdownItem
+                key="nueva-reserva"
+                as="a"
+                href="/reservas/create"
+                className="text-yellow-500 hover:bg-yellow-500 hover:text-black"
+              >
+                Nueva Reserva
+              </DropdownItem>
+            </DropdownMenu>
+          </Dropdown>
         )}
+
+        {/* Taxi Dropdown - Already exists, remains the same */}
         <Dropdown>
           <DropdownTrigger>
             <Button
@@ -125,7 +130,7 @@ function Navbar() {
           </DropdownTrigger>
           <DropdownMenu
             aria-label="Taxi Options"
-            className="bg-black border border-yellow-500 dark:border-yellow-500"
+            className="bg-black border border-yellow-500"
             itemClasses={{
               base: "data-[hover=true]:bg-yellow-500 data-[hover=true]:text-black",
             }}
@@ -148,104 +153,140 @@ function Navbar() {
             </DropdownItem>
           </DropdownMenu>
         </Dropdown>
-        <Button
-          auto
-          bordered
-          color="warning"
-          className="hover:bg-yellow-500 hover:text-black"
-          as="a"
-          href="/contacto"
-        >
-          Contacto
-        </Button>
-        <Button
-          auto
-          bordered
-          color="warning"
-          className="hover:bg-yellow-500 hover:text-black"
-          as="a"
-          href="/sobre"
-        >
-          Sobre Nosotros
-        </Button>
-        <Button
-          auto
-          bordered
-          color="warning"
-          className="hover:bg-yellow-500 hover:text-black"
-          as="a"
-          href="/ayuda"
-        >
-          Ayuda
-        </Button>
-        {isAuthenticated && user?.role?.nombre_rol === 'ADMINISTRADOR' && (
-          <Button
-            auto
-            bordered
-            color="warning"
-            className="hover:bg-yellow-500 hover:text-black"
-            as="a"
-            href="/admin/dashboard"
-          >
-            Panel Admin
-          </Button>
-        )}
-        {isAuthenticated && isUserValid ? (
-          <>
+
+        {/* Información Dropdown */}
+        <Dropdown>
+          <DropdownTrigger>
             <Button
               auto
               bordered
               color="warning"
               className="hover:bg-yellow-500 hover:text-black"
-              as="a"
-              href="/dashboard"
             >
-              Dashboard
+              Información
             </Button>
-            <Dropdown>
-              <DropdownTrigger>
-                <Button
-                  auto
-                  bordered
-                  color="warning"
-                  className="hover:bg-yellow-500 hover:text-black"
-                >
-                  {user.nombre}
-                </Button>
-              </DropdownTrigger>
-              <DropdownMenu
-                aria-label="User Options"
-                className="bg-black border border-yellow-500 dark:border-yellow-500"
-                itemClasses={{
-                  base: "data-[hover=true]:bg-yellow-500 data-[hover=true]:text-black",
-                }}
+          </DropdownTrigger>
+          <DropdownMenu
+            aria-label="Information Options"
+            className="bg-black border border-yellow-500"
+            itemClasses={{
+              base: "data-[hover=true]:bg-yellow-500 data-[hover=true]:text-black",
+            }}
+          >
+            <DropdownItem
+              key="contacto"
+              as="a"
+              href="/contacto"
+              className="text-yellow-500 hover:bg-yellow-500 hover:text-black"
+            >
+              Contacto
+            </DropdownItem>
+            <DropdownItem
+              key="sobre"
+              as="a"
+              href="/sobre"
+              className="text-yellow-500 hover:bg-yellow-500 hover:text-black"
+            >
+              Sobre Nosotros
+            </DropdownItem>
+            <DropdownItem
+              key="ayuda"
+              as="a"
+              href="/ayuda"
+              className="text-yellow-500 hover:bg-yellow-500 hover:text-black"
+            >
+              Ayuda
+            </DropdownItem>
+          </DropdownMenu>
+        </Dropdown>
+
+        {/* Admin/Driver Section */}
+        {isAuthenticated && (user?.role?.nombre_rol === 'ADMINISTRADOR' || user?.role?.nombre_rol === 'CONDUCTOR') && (
+          <Dropdown>
+            <DropdownTrigger>
+              <Button
+                auto
+                bordered
+                color="warning"
+                className="hover:bg-yellow-500 hover:text-black"
               >
+                Gestión
+              </Button>
+            </DropdownTrigger>
+            <DropdownMenu
+              aria-label="Management Options"
+              className="bg-black border border-yellow-500"
+              itemClasses={{
+                base: "data-[hover=true]:bg-yellow-500 data-[hover=true]:text-black",
+              }}
+            >
+              {user?.role?.nombre_rol === 'ADMINISTRADOR' && (
                 <DropdownItem
-                  key="profile"
+                  key="admin"
                   as="a"
-                  href="/profile"
+                  href="/admin/dashboard"
                   className="text-yellow-500 hover:bg-yellow-500 hover:text-black"
                 >
-                  Perfil
+                  Panel Admin
                 </DropdownItem>
-                <DropdownItem
-                  key="settings"
-                  as="a"
-                  href="/settings"
-                  className="text-yellow-500 hover:bg-yellow-500 hover:text-black"
-                >
-                  Configuración
-                </DropdownItem>
-                <DropdownItem
-                  key="logout"
-                  className="text-yellow-500 hover:bg-yellow-500 hover:text-black"
-                  onClick={logout}
-                >
-                  Cerrar Sesión
-                </DropdownItem>
-              </DropdownMenu>
-            </Dropdown>
-          </>
+              )}
+              <DropdownItem
+                key="viajes"
+                as="a"
+                href="/viajes"
+                className="text-yellow-500 hover:bg-yellow-500 hover:text-black"
+              >
+                Mis Viajes
+              </DropdownItem>
+            </DropdownMenu>
+          </Dropdown>
+        )}
+
+        {/* User Menu - Already exists, remains mostly the same */}
+        {isAuthenticated && isUserValid ? (
+          <Dropdown>
+            <DropdownTrigger>
+              <Button
+                auto
+                bordered
+                color="warning"
+                className="hover:bg-yellow-500 hover:text-black"
+              >
+                {user.nombre}
+              </Button>
+            </DropdownTrigger>
+            <DropdownMenu
+              aria-label="User Options"
+              className="bg-black border border-yellow-500"
+              itemClasses={{
+                base: "data-[hover=true]:bg-yellow-500 data-[hover=true]:text-black",
+              }}
+            >
+              <DropdownItem
+                key="profile"
+                as="a"
+                href="/profile"
+                className="text-yellow-500 hover:bg-yellow-500 hover:text-black"
+              >
+                Perfil
+              </DropdownItem>
+              <DropdownItem
+                key="settings"
+                as="a"
+                href="/settings"
+                className="text-yellow-500 hover:bg-yellow-500 hover:text-black"
+              >
+                Configuración
+              </DropdownItem>
+              <DropdownItem
+                key="logout"
+                className="text-yellow-500 hover:bg-yellow-500 hover:text-black"
+                onClick={logout}
+              >
+                Cerrar Sesión
+              </DropdownItem>
+            </DropdownMenu>
+          </Dropdown>
         ) : (
           <>
             <Button

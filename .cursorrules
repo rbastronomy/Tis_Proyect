@@ -1,6 +1,6 @@
 When writing react use as much NextUi components as possible, every module of the backend must be written in OOP following MVC pattern.
 Entire project uses esm modules import syntax. DO NOT USE require.
-For each method or function add a comment with the type of the return and the parameters to later generate the documentation.
+ADD JSDOC TO EVERYTHING IN THE BACKEND(CLASSES, METHODS, ETC).
 
 ## Flow Overview
 
