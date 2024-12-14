@@ -3,6 +3,8 @@ import { Button } from '@nextui-org/react'
 import Map from '../../components/Map'
 import { useGeolocation } from '../../hooks/useGeolocation'
 import { useState, useEffect } from 'react'
+import { useAuth } from '../../hooks/useAuth'
+import { io } from 'socket.io-client'
 
 export const Route = createFileRoute('/taxi/')({
   component: Taxi,
@@ -10,16 +12,97 @@ export const Route = createFileRoute('/taxi/')({
 
 function Taxi() {
   const [isTracking, setIsTracking] = useState(false)
+  const [socket, setSocket] = useState(null)
+  const { user } = useAuth()
+  /////////////////////////////////////////////////////////// 
+  
   const { position, error, loading } = useGeolocation({ 
     skip: !isTracking, 
     enableHighAccuracy: true, // Asegura que se use la mayor precisión posible
-    timeout: 10000 // Limita el tiempo de espera para obtener la ubicación
+    timeout: 10000, // Limita el tiempo de espera para obtener la ubicación
+    maximumAge: 5000,        // Usar cache de máximo 5 segundos
+    distanceFilter: 2,      // Actualizar solo si se mueve más de 2 metros
+    desiredAccuracy: 100     // Precisión deseada en metros
   })
+
+  // Inicializar Socket.IO cuando comienza el tracking
+  useEffect(() => {
+    if (isTracking && !socket) {
+      const newSocket = io('http://localhost:3000', {
+        withCredentials: true,
+        reconnection: true,           // Habilitar reconexión automática
+        reconnectionAttempts: 5,      // Intentos de reconexión
+        reconnectionDelay: 1000       // Delay entre intentos
+      });
+
+      newSocket.on('connect', () => {
+        console.log('Socket conectado', newSocket.id);
+        newSocket.emit('taxi:auth', { patente: user.patente });
+      });
+
+      newSocket.on('taxi:online', (data) => {
+        console.log('Taxi online:', data);
+      });
+
+      newSocket.on('taxi:location', (data) => {
+        console.log('Ubicación recibida:', data);
+      });
+
+      newSocket.on('disconnect', () => {
+        console.log('Socket desconectado - intentando reconectar...');
+      });
+
+      newSocket.on('reconnect', (attemptNumber) => {
+        console.log('Socket reconectado después de', attemptNumber, 'intentos');
+        newSocket.emit('taxi:auth', { patente: user.patente }); // Re-autenticar
+      });
+
+      newSocket.on('connect_error', (error) => {
+        console.error('Error de conexión:', error);
+      });
+
+      setSocket(newSocket);
+    }
+
+    // Cleanup
+    return () => {
+      if (socket) {
+        socket.removeAllListeners();  // Remover todos los listeners antes de desconectar
+        socket.disconnect();
+        setSocket(null);
+      }
+    };
+  }, [isTracking, user.patente]);
+
+  ///////////////////////////////////////////////////////////
+  // Enviar ubicación cuando cambie
+  useEffect(() => {
+    if (socket && position && isTracking) {
+      try {
+        if (position.accuracy <= 100) {
+          socket.volatile.emit('location:update', {
+            patente: user.patente,
+            ...position
+          });
+        } else {
+          console.warn('Posición no enviada por baja precisión:', position.accuracy);
+        }
+      } catch (error) {
+        console.error('Error al enviar posición:', error);
+      }
+    }
+  }, [position, socket, user.patente, isTracking]);
 
   // Si no hay posición, se utiliza una posición predeterminada (Iquique)
   const mapPosition = position && position.latitude && position.longitude 
-    ? { lat: position.latitude, lon: position.longitude }
-    : { lat: -20.2133, lon: -70.1503 }  // Iquique como fallback
+    ? { 
+        lat: Number(position.latitude), // Asegurar que son números
+        lon: Number(position.longitude)
+      }
+    : { 
+        lat: -20.2133, // Posición por defecto (Iquique)
+        lon: -70.1503 
+      };
 
   const handleTrackingToggle = () => {
     if (!isTracking) {
@@ -51,15 +134,32 @@ function Taxi() {
 
   useEffect(() => {
     if (position) {
-      console.log('Posición obtenida:', position)
+      console.log('Posición raw:', position);
+      console.log('Posición procesada:', mapPosition);
     }
-  }, [position])
+  }, [position]);
+
+  useEffect(() => {
+    // Cleanup cuando el componente se desmonte
+    return () => {
+      setIsTracking(false);
+      if (socket) {
+        socket.removeAllListeners();
+        socket.disconnect();
+        setSocket(null);
+      }
+    };
+  }, []); // Solo se ejecuta al montar/desmontar
 
   return (
     <div className="relative min-h-screen">
       {/* Mapa de pantalla completa solo si mapPosition tiene valores válidos */}
       <div id="map-container" className="absolute inset-0 w-full h-full z-0">
-        <Map position={mapPosition} isTracking={isTracking} />
+        <Map 
+          position={mapPosition} 
+          isTracking={isTracking} 
+          onPositionError={(error) => console.error('Error en mapa:', error)}
+        />
       </div>
 
       {/* Botón de seguimiento centrado en la parte superior */}
@@ -86,7 +186,10 @@ function Taxi() {
             <p>Latitude: {position.latitude.toFixed(4)}</p>
             <p>Longitude: {position.longitude.toFixed(4)}</p>
             {position.speed && <p>Velocidad: {position.speed.toFixed(2)} m/s</p>}
-            <p>Precisión: ±{position.accuracy.toFixed(0)}m</p>
+            <p className={position.accuracy > 100 ? "text-red-500" : "text-green-500"}>
+              Precisión: ±{position.accuracy.toFixed(0)}m
+              {position.accuracy > 100 && " (Baja precisión)"}
+            </p>
           </div>
         )}
       </div>

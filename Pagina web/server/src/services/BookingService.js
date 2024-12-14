@@ -486,15 +486,6 @@ export class BookingService extends BaseService {
             .returning('*');
         return historial;
     }
-
-    /**
-     * Get booking history for a user
-     * @param {number} userId - User ID
-     * @returns {Promise<Array>} Array of bookings
-     */
-    async getUserHistory(userId) {
-        return await this.bookingRepository.findUserHistory(userId)
-    }
 }
 
 export default BookingService;

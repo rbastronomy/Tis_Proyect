@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import process from 'process';
 import fastifyCors from '@fastify/cors';
 import { setupRoutes } from './routes/index.js';
+import { WebSocketConfig } from './config/WebSocketConfig.js';
 
 dotenv.config();
 
@@ -17,18 +18,22 @@ const startServer = async () => {
       logger: true,
     });
 
-    // Register CORS first
     await fastify.register(fastifyCors, {
       origin: 'http://localhost:5173',
       credentials: true,
     });
 
-
-    // Setup routes
     setupRoutes(fastify);
 
+    // Inicializar WebSocket ANTES de listen
+    const wsConfig = new WebSocketConfig(fastify.server);
+    const io = wsConfig.initialize();
+    fastify.decorate('io', io);
+
+    // Iniciar el servidor después de configurar todo
     await fastify.listen({ port: 3000, host: '0.0.0.0' });
     fastify.log.info('Server is running on port 3000');
+
   } catch (error) {
     console.error('Error starting server:', error);
     process.exit(1);

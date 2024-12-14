@@ -8,7 +8,6 @@ import { ServiceRouter } from './ServiceRouter.js';
 import { OfferingRouter } from './OfferingRouter.js';
 
 export function setupRoutes(fastify) {
-  // Initialize and register all routers
   const routers = [
     new AuthRouter(fastify),
     new UserRouter(fastify),
@@ -20,6 +19,5 @@ export function setupRoutes(fastify) {
     new OfferingRouter(fastify),
   ];
 
-  // Register all routes
   routers.forEach(router => router.registerRoutes());
 }
