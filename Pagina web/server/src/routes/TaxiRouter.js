@@ -70,5 +70,32 @@ export class TaxiRouter extends BaseRouter {
         ['ADMINISTRADOR']
       )
     });
+
+    // Get taxis by driver
+    this.addRoute('GET', '/driver/:rut', {
+      handler: this.withAuth(
+        this.controller.getTaxisByDriver.bind(this.controller),
+        ['ver_taxis'],
+        ['ADMINISTRADOR']
+      )
+    });
+
+    // Assign taxi to driver
+    this.addRoute('POST', '/driver/:rut', {
+      handler: this.withAuth(
+        this.controller.assignTaxiToDriver.bind(this.controller),
+        ['asignar_taxi'],
+        ['ADMINISTRADOR']
+      )
+    });
+
+    // Unassign taxi from driver
+    this.addRoute('DELETE', '/driver/:rut/:patente', {
+      handler: this.withAuth(
+        this.controller.unassignTaxiFromDriver.bind(this.controller),
+        ['asignar_taxi'],
+        ['ADMINISTRADOR']
+      )
+    });
   }
 } 

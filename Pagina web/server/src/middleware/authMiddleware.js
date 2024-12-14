@@ -33,13 +33,19 @@ export class AuthMiddleware {
 
   /**
    * Validates user permissions against required permissions
+   * Administrators bypass permission checks
    * @param {UserModel} user - User model
    * @param {string[]} requiredPermissions - Array of required permissions
    * @param {string[]} requiredRoles - Array of required roles
    * @throws {AuthError} - If user does not have required permissions
    */
   static validatePermissions(user, requiredPermissions, requiredRoles) {
-    console.log(user);
+    // If user has ADMINISTRADOR role, bypass all permission checks
+    if (user.hasRoles(['ADMINISTRADOR'])) {
+      return;
+    }
+
+    // For non-admin users, check both permissions and roles
     if (!user.hasPermissions(requiredPermissions) || !user.hasRoles(requiredRoles)) {
       throw AuthError.Forbidden();
     }

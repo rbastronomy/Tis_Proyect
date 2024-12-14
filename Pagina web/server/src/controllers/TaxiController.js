@@ -172,4 +172,74 @@ export class TaxiController extends BaseController {
         });
       }
     }
+
+    /**
+     * Get all taxis assigned to a specific driver
+     * @param {Object} request - HTTP request object
+     * @param {Object} reply - HTTP response object
+     */
+    async getTaxisByDriver(request, reply) {
+      try {
+        const { rut } = request.params;
+        const taxis = await this.service.getTaxisByDriver(rut);
+        
+        reply.code(200).send({
+          message: 'Taxis obtenidos exitosamente',
+          taxis: taxis.map(taxi => taxi.toJSON())
+        });
+      } catch (error) {
+        request.log.error(error);
+        reply.code(500).send({ 
+          message: 'Error al obtener los taxis del conductor', 
+          error: error.message 
+        });
+      }
+    }
+
+    /**
+     * Assign a taxi to a driver
+     * @param {Object} request - HTTP request object
+     * @param {Object} reply - HTTP response object
+     */
+    async assignTaxiToDriver(request, reply) {
+        try {
+            const { rut } = request.params;
+            const { patente } = request.body;
+            const updatedTaxi = await this.service.assignTaxiToDriver(patente, rut);
+            
+            reply.code(200).send({
+                message: 'Taxi asignado exitosamente',
+                taxi: updatedTaxi.toJSON()
+            });
+        } catch (error) {
+            request.log.error(error);
+            reply.code(500).send({ 
+                message: 'Error al asignar el taxi', 
+                error: error.message 
+            });
+        }
+    }
+
+    /**
+     * Unassign a taxi from a driver
+     * @param {Object} request - HTTP request object
+     * @param {Object} reply - HTTP response object
+     */
+    async unassignTaxiFromDriver(request, reply) {
+        try {
+            const { rut, patente } = request.params;
+            const updatedTaxi = await this.service.unassignTaxiFromDriver(patente, rut);
+            
+            reply.code(200).send({
+                message: 'Taxi desasignado exitosamente',
+                taxi: updatedTaxi.toJSON()
+            });
+        } catch (error) {
+            request.log.error(error);
+            reply.code(500).send({ 
+                message: 'Error al desasignar el taxi', 
+                error: error.message 
+            });
+        }
+    }
 }
