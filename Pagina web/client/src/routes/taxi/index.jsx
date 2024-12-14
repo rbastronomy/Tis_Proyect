@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { Button } from '@nextui-org/react'
 import Map from '../../components/Map'
 import { useGeolocation } from '../../hooks/useGeolocation'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { io } from 'socket.io-client'
 
@@ -11,19 +11,43 @@ export const Route = createFileRoute('/taxi/')({
 })
 
 function Taxi() {
-  const [isTracking, setIsTracking] = useState(false)
-  const [socket, setSocket] = useState(null)
-  const { user } = useAuth()
-  /////////////////////////////////////////////////////////// 
-  
+  const { user } = useAuth();
+  const [isTracking, setIsTracking] = useState(false);
+  const [socket, setSocket] = useState(null);
+
+  const handlePositionUpdate = useCallback((pos) => {
+    if (socket && isTracking) {
+      try {
+        if (pos.accuracy <= 100) {
+          socket.volatile.emit('location:update', {
+            patente: user.patente,
+            ...pos,
+            timestamp: Date.now()
+          });
+        } else {
+          console.warn(`Posición ignorada por baja precisión: ${pos.accuracy}m`);
+        }
+      } catch (error) {
+        console.error('Error al enviar posición:', error);
+      }
+    }
+  }, [socket, isTracking, user.patente]);
+
   const { position, error, loading } = useGeolocation({ 
-    skip: !isTracking, 
-    enableHighAccuracy: true, // Asegura que se use la mayor precisión posible
-    timeout: 10000, // Limita el tiempo de espera para obtener la ubicación
-    maximumAge: 5000,        // Usar cache de máximo 5 segundos
-    distanceFilter: 2,      // Actualizar solo si se mueve más de 2 metros
-    desiredAccuracy: 100     // Precisión deseada en metros
-  })
+    skip: !isTracking,
+    enableHighAccuracy: true,
+    timeout: 30000,
+    maximumAge: 0,
+    retryOnError: true,
+    maxRetries: 3,
+    validateAccuracy: (accuracy) => {
+      if (accuracy > 100) {
+        console.warn(`Baja precisión: ${accuracy}m - Reintentando...`);
+        return false;
+      }
+      return true;
+    }
+  });
 
   // Inicializar Socket.IO cuando comienza el tracking
   useEffect(() => {
@@ -38,14 +62,6 @@ function Taxi() {
       newSocket.on('connect', () => {
         console.log('Socket conectado', newSocket.id);
         newSocket.emit('taxi:auth', { patente: user.patente });
-      });
-
-      newSocket.on('taxi:online', (data) => {
-        console.log('Taxi online:', data);
-      });
-
-      newSocket.on('taxi:location', (data) => {
-        console.log('Ubicación recibida:', data);
       });
 
       newSocket.on('disconnect', () => {
@@ -72,37 +88,28 @@ function Taxi() {
         setSocket(null);
       }
     };
-  }, [isTracking, user.patente]);
+  }, [isTracking, user.patente, socket]);
 
   ///////////////////////////////////////////////////////////
   // Enviar ubicación cuando cambie
   useEffect(() => {
-    if (socket && position && isTracking) {
-      try {
-        if (position.accuracy <= 100) {
-          socket.volatile.emit('location:update', {
-            patente: user.patente,
-            ...position
-          });
-        } else {
-          console.warn('Posición no enviada por baja precisión:', position.accuracy);
-        }
-      } catch (error) {
-        console.error('Error al enviar posición:', error);
-      }
+    if (position) {
+      handlePositionUpdate(position);
     }
-  }, [position, socket, user.patente, isTracking]);
+  }, [position, handlePositionUpdate]);
 
   // Si no hay posición, se utiliza una posición predeterminada (Iquique)
-  const mapPosition = position && position.latitude && position.longitude 
-    ? { 
-        lat: Number(position.latitude), // Asegurar que son números
-        lon: Number(position.longitude)
-      }
-    : { 
-        lat: -20.2133, // Posición por defecto (Iquique)
-        lon: -70.1503 
-      };
+  const mapPosition = useMemo(() => {
+    return position && position.latitude && position.longitude 
+      ? { 
+          lat: Number(position.latitude),
+          lon: Number(position.longitude)
+        }
+      : { 
+          lat: -20.2133,
+          lon: -70.1503 
+        };
+  }, [position]);
 
   const handleTrackingToggle = () => {
     if (!isTracking) {
@@ -137,7 +144,7 @@ function Taxi() {
       console.log('Posición raw:', position);
       console.log('Posición procesada:', mapPosition);
     }
-  }, [position]);
+  }, [position, mapPosition]);
 
   useEffect(() => {
     // Cleanup cuando el componente se desmonte
@@ -149,7 +156,7 @@ function Taxi() {
         setSocket(null);
       }
     };
-  }, []); // Solo se ejecuta al montar/desmontar
+  }, [socket]); // Solo se ejecuta al montar/desmontar
 
   return (
     <div className="relative min-h-screen">
@@ -183,12 +190,17 @@ function Taxi() {
         )}
         {position && isTracking && (
           <div className="mt-2 text-sm">
-            <p>Latitude: {position.latitude.toFixed(4)}</p>
-            <p>Longitude: {position.longitude.toFixed(4)}</p>
+            <p>Latitude: {position.latitude.toFixed(6)}</p>
+            <p>Longitude: {position.longitude.toFixed(6)}</p>
             {position.speed && <p>Velocidad: {position.speed.toFixed(2)} m/s</p>}
-            <p className={position.accuracy > 100 ? "text-red-500" : "text-green-500"}>
+            <p className={position.accuracy > 100 ? "text-red-500 font-bold" : "text-green-500"}>
               Precisión: ±{position.accuracy.toFixed(0)}m
-              {position.accuracy > 100 && " (Baja precisión)"}
+              {position.accuracy > 100 && (
+                <span className="block text-xs">
+                  GPS no suficientemente preciso.
+                  Asegúrate de estar al aire libre y tener el GPS activado.
+                </span>
+              )}
             </p>
           </div>
         )}

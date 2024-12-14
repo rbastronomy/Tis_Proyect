@@ -28,25 +28,31 @@ function Login() {
         headers: {
           'Content-Type': 'application/json',
         },
-        credentials: 'include',
-        body: JSON.stringify({
-          correo: data.email,
-          contrasena: data.password
-        }),
+        body: JSON.stringify(data),
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        setError(errorData.error || 'Error al iniciar sesión');
-        throw new Error(errorData.error || 'Error al iniciar sesión');
+      
+      console.log('Status:', response.status);
+      console.log('Status Text:', response.statusText);
+      const text = await response.text();
+      console.log('Response Text:', text);
+      
+      if (!text) {
+        throw new Error('Empty response from server');
+      }
+      
+      const result = JSON.parse(text);
+      
+      if (!result.success) {
+        setError(result.message || 'Error al iniciar sesión');
+        throw new Error(result.message || 'Error al iniciar sesión');
       }
 
       await refreshAuth();
       navigate({ to: '/' }, { replace: true });
 
     } catch (error) {
-      console.error('Error en el login:', error.message);
-      setError(error.message);
+      console.error('Login error details:', error);
+      setError('root', { message: `Error en el login: ${error.message}` });
     }
   };
 

@@ -1,180 +1,97 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
-// Haversine distance calculation
-function calculateDistance(coords1, coords2) {
-  const toRad = (value) => (value * Math.PI) / 180;
-  const R = 6371e3; // Earth's radius in meters
-  const lat1 = toRad(coords1.latitude);
-  const lat2 = toRad(coords2.latitude);
-  const deltaLat = toRad(coords2.latitude - coords1.latitude);
-  const deltaLon = toRad(coords2.longitude - coords1.longitude);
-
-  const a =
-    Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
-    Math.cos(lat1) * Math.cos(lat2) * Math.sin(deltaLon / 2) * Math.sin(deltaLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-  return R * c;
-}
-
-function throttle(func, delay) {
-  let lastCall = 0;
-  return function (...args) {
-    const now = Date.now();
-    if (now - lastCall >= delay) {
-      lastCall = now;
-      func(...args);
-    }
-  };
-}
-
-export function useGeolocation(options = {}) {
+export function useGeolocation({
+  skip = false,
+  enableHighAccuracy = true,
+  timeout = 30000,
+  maximumAge = 0,
+  retryOnError = true,
+  maxRetries = 3,
+  validateAccuracy = null
+} = {}) {
   const [position, setPosition] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [hasInitialPosition, setHasInitialPosition] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
 
-  const positionBuffer = useRef([]);
-  const BUFFER_SIZE = 5;
-  const ACCURACY_THRESHOLD = 20; // meters
-  const MINIMUM_DISTANCE = 2; // meters
+  const handleSuccess = useCallback((pos) => {
+    const newPosition = {
+      latitude: pos.coords.latitude,
+      longitude: pos.coords.longitude,
+      accuracy: pos.coords.accuracy,
+      speed: pos.coords.speed,
+      timestamp: pos.timestamp
+    };
 
-  const { skip = false, ...geolocationOptions } = options;
+    // Si la precisión es muy mala (> 1000m), establecer error y detener
+    if (newPosition.accuracy > 1000000) {
+      setError('GPS signal too weak. Please check GPS settings and ensure you are outdoors.');
+      setLoading(false);
+      return;
+    }
 
-  const throttledSetPosition = useMemo(
-    () =>
-      throttle((newPosition) => {
-        // Only process if accuracy is acceptable
-        if (newPosition.accuracy > ACCURACY_THRESHOLD) {
-          console.warn(`Insufficient accuracy: ${newPosition.accuracy}m`);
-          return;
-        }
+    // Validar precisión si se proporciona una función de validación
+    if (validateAccuracy && !validateAccuracy(newPosition.accuracy)) {
+      if (retryOnError && retryCount < maxRetries) {
+        setRetryCount(prev => prev + 1);
+        return;
+      }
+      // Si se agotan los reintentos, usar la última posición disponible
+      setPosition(newPosition);
+      setLoading(false);
+      return;
+    }
 
-        positionBuffer.current.push(newPosition);
-        if (positionBuffer.current.length > BUFFER_SIZE) {
-          positionBuffer.current.shift();
-        }
+    setPosition(newPosition);
+    setLoading(false);
+    setError(null);
+    setRetryCount(0);
+  }, [validateAccuracy, retryOnError, maxRetries, retryCount]);
 
-        // Calculate averaged position
-        const averagePosition = positionBuffer.current.reduce(
-          (acc, pos) => ({
-            latitude: acc.latitude + pos.latitude,
-            longitude: acc.longitude + pos.longitude,
-          }),
-          { latitude: 0, longitude: 0 }
-        );
-
-        const averagedPosition = {
-          latitude: averagePosition.latitude / positionBuffer.current.length,
-          longitude: averagePosition.longitude / positionBuffer.current.length,
-          timestamp: newPosition.timestamp,
-          accuracy: newPosition.accuracy,
-          speed: newPosition.speed,
-          heading: newPosition.heading,
-        };
-
-        setPosition((prevPosition) => {
-          if (prevPosition) {
-            const distance = calculateDistance(prevPosition, averagedPosition);
-            if (distance < MINIMUM_DISTANCE) {
-              return prevPosition;
-            }
-          }
-          return averagedPosition;
-        });
-
-        if (!hasInitialPosition) {
-          setHasInitialPosition(true);
-          setLoading(false);
-        }
-        setError(null);
-      }, 500),
-    [hasInitialPosition]
-  );
+  const handleError = useCallback((err) => {
+    if (retryOnError && retryCount < maxRetries) {
+      setRetryCount(prev => prev + 1);
+      return;
+    }
+    setError(err.message);
+    setLoading(false);
+  }, [retryOnError, maxRetries, retryCount]);
 
   useEffect(() => {
-    let watchId = null;
-
-    if (skip) {
-      setLoading(false);
-      setPosition(null);
-      setError(null);
-      setHasInitialPosition(false);
-      positionBuffer.current = [];
-      return;
-    }
-
-    function onSuccess(position) {
-      const newPosition = {
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude,
-        accuracy: position.coords.accuracy,
-        speed: position.coords.speed,
-        heading: position.coords.heading,
-        timestamp: position.timestamp,
-      };
-
-      throttledSetPosition(newPosition);
-    }
-
-    function onError(error) {
-      let errorMessage = 'Error obtaining location: ';
-      switch (error.code) {
-        case error.PERMISSION_DENIED:
-          errorMessage += 'Permission denied. Please enable location services in your browser settings.';
-          break;
-        case error.POSITION_UNAVAILABLE:
-          errorMessage += 'Location information unavailable.';
-          break;
-        case error.TIMEOUT:
-          errorMessage += 'Request timed out.';
-          break;
-        default:
-          errorMessage += error.message;
-      }
-      setError(errorMessage);
-      setLoading(false);
-    }
-
-    if (!navigator.geolocation) {
-      setError('Geolocation is not supported by this browser.');
-      setLoading(false);
-      return;
-    }
+    if (skip) return;
 
     setLoading(true);
+    let watchId;
 
     try {
-      // Get initial position
-      navigator.geolocation.getCurrentPosition(onSuccess, onError, {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0,
-      });
-
-      // Start watching position
-      watchId = navigator.geolocation.watchPosition(onSuccess, onError, {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 2000,
-        ...geolocationOptions,
-      });
-    } catch (error) {
-      setError('Error initializing geolocation: ' + error.message);
+      watchId = navigator.geolocation.watchPosition(
+        handleSuccess,
+        handleError,
+        {
+          enableHighAccuracy,
+          timeout,
+          maximumAge
+        }
+      );
+    } catch (err) {
+      setError('Geolocation not supported');
       setLoading(false);
+      throw err;
     }
 
     return () => {
       if (watchId) {
         navigator.geolocation.clearWatch(watchId);
       }
-      positionBuffer.current = [];
     };
-  }, [skip, geolocationOptions, throttledSetPosition]);
+  }, [
+    skip,
+    enableHighAccuracy,
+    timeout,
+    maximumAge,
+    handleSuccess,
+    handleError
+  ]);
 
-  return {
-    position,
-    error,
-    loading: loading && !hasInitialPosition,
-  };
+  return { position, error, loading };
 }
