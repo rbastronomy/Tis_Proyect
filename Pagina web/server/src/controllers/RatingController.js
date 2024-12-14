@@ -118,10 +118,10 @@ export default class RatingController extends BaseController {
         }
     }
 
-    async getRatingById(request, reply) {
+    async getCompleteTrip(request, reply) {
         try {
-            const { id_valoracion } = request.params;
-            const rating = await this.service.getRatingById(id_valoracion);
+            const { codigo_viaje } = request.params;
+            const rating = await this.service.findTripCompleted(codigo_viaje);
             return reply.code(200).send(rating);
         } catch (error) {
             request.log.error(error);
@@ -132,7 +132,4 @@ export default class RatingController extends BaseController {
             });
         }
     }
-    
 }
-
-module.exports = RatingController;  

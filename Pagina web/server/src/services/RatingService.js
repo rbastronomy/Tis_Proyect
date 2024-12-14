@@ -105,6 +105,15 @@ export class RatingService extends BaseService {
         }
     }
 
+    async findTripCompleted(codigo_viaje){
+        try {
+            return await this.repository.findTripCompleted(codigo_viaje);
+        } catch (error) {
+            console.error('Error getting trip completed:', error);
+            throw new Error('Failed to retrieve trip completed');
+        }
+    }
+
     validateRatingData(ratingData) {
         const requieredFields = ['comentario_valoracion', 'calificacion'];
         for (const field of requieredFields) {

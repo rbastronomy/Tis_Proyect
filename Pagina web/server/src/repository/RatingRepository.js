@@ -91,4 +91,17 @@ export class RatingRepository extends BaseRepository{
             throw new Error(`Error getting ratings for trip: ${error.message}`);
         }
     }
+
+    async findTripCompleted(codigo_viaje) {
+        try {
+            const ratings = await this.db(this.tableName)
+                .select('*')
+                .where('codigo_viaje', codigo_viaje)
+                .where('estado_viaje', 'COMPLETADO')
+                .whereNull('deleted_at_valoracion');
+            return ratings.map((rating) => RatingModel.toModel(rating));
+        } catch (error) {
+            throw new Error(`Error getting ratings for trip: ${error.message}`);
+        }
+    }
 }
