@@ -97,5 +97,23 @@ export class TaxiRouter extends BaseRouter {
         ['ADMINISTRADOR']
       )
     });
+
+    // Get available taxis with their drivers
+    this.addRoute('GET', '/available', {
+      handler: this.withAuth(
+        this.controller.getAvailableTaxisWithDrivers.bind(this.controller),
+        ['ver_taxis'],
+        ['ADMINISTRADOR']
+      )
+    });
+
+    // Add this new route in setupRoutes()
+    this.addRoute('GET', '/driver-info/:rut', {
+      handler: this.withAuth(
+        this.controller.getDriverInfo.bind(this.controller),
+        ['ver_taxis'],
+        ['ADMINISTRADOR']
+      )
+    });
   }
 } 

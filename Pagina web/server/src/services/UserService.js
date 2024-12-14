@@ -171,4 +171,19 @@ export class UserService extends BaseService {
       throw error;
     }
   }
+
+  /**
+   * Find drivers by their RUTs in bulk
+   * @param {Array<number>} ruts - Array of driver RUTs
+   * @param {Date} [bookingTime=new Date()] - The time of the booking
+   * @returns {Promise<Object>} Map of RUT to driver models
+   */
+  async findDriversByRuts(ruts, bookingTime = new Date()) {
+    try {
+      return await this.repository.findDriversByRuts(ruts, bookingTime);
+    } catch (error) {
+      console.error('Error finding drivers by RUTs:', error);
+      throw new Error('Failed to fetch drivers');
+    }
+  }
 }

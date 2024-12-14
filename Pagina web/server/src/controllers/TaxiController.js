@@ -242,4 +242,57 @@ export class TaxiController extends BaseController {
             });
         }
     }
+
+    /**
+     * Get available taxis with their assigned drivers
+     * @param {Object} req - Request object
+     * @param {Object} res - Response object
+     * @returns {Promise<void>}
+     */
+    async getAvailableTaxisWithDrivers(req, res) {
+      try {
+        // Get booking time from query or use current time
+        const bookingTime = req.query.fecha_reserva ? 
+          new Date(req.query.fecha_reserva) : 
+          new Date();
+
+        console.log('Controller - Booking Time:', {
+          fromQuery: !!req.query.fecha_reserva,
+          bookingTime: bookingTime.toISOString(),
+          rawQuery: req.query.fecha_reserva
+        });
+
+        const taxis = await this.service.getAvailableTaxisWithDrivers(bookingTime);
+        res.send({ taxis });
+      } catch (error) {
+        console.error('Error getting available taxis:', error);
+        res.status(500).send({ 
+          error: 'Error getting available taxis',
+          details: error.message 
+        });
+      }
+    }
+
+    /**
+     * Gets driver information by RUT
+     * @param {Object} request - HTTP request object
+     * @param {Object} reply - HTTP response object
+     */
+    async getDriverInfo(request, reply) {
+      try {
+        const { rut } = request.params;
+        const driver = await this.service.getDriverInfo(rut);
+        
+        reply.code(200).send({
+          message: 'Driver info retrieved successfully',
+          driver: driver.toJSON()
+        });
+      } catch (error) {
+        request.log.error(error);
+        reply.code(500).send({ 
+          message: 'Error getting driver info', 
+          error: error.message 
+        });
+      }
+    }
 }

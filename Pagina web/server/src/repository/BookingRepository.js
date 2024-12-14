@@ -71,15 +71,48 @@ export class BookingRepository extends BaseRepository {
 
   /**
    * Find booking by ID
-   * @param {number} codigo_reserva - Booking ID
+   * @param {number|string} codigo_reserva - Booking ID
    * @returns {Promise<Object|null>} Raw booking data or null
    */
   async findById(codigo_reserva) {
     try {
-      return await this.db(this.tableName)
-        .where("codigo_reserva", codigo_reserva)
+      // Validate and convert the booking ID
+      const bookingId = Number(codigo_reserva);
+      if (isNaN(bookingId)) {
+        console.error('Invalid booking ID:', codigo_reserva);
+        throw new Error('Invalid booking ID format');
+      }
+
+      console.log('Looking for booking with ID:', bookingId);
+      
+      const booking = await this.db(this.tableName)
+        .select(
+          'codigo_reserva',
+          'rut_cliente',
+          'id_oferta',
+          'origen_reserva',
+          'destino_reserva',
+          'fecha_reserva',
+          'fecha_realizado',
+          'tipo_reserva',
+          'observacion_reserva',
+          'estado_reserva',
+          'rut_conductor',
+          'patente_taxi'
+        )
+        .where('codigo_reserva', bookingId)
+        .whereNull('deleted_at_reserva')
         .first();
+
+      if (!booking) {
+        console.log('No booking found with ID:', bookingId);
+        return null;
+      }
+
+      console.log('Found booking:', booking);
+      return booking;
     } catch (error) {
+      console.error('Error in findById:', error);
       throw new Error(`Error finding booking by ID: ${error.message}`);
     }
   }
@@ -231,10 +264,10 @@ export class BookingRepository extends BaseRepository {
   }
 
   /**
-   * Find booking by its code
-   * @param {number} codigo_reserva - Booking code
-   * @returns {Promise<Object|null>} Raw booking data or null
-   */
+ * Find booking by its code
+ * @param {number} codigo_reserva - Booking code
+ * @returns {Promise<Object|null>} Raw booking data or null
+ */
   async findByCodigoReserva(codigo_reserva) {
     try {
       const booking = await this.db(this.tableName)
@@ -243,21 +276,28 @@ export class BookingRepository extends BaseRepository {
           'rut_cliente',
           'id_oferta',
           'origen_reserva',
-          'destino_reserva',
-          'fecha_reserva',
-          'fecha_realizado',
-          'tipo_reserva',
-          'observacion_reserva',
-          'estado_reserva'
-        )
-        .where('codigo_reserva', codigo_reserva)
-        .whereNull('deleted_at_reserva')
-        .first();
+              'destino_reserva',
+              'fecha_reserva',
+              'fecha_realizado',
+              'tipo_reserva',
+              'observacion_reserva',
+              'estado_reserva',
+              'rut_conductor',
+              'patente_taxi',
+              'created_at',
+              'updated_at',
+              'deleted_at_reserva'
+          )
+          .where('codigo_reserva', codigo_reserva)
+          .whereNull('deleted_at_reserva')
+          .first();
 
+      console.log('BookingRepository - Found booking:', booking);
       return booking || null;
-    } catch (error) {
+  } catch (error) {
+      console.error('BookingRepository - Error:', error);
       throw new Error(`Error finding booking by code: ${error.message}`);
-    }
+  }
   }
 }
 

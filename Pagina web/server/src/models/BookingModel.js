@@ -77,10 +77,9 @@ export class BookingModel extends BaseModel {
             this.driver = data.driver;
         }
         if (data.taxi) {
-            this.taxi = data.taxi;
-        }
-        if (data.trip) {
-            this.trip = data.trip;
+            this.taxi = data.taxi instanceof TaxiModel ? 
+                data.taxi : 
+                new TaxiModel(data.taxi);
         }
         if (data.cliente) {
             this.cliente = data.cliente;
@@ -160,6 +159,7 @@ export class BookingModel extends BaseModel {
     /** @param {TaxiModel|Object} value */
     set taxi(value) {
         this._data.taxi = value instanceof TaxiModel ? value : new TaxiModel(value);
+        this._data.patente_taxi = this._data.taxi.patente;
     }
 
     /** @param {ServiceModel|Object} value */
@@ -236,15 +236,16 @@ export class BookingModel extends BaseModel {
             deleted_at_reserva: this._data.deleted_at_reserva,
             created_at: this._data.created_at,
             updated_at: this._data.updated_at,
+            patente_taxi: this._data.patente_taxi,
+            rut_conductor: this._data.rut_conductor
         };
 
         if (this._data.driver) json.driver = this._data.driver.toJSON();
         if (this._data.taxi) json.taxi = this._data.taxi.toJSON();
-        if (this._data.trip) json.trip = this._data.trip.toJSON();
         if (this._data.cliente) json.cliente = this._data.cliente.toJSON();
         if (this._data.service) json.service = this._data.service.toJSON();
         if (this._data.history?.length) {
-            json.history = this._data.history;
+            json.history = this._data.history.map(h => h.toJSON());
         }
 
         return json;

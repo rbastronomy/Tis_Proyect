@@ -64,7 +64,9 @@ export class HistoryModel extends BaseModel {
 
         this.validateEnum('estado_historial', this._data.estado_historial, HistoryModel.VALID_ESTADOS);
         this.validateEnum('accion', this._data.accion, HistoryModel.VALID_ACCIONES);
-        this.validateString('observacion_historial', this._data.observacion_historial);
+        
+        this.validateString('observacion_historial', this._data.observacion_historial, { required: false });
+        
         this.validateDate('fecha_cambio', this._data.fecha_cambio);
         
         if (!this._data.codigo_reserva) {

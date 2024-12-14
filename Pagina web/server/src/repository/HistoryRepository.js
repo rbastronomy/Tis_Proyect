@@ -19,7 +19,7 @@ export class HistoryRepository extends BaseRepository {
    * @returns {Promise<Object>} Created history entry raw data
    */
   async create(historyData, trx = null) {
-    const query = (trx || this.knex)(this.tableName)
+    const query = (trx || this.db)(this.tableName)
       .insert({
         estado_historial: historyData.estado_historial,
         observacion_historial: historyData.observacion_historial,
@@ -39,7 +39,7 @@ export class HistoryRepository extends BaseRepository {
    * @returns {Promise<Array>} History entries
    */
   async findByBookingCode(codigo_reserva) {
-    return this.knex(this.tableName)
+    return this.db(this.tableName)
       .where({ codigo_reserva })
       .orderBy("fecha_cambio", "desc");
   }
@@ -50,7 +50,7 @@ export class HistoryRepository extends BaseRepository {
    * @returns {Promise<Array>} History entries
    */
   async findByState(estado_historial) {
-    return this.knex(this.tableName)
+    return this.db(this.tableName)
       .where({ estado_historial })
       .orderBy("fecha_cambio", "desc");
   }
@@ -62,7 +62,7 @@ export class HistoryRepository extends BaseRepository {
    * @returns {Promise<Array>} History entries
    */
   async findByDateRange(startDate, endDate) {
-    return this.knex(this.tableName)
+    return this.db(this.tableName)
       .whereBetween("fecha_cambio", [startDate, endDate])
       .orderBy("fecha_cambio", "desc");
   }
@@ -73,7 +73,7 @@ export class HistoryRepository extends BaseRepository {
    * @returns {Promise<Array>} History entries
    */
   async findByAction(accion) {
-    return this.knex(this.tableName)
+    return this.db(this.tableName)
       .where({ accion })
       .orderBy("fecha_cambio", "desc");
   }
@@ -84,7 +84,7 @@ export class HistoryRepository extends BaseRepository {
    * @returns {Promise<Object|null>} History entry with booking details
    */
   async findWithBookingDetails(id_historial) {
-    return this.knex(this.tableName)
+    return this.db(this.tableName)
       .select(
         'historial.*',
         'reserva.estados as estado_reserva',

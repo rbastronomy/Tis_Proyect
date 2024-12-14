@@ -57,15 +57,27 @@ export class TaxiModel extends BaseModel {
    * @throws {Error} If validation fails
    */
   constructor(data = {}) {
+    console.log('TaxiModel - Constructor received data:', data);
+    
     super(data, TaxiModel.defaultData);
     this.validate();
     
     if (data.conductor) {
-      this.conductor = data.conductor;
+        console.log('TaxiModel - Processing conductor data:', data.conductor);
+        this._data.conductor = data.conductor instanceof UserModel ? 
+            data.conductor : 
+            new UserModel({
+                ...data.conductor,
+                role: { nombre_rol: 'CONDUCTOR' }
+            });
+        this._data.rut_conductor = this._data.conductor.rut;
+        console.log('TaxiModel - Processed conductor:', this._data.conductor.toJSON());
     }
     if (data.geolocalizacion) {
-      this.geolocalizacion = new GeolocalizationModel(data.geolocalizacion);
+        this.geolocalizacion = new GeolocalizationModel(data.geolocalizacion);
     }
+    
+    console.log('TaxiModel - Constructor finished, data:', this._data);
   }
 
   /**
@@ -161,25 +173,33 @@ export class TaxiModel extends BaseModel {
    * @returns {Object} Taxi data as JSON
    */
   toJSON() {
+    console.log('TaxiModel - Converting to JSON, current data:', this._data);
+    
     const json = {
-      patente: this._data.patente,
-      rut_conductor: this._data.rut_conductor,
-      marca: this._data.marca,
-      modelo: this._data.modelo,
-      color: this._data.color,
-      ano: this._data.ano,
-      vencimiento_revision_tecnica: this._data.vencimiento_revision_tecnica,
-      vencimiento_permiso_circulacion: this._data.vencimiento_permiso_circulacion,
-      codigo_taxi: this._data.codigo_taxi,
-      estado_taxi: this._data.estado_taxi,
-      deleted_at_taxi: this._data.deleted_at_taxi,
-      created_at: this._data.created_at,
-      updated_at: this._data.updated_at
+        patente: this._data.patente,
+        rut_conductor: this._data.rut_conductor,
+        marca: this._data.marca,
+        modelo: this._data.modelo,
+        color: this._data.color,
+        ano: this._data.ano,
+        vencimiento_revision_tecnica: this._data.vencimiento_revision_tecnica,
+        vencimiento_permiso_circulacion: this._data.vencimiento_permiso_circulacion,
+        codigo_taxi: this._data.codigo_taxi,
+        estado_taxi: this._data.estado_taxi,
+        deleted_at_taxi: this._data.deleted_at_taxi,
+        created_at: this._data.created_at,
+        updated_at: this._data.updated_at
     };
 
-    if (this._data.conductor) json.conductor = this._data.conductor.toJSON();
-    if (this._data.geolocalizacion) json.geolocalizacion = this._data.geolocalizacion.toJSON();
+    if (this._data.conductor) {
+        console.log('TaxiModel - Including conductor in JSON:', this._data.conductor);
+        json.conductor = this._data.conductor.toJSON();
+    }
+    if (this._data.geolocalizacion) {
+        json.geolocalizacion = this._data.geolocalizacion.toJSON();
+    }
 
+    console.log('TaxiModel - Final JSON:', json);
     return json;
   }
 

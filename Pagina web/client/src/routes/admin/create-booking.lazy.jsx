@@ -45,16 +45,20 @@ function CreateBooking() {
     setError('');
 
     try {
+      const bookingPayload = {
+        ...bookingData,
+        fecha_reserva: new Date(bookingData.fecha_reserva).toISOString(),
+        estado_reserva: 'EN_REVISION',
+        observacion_reserva: bookingData.observacion_reserva || ''
+      };
+
       const response = await fetch('/api/reservas', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         credentials: 'include',
-        body: JSON.stringify({
-          ...bookingData,
-          freserva: new Date(bookingData.freserva).toISOString()
-        })
+        body: JSON.stringify(bookingPayload)
       });
 
       if (response.ok) {

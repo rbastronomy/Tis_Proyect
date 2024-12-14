@@ -81,6 +81,8 @@ class BookingController extends BaseController {
     async getBookingByCode(request, reply) {
         try {
             const codigoReserva = request.params.codigoreserva;
+            console.log('BookingController - Getting booking:', codigoReserva);
+            
             const booking = await this.service.getBookingByCode(codigoReserva);
             
             if (!booking) {
@@ -89,12 +91,15 @@ class BookingController extends BaseController {
                 });
             }
 
+            const bookingData = booking.toJSON();
+            console.log('BookingController - Sending booking data:', bookingData);
+
             return reply.send({
                 message: 'Reserva recuperada exitosamente',
-                reserva: booking.toJSON()
+                reserva: bookingData
             });
         } catch (error) {
-            request.log.error(error);
+            console.error('BookingController - Error:', error);
             return reply.code(500).send({ 
                 error: 'Error al recuperar la reserva',
                 details: error.message 
@@ -169,27 +174,33 @@ class BookingController extends BaseController {
     /**
      * Validates booking and assigns driver
      * @param {Object} request - Fastify request object
-     * @param {Object} request.params - Request parameters
-     * @param {Object} request.body - Request body
      * @param {Object} reply - Fastify reply object
-     * @returns {Promise<Object>} Response object with updated booking
+     * @returns {Promise<void>}
      */
     async validateAndAssignDriver(request, reply) {
         try {
-            const { bookingId } = request.params;
-            const { estadoReserva, rutConductor, patenteTaxi, motivo } = request.body;
-            
-            const booking = await this.service.validateAndAssignDriver(
+            const bookingId = request.params.codigoreserva;
+            const { estados, rut_conductor, patente_taxi, observacion } = request.body;
+
+            console.log('Validating booking request:', {
                 bookingId,
-                estadoReserva,
-                rutConductor,
-                patenteTaxi,
-                motivo
+                estados,
+                rut_conductor,
+                patente_taxi,
+                observacion
+            });
+
+            const bookingModel = await this.service.validateAndAssignDriver(
+                bookingId,
+                estados,
+                rut_conductor,
+                patente_taxi,
+                observacion
             );
 
             return reply.send({
-                message: `Reserva ${estadoReserva === 'APROBAR' ? 'aprobada' : 'rechazada'} exitosamente`,
-                booking: booking.toJSON()
+                message: `Reserva ${estados === 'APROBAR' ? 'aprobada' : 'actualizada'} exitosamente`,
+                booking: bookingModel.toJSON()
             });
         } catch (error) {
             request.log.error(error);

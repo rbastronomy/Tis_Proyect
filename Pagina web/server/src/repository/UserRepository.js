@@ -1,5 +1,6 @@
 import { BaseRepository } from '../core/BaseRepository.js';
 import { UserModel } from '../models/UserModel.js';
+import { RoleModel } from '../models/RoleModel.js';
 
 export class UserRepository extends BaseRepository {
   constructor() {
@@ -283,6 +284,70 @@ export class UserRepository extends BaseRepository {
       return result || null;
     } catch (error) {
       console.error('Error finding user:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Finds available drivers by their RUTs in bulk
+   * @param {Array<number>} ruts - Array of driver RUTs
+   * @param {Date} [bookingTime=new Date()] - The time of the booking
+   * @returns {Promise<Object>} Map of RUT to driver data
+   */
+  async findDriversByRuts(ruts, bookingTime = new Date()) {
+    try {
+      if (!ruts || ruts.length === 0) return {};
+
+      const formattedRuts = ruts.map(rut => this._formatRut(rut));
+      const bufferTime = 60; // 60 minutes buffer
+      
+      // Ensure bookingTime is a Date object and format for PostgreSQL
+      const bookingDate = bookingTime instanceof Date ? bookingTime : new Date(bookingTime);
+      const formattedBookingTime = bookingDate.toISOString();
+
+      console.log('UserRepository - Booking Time:', {
+        originalTime: bookingTime,
+        formattedTime: formattedBookingTime,
+        isDefault: bookingTime.getTime() === new Date().getTime(),
+        bufferTime
+      });
+      
+      // Get drivers excluding those who have overlapping bookings
+      const drivers = await this.db
+        .select(
+          'persona.*',
+          'roles.id_roles',
+          'roles.nombre_rol',
+          'roles.descripcion_rol'
+        )
+        .from(this.tableName)
+        .leftJoin('roles', 'persona.id_roles', 'roles.id_roles')
+        .whereIn('persona.rut', formattedRuts)
+        .where('persona.id_roles', 3)
+        .whereNull('persona.deleted_at_persona')
+        // Exclude drivers with overlapping bookings
+        .whereNotExists(function() {
+          this.select('*')
+            .from('reserva')
+            .whereRaw('reserva.rut_conductor = persona.rut')
+            .whereIn('estado_reserva', ['PENDIENTE', 'EN_CAMINO'])
+            .whereRaw(`fecha_reserva BETWEEN (?::timestamp - INTERVAL '${bufferTime} minutes') AND (?::timestamp + INTERVAL '${bufferTime} minutes')`, 
+              [formattedBookingTime, formattedBookingTime]);
+        });
+
+      return drivers.reduce((map, driver) => {
+        const driverModel = this._toModel(driver);
+        driverModel.role = new RoleModel({
+          id_roles: driver.id_roles,
+          nombre_rol: driver.nombre_rol,
+          descripcion_rol: driver.descripcion_rol,
+          estado_rol: 'ACTIVO'
+        });
+        map[driver.rut] = driverModel;
+        return map;
+      }, {});
+    } catch (error) {
+      console.error('Error finding drivers by RUTs:', error);
       throw error;
     }
   }

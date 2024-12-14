@@ -6,6 +6,7 @@ import { RateService } from './RateService.js';
 import { BookingModel } from '../models/BookingModel.js';
 import { HistoryService } from './HistoryService.js';
 import { OfferingService } from "./OfferingService.js";
+import { UserService } from "./UserService.js";
 
 export class BookingService extends BaseService {
     constructor() {
@@ -16,6 +17,7 @@ export class BookingService extends BaseService {
         this.rateService = new RateService();
         this.historyService = new HistoryService();
         this.offeringService = new OfferingService();
+        this.userService = new UserService();
     }
 
     /**
@@ -165,37 +167,76 @@ export class BookingService extends BaseService {
      */
     async validateAndAssignDriver(bookingId, action, rutConductor, patenteTaxi, motivo) {
         try {
-            const booking = await this.repository.findById(bookingId);
+            console.log('Validating booking:', { bookingId, action, rutConductor, patenteTaxi });
+            
+            const bookingCode = Number(bookingId);
+            if (isNaN(bookingCode)) {
+                throw new Error('Código de reserva inválido');
+            }
+
+            const booking = await this.repository.findById(bookingCode);
             if (!booking) {
                 throw new Error('Reserva no encontrada');
             }
 
-            if (booking.estados !== 'EN_REVISION') {
-                throw new Error('La reserva no está en estado de revisión');
+            // Allow validation only for EN_REVISION or reassignment for PENDIENTE
+            if (booking.estado_reserva !== 'EN_REVISION' && booking.estado_reserva !== 'PENDIENTE') {
+                throw new Error('La reserva no puede ser modificada en su estado actual');
             }
 
-            const historial = await this.HistoryRepository.create({
-                rut: rutConductor,
-                accion: action === 'APROBAR' ? 'APROBAR_RESERVA' : 'RECHAZAR_RESERVA',
-                descripcion: motivo || (action === 'APROBAR' ? 'Reserva aprobada' : 'Reserva rechazada'),
-                fecha: new Date()
+            // Create history entry using transaction
+            return await this.repository.transaction(async (trx) => {
+                // Map actions to valid history actions
+                let historyAction;
+                if (booking.estado_reserva === 'EN_REVISION') {
+                    historyAction = action === 'APROBAR' ? 'CONFIRMACION' : 'MODIFICACION';
+                } else {
+                    historyAction = 'MODIFICACION';
+                }
+
+                // Create history entry
+                const historyEntry = await this.historyService.createHistoryEntryWithTransaction(
+                    trx,
+                    historyAction,
+                    bookingCode,
+                    {
+                        observacion_historial: motivo || (action === 'APROBAR' ? 
+                            'Reserva aprobada y conductor asignado' : 
+                            'Conductor reasignado')
+                    }
+                );
+
+                // Update booking data
+                const updateData = {
+                    updated_at: new Date()
+                };
+
+                // Only update estado_reserva if it's in EN_REVISION
+                if (booking.estado_reserva === 'EN_REVISION') {
+                    updateData.estado_reserva = action === 'APROBAR' ? 'PENDIENTE' : 'RECHAZADO';
+                }
+
+                // Update driver and taxi assignment
+                if (action === 'APROBAR' || booking.estado_reserva === 'PENDIENTE') {
+                    updateData.rut_conductor = rutConductor;
+                    updateData.patente_taxi = patenteTaxi;
+                }
+
+                // Update booking with transaction
+                const updatedBooking = await this.repository.update(
+                    bookingCode, 
+                    updateData, 
+                    trx
+                );
+
+                return BookingModel.toModel({
+                    ...updatedBooking,
+                    history: historyEntry
+                });
             });
-
-            const updateData = {
-                estados: action === 'APROBAR' ? 'PENDIENTE' : 'RECHAZADO',
-                idhistorial: historial.idhistorial
-            };
-
-            if (action === 'APROBAR') {
-                updateData.rut_conductor = rutConductor;
-                updateData.patente_taxi = patenteTaxi;
-            }
-
-            const updatedBooking = await this.repository.update(bookingId, updateData);
-            return updatedBooking;
         } catch (error) {
             console.error('Error validating booking:', error);
-            throw new Error(`Error al validar la reserva: ${error.message}`);
+            throw new Error(`Error validating booking: ${error.message}`);
         }
     }
 
@@ -408,15 +449,17 @@ export class BookingService extends BaseService {
     }
 
     /**
-     * Gets a specific booking by its code
+     * Gets a specific booking by its code with full details
      * @param {number} codigoReserva - The booking code to find
      * @returns {Promise<BookingModel|null>} The found booking or null
      * @throws {Error} If retrieval fails
      */
     async getBookingByCode(codigoReserva) {
         try {
-            // Get raw booking data
+            console.log('BookingService - Getting booking:', codigoReserva);
+            
             const rawBooking = await this.repository.findByCodigoReserva(codigoReserva);
+            console.log('BookingService - Raw booking data:', rawBooking);
             
             if (!rawBooking) {
                 return null;
@@ -424,36 +467,87 @@ export class BookingService extends BaseService {
 
             // Get the offering to get service and rate IDs
             const offering = await this.offeringService.findById(rawBooking.id_oferta);
+            console.log('BookingService - Offering data:', offering);
             
             if (!offering) {
                 throw new Error('Oferta asociada no encontrada');
             }
 
-            // Get service and rate details from their respective services
-            const [serviceModel, rateModel] = await Promise.all([
+            // Fetch all related data in parallel
+            console.log('BookingService - Fetching related data...');
+            const [
+                serviceModel, 
+                rateModel,
+                historyEntries,
+                taxiData,
+                clienteData
+            ] = await Promise.all([
                 this.serviceService.findByCodigos(offering.codigo_servicio),
-                this.rateService.findById(offering.id_tarifa)
+                this.rateService.findById(offering.id_tarifa),
+                this.historyService.getBookingHistory(codigoReserva),
+                rawBooking.patente_taxi ? 
+                    this.taxiService.getTaxiByLicensePlate(rawBooking.patente_taxi) : 
+                    null,
+                rawBooking.rut_cliente ?
+                    this.userService.findByRut(rawBooking.rut_cliente) :
+                    null
             ]);
 
-            if (!serviceModel || !rateModel) {
-                throw new Error('Servicio o tarifa no encontrados');
-            }
+            console.log('BookingService - Related data fetched:', {
+                service: serviceModel?.toJSON(),
+                rate: rateModel?.toJSON(),
+                history: historyEntries?.map(h => h.toJSON()),
+                taxi: taxiData?.toJSON(),
+                client: clienteData?.toJSON()
+            });
 
             // Create a domain model with all the information
-            return BookingModel.toModel({
+            const bookingModel = new BookingModel({
                 ...rawBooking,
-                servicio: {
+                servicio: serviceModel ? {
                     tipo: serviceModel.tipo_servicio,
                     descripcion: serviceModel.descripcion_servicio
-                },
-                tarifa: {
+                } : null,
+                tarifa: rateModel ? {
                     precio: rateModel.precio,
                     descripcion: rateModel.descripcion_tarifa,
                     tipo: rateModel.tipo_tarifa
-                }
+                } : null,
+                history: historyEntries,
+                taxi: taxiData ? {
+                    patente: taxiData.patente,
+                    marca: taxiData.marca,
+                    modelo: taxiData.modelo,
+                    color: taxiData.color,
+                    ano: taxiData.ano,
+                    estado_taxi: taxiData.estado_taxi,
+                    vencimiento_revision_tecnica: taxiData.vencimiento_revision_tecnica,
+                    vencimiento_permiso_circulacion: taxiData.vencimiento_permiso_circulacion,
+                    conductor: taxiData.conductor ? {
+                        rut: taxiData.conductor.rut,
+                        nombre: taxiData.conductor.nombre,
+                        apellido: taxiData.conductor.apellido,
+                        correo: taxiData.conductor.correo,
+                        telefono: taxiData.conductor.telefono
+                    } : null
+                } : null,
+                cliente: clienteData ? {
+                    rut: clienteData.rut,
+                    nombre: clienteData.nombre,
+                    apellido: clienteData.apellido,
+                    correo: clienteData.correo,
+                    telefono: clienteData.telefono
+                } : null,
+                created_at: rawBooking.created_at,
+                updated_at: rawBooking.updated_at,
+                deleted_at_reserva: rawBooking.deleted_at_reserva
             });
+
+            const finalData = bookingModel.toJSON();
+            console.log('BookingService - Final booking data:', finalData);
+            return bookingModel;
         } catch (error) {
-            console.error('Error getting booking by code:', error);
+            console.error('BookingService - Error:', error);
             throw new Error(`Error al obtener la reserva: ${error.message}`);
         }
     }

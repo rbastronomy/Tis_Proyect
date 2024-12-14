@@ -37,6 +37,10 @@ const AdminTaxisLazyImport = createFileRoute('/admin/taxis')()
 const AdminDashboardLazyImport = createFileRoute('/admin/dashboard')()
 const AdminCreateBookingLazyImport = createFileRoute('/admin/create-booking')()
 const AdminConductoresLazyImport = createFileRoute('/admin/conductores')()
+const AdminReservasIndexLazyImport = createFileRoute('/admin/reservas/')()
+const AdminReservasCodigoReservaAdminLazyImport = createFileRoute(
+  '/admin/reservas/$codigoReservaAdmin',
+)()
 const AdminConductorRutLazyImport = createFileRoute('/admin/conductor/$rut')()
 
 // Create/Update Routes
@@ -149,6 +153,23 @@ const TaxiRutaRoute = TaxiRutaImport.update({
   path: '/taxi/ruta',
   getParentRoute: () => rootRoute,
 } as any)
+
+const AdminReservasIndexLazyRoute = AdminReservasIndexLazyImport.update({
+  path: '/admin/reservas/',
+  getParentRoute: () => rootRoute,
+} as any).lazy(() =>
+  import('./routes/admin/reservas/index.lazy').then((d) => d.Route),
+)
+
+const AdminReservasCodigoReservaAdminLazyRoute =
+  AdminReservasCodigoReservaAdminLazyImport.update({
+    path: '/admin/reservas/$codigoReservaAdmin',
+    getParentRoute: () => rootRoute,
+  } as any).lazy(() =>
+    import('./routes/admin/reservas/$codigoReservaAdmin.lazy').then(
+      (d) => d.Route,
+    ),
+  )
 
 const AdminConductorRutLazyRoute = AdminConductorRutLazyImport.update({
   path: '/admin/conductor/$rut',
@@ -301,6 +322,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminConductorRutLazyImport
       parentRoute: typeof rootRoute
     }
+    '/admin/reservas/$codigoReservaAdmin': {
+      id: '/admin/reservas/$codigoReservaAdmin'
+      path: '/admin/reservas/$codigoReservaAdmin'
+      fullPath: '/admin/reservas/$codigoReservaAdmin'
+      preLoaderRoute: typeof AdminReservasCodigoReservaAdminLazyImport
+      parentRoute: typeof rootRoute
+    }
+    '/admin/reservas/': {
+      id: '/admin/reservas/'
+      path: '/admin/reservas'
+      fullPath: '/admin/reservas'
+      preLoaderRoute: typeof AdminReservasIndexLazyImport
+      parentRoute: typeof rootRoute
+    }
   }
 }
 
@@ -327,6 +362,8 @@ export interface FileRoutesByFullPath {
   '/reservas': typeof ReservasIndexLazyRoute
   '/viajes': typeof ViajesIndexLazyRoute
   '/admin/conductor/$rut': typeof AdminConductorRutLazyRoute
+  '/admin/reservas/$codigoReservaAdmin': typeof AdminReservasCodigoReservaAdminLazyRoute
+  '/admin/reservas': typeof AdminReservasIndexLazyRoute
 }
 
 export interface FileRoutesByTo {
@@ -350,6 +387,8 @@ export interface FileRoutesByTo {
   '/reservas': typeof ReservasIndexLazyRoute
   '/viajes': typeof ViajesIndexLazyRoute
   '/admin/conductor/$rut': typeof AdminConductorRutLazyRoute
+  '/admin/reservas/$codigoReservaAdmin': typeof AdminReservasCodigoReservaAdminLazyRoute
+  '/admin/reservas': typeof AdminReservasIndexLazyRoute
 }
 
 export interface FileRoutesById {
@@ -374,6 +413,8 @@ export interface FileRoutesById {
   '/reservas/': typeof ReservasIndexLazyRoute
   '/viajes/': typeof ViajesIndexLazyRoute
   '/admin/conductor/$rut': typeof AdminConductorRutLazyRoute
+  '/admin/reservas/$codigoReservaAdmin': typeof AdminReservasCodigoReservaAdminLazyRoute
+  '/admin/reservas/': typeof AdminReservasIndexLazyRoute
 }
 
 export interface FileRouteTypes {
@@ -399,6 +440,8 @@ export interface FileRouteTypes {
     | '/reservas'
     | '/viajes'
     | '/admin/conductor/$rut'
+    | '/admin/reservas/$codigoReservaAdmin'
+    | '/admin/reservas'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -421,6 +464,8 @@ export interface FileRouteTypes {
     | '/reservas'
     | '/viajes'
     | '/admin/conductor/$rut'
+    | '/admin/reservas/$codigoReservaAdmin'
+    | '/admin/reservas'
   id:
     | '__root__'
     | '/'
@@ -443,6 +488,8 @@ export interface FileRouteTypes {
     | '/reservas/'
     | '/viajes/'
     | '/admin/conductor/$rut'
+    | '/admin/reservas/$codigoReservaAdmin'
+    | '/admin/reservas/'
   fileRoutesById: FileRoutesById
 }
 
@@ -467,6 +514,8 @@ export interface RootRouteChildren {
   ReservasIndexLazyRoute: typeof ReservasIndexLazyRoute
   ViajesIndexLazyRoute: typeof ViajesIndexLazyRoute
   AdminConductorRutLazyRoute: typeof AdminConductorRutLazyRoute
+  AdminReservasCodigoReservaAdminLazyRoute: typeof AdminReservasCodigoReservaAdminLazyRoute
+  AdminReservasIndexLazyRoute: typeof AdminReservasIndexLazyRoute
 }
 
 const rootRouteChildren: RootRouteChildren = {
@@ -490,6 +539,9 @@ const rootRouteChildren: RootRouteChildren = {
   ReservasIndexLazyRoute: ReservasIndexLazyRoute,
   ViajesIndexLazyRoute: ViajesIndexLazyRoute,
   AdminConductorRutLazyRoute: AdminConductorRutLazyRoute,
+  AdminReservasCodigoReservaAdminLazyRoute:
+    AdminReservasCodigoReservaAdminLazyRoute,
+  AdminReservasIndexLazyRoute: AdminReservasIndexLazyRoute,
 }
 
 export const routeTree = rootRoute
@@ -523,7 +575,9 @@ export const routeTree = rootRoute
         "/taxi/",
         "/reservas/",
         "/viajes/",
-        "/admin/conductor/$rut"
+        "/admin/conductor/$rut",
+        "/admin/reservas/$codigoReservaAdmin",
+        "/admin/reservas/"
       ]
     },
     "/": {
@@ -585,6 +639,12 @@ export const routeTree = rootRoute
     },
     "/admin/conductor/$rut": {
       "filePath": "admin/conductor/$rut.lazy.jsx"
+    },
+    "/admin/reservas/$codigoReservaAdmin": {
+      "filePath": "admin/reservas/$codigoReservaAdmin.lazy.jsx"
+    },
+    "/admin/reservas/": {
+      "filePath": "admin/reservas/index.lazy.jsx"
     }
   }
 }

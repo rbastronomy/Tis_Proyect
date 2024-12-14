@@ -83,20 +83,33 @@ export class BaseModel {
    * @param {Object} options - Validation options
    */
   validateString(field, value, options = {}) {
-    const { required = true, minLength = 1, maxLength = undefined } = options;
+    const { required = true, minLength = 0, maxLength = undefined } = options;
     
-    if (required && (!value || typeof value !== 'string' || !value.trim())) {
+    // If field is not required and value is empty, skip validation
+    if (!required && (value === null || value === undefined || value === '')) {
+      return;
+    }
+
+    // For required fields or when value is present
+    if (required && (value === null || value === undefined || value === '')) {
       this._errors[field] = `${field} es requerido y debe ser texto`;
       return;
     }
 
-    if (value && typeof value === 'string') {
-      if (minLength && value.trim().length < minLength) {
-        this._errors[field] = `${field} debe tener al menos ${minLength} caracteres`;
-      }
-      if (maxLength && value.trim().length > maxLength) {
-        this._errors[field] = `${field} no puede tener más de ${maxLength} caracteres`;
-      }
+    // If we get here, we have a value to validate
+    if (typeof value !== 'string') {
+      this._errors[field] = `${field} debe ser texto`;
+      return;
+    }
+
+    const trimmedValue = value.trim();
+    
+    if (minLength && trimmedValue.length < minLength) {
+      this._errors[field] = `${field} debe tener al menos ${minLength} caracteres`;
+    }
+    
+    if (maxLength && trimmedValue.length > maxLength) {
+      this._errors[field] = `${field} no puede tener más de ${maxLength} caracteres`;
     }
   }
 

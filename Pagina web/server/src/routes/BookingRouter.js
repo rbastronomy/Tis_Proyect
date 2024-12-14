@@ -307,8 +307,28 @@ export class BookingRouter extends BaseRouter {
                   tipo_reserva: { type: 'string' },
                   observacion_reserva: { type: 'string' },
                   estado_reserva: { type: 'string' },
-                  rut_conductor: { type: 'integer', nullable: true },
-                  patente_taxi: { type: 'string', nullable: true },
+                  rut_conductor: { type: ['integer', 'null'] },
+                  patente_taxi: { type: ['string', 'null'] },
+                  taxi: {
+                    type: ['object', 'null'],
+                    properties: {
+                      patente: { type: 'string' },
+                      marca: { type: 'string' },
+                      modelo: { type: 'string' },
+                      color: { type: 'string' },
+                      ano: { type: 'string' },
+                      conductor: {
+                        type: 'object',
+                        properties: {
+                          rut: { type: 'integer' },
+                          nombre: { type: 'string' },
+                          apellido: { type: 'string' },
+                          correo: { type: 'string' },
+                          telefono: { type: 'string' }
+                        }
+                      }
+                    }
+                  },
                   servicio: {
                     type: 'object',
                     properties: {
@@ -322,6 +342,19 @@ export class BookingRouter extends BaseRouter {
                       precio: { type: 'number' },
                       descripcion: { type: 'string' },
                       tipo: { type: 'string' }
+                    }
+                  },
+                  history: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        id_historial: { type: 'integer' },
+                        estado_historial: { type: 'string' },
+                        observacion_historial: { type: 'string' },
+                        fecha_cambio: { type: 'string' },
+                        accion: { type: 'string' }
+                      }
                     }
                   }
                 }

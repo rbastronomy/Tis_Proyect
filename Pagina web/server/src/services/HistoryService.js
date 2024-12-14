@@ -44,9 +44,8 @@ export class HistoryService extends BaseService {
      * Creates a history entry within a transaction
      * @param {Object} trx - Knex transaction object
      * @param {string} accion - Action performed
-     * @param {Object} [additionalData] - Additional data for the history entry
-     * @param {string} [additionalData.observacion_historial] - Observations
-     * @param {number} [additionalData.codigo_reserva] - Related booking code
+     * @param {number} codigo_reserva - Related booking code
+     * @param {Object} [additionalData={}] - Additional data for the history entry
      * @returns {Promise<HistoryModel>} Created history entry model
      * @throws {Error} If creation fails
      */
@@ -57,20 +56,20 @@ export class HistoryService extends BaseService {
 
         try {
             const historyData = {
-                estado_historial: 'RESERVA_EN_REVISION',
+                estado_historial: additionalData.estado_historial || 'RESERVA_EN_REVISION',
                 observacion_historial: additionalData.observacion_historial || '',
                 accion: accion,
                 codigo_reserva: codigo_reserva,
                 fecha_cambio: new Date()
             };
 
-            // Create and validate model - single instance
+            // Create and validate model
             const historyModel = new HistoryModel(historyData);
             
             // Save to database using the provided transaction
             const rawHistory = await this.repository.create(historyModel.toJSON(), trx);
             
-            // Update the existing model with the saved data (including ID and timestamps)
+            // Update the model with the saved data
             historyModel.update(rawHistory);
             
             return historyModel;
@@ -83,11 +82,12 @@ export class HistoryService extends BaseService {
     /**
      * Gets history entries for a booking
      * @param {number} codigo_reserva - Booking code
-     * @returns {Promise<Array>} History entries for the booking
+     * @returns {Promise<HistoryModel[]>} History entries for the booking
      */
     async getBookingHistory(codigo_reserva) {
         try {
-            return await this.repository.findByBookingCode(codigo_reserva);
+            const historyEntries = await this.repository.findByBookingCode(codigo_reserva);
+            return historyEntries.map(entry => new HistoryModel(entry));
         } catch (error) {
             console.error('Error getting booking history:', error);
             throw new Error(`Error al obtener historial de reserva: ${error.message}`);

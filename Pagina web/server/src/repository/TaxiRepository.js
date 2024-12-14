@@ -87,13 +87,18 @@ export class TaxiRepository extends BaseRepository {
      */
     async findByPatente(patente) {
         try {
+            console.log('TaxiRepository - Finding taxi with patente:', patente);
+            
             const taxi = await this.db(this.tableName)
                 .select('*')
-                .where({ patente })
+                .where('patente', patente)
                 .whereNull('deleted_at_taxi')
                 .first();
+
+            console.log('TaxiRepository - Raw taxi data:', taxi);
             return taxi || null;
         } catch (error) {
+            console.error('TaxiRepository - Error finding taxi:', error);
             throw new Error(`Database error finding taxi: ${error.message}`);
         }
     }

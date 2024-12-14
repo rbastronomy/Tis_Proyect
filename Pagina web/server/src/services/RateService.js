@@ -98,7 +98,7 @@ export class RateService extends BaseService {
      * @returns {Promise<Object>} Tariff data
      * @throws {Error} If tariff is not found
      */
-    async findByIdRate(id) {
+    async findById(id) {
         try {
             const tariffDB = await this.repository.findById(id);
             if (!tariffDB) {
