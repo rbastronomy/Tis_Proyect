@@ -102,4 +102,40 @@ export class UserController extends BaseController {
       });
     }
   }
+
+  /**
+   * Get detailed information about a specific driver
+   * @param {FastifyRequest} request - The request object
+   * @param {FastifyReply} reply - The reply object
+   * @returns {Promise<Object>} The driver details
+   */
+  async getDriverDetails(request, reply) {
+    try {
+      const { rut } = request.params;
+      
+      const driver = await this.service.findDriverByRut(rut, {
+        include: {
+          role: {
+            include: {
+              permissions: true
+            }
+          }
+        }
+      });
+
+      if (!driver) {
+        return reply.code(404).send({
+          message: 'Conductor no encontrado'
+        });
+      }
+
+      return reply.code(200).send(driver);
+    } catch (error) {
+      console.error('Error in getDriverDetails:', error);
+      return reply.code(500).send({
+        message: 'Error al obtener detalles del conductor',
+        error: error.message
+      });
+    }
+  }
 }

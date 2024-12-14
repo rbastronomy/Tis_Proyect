@@ -79,16 +79,17 @@ function Conductores() {
 
   const handleOpenModal = (driver = null) => {
     if (driver) {
+      console.log('Opening modal for driver:', driver);
       setSelectedDriver(driver);
-      updateRut(driver.rut);
+      updateRut(driver.rut.toString());
       setFormData({
         nombre: driver.nombre,
         correo: driver.correo,
         telefono: driver.telefono,
         nacionalidad: driver.nacionalidad,
         genero: driver.genero,
-        fecha_contratacion: driver.fecha_contratacion,
-        licencia_conducir: driver.licencia_conducir,
+        fecha_contratacion: driver.fecha_contratacion?.split('T')[0],
+        licencia_conducir: driver.licencia_conducir?.split('T')[0],
         estado_persona: driver.estado_persona,
         contrasena: '',
         confirmPassword: ''
@@ -283,18 +284,21 @@ function Conductores() {
               onMouseEnter={() => setHoveredCard(conductor.rut)}
               onMouseLeave={() => setHoveredCard(null)}
             >
-              <div className="p-6 relative">
-                {hoveredCard === conductor.rut && (
-                  <motion.div
-                    className="absolute inset-0 bg-black bg-opacity-5 pointer-events-none"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    style={{
-                      boxShadow: 'inset 0 0 20px rgba(0,0,0,0.1)',
-                    }}
-                  />
-                )}
+              {hoveredCard === conductor.rut && (
+                <motion.div
+                  className="absolute inset-0 bg-black bg-opacity-5 pointer-events-none"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  style={{
+                    boxShadow: 'inset 0 0 20px rgba(0,0,0,0.1)',
+                  }}
+                />
+              )}
+              <div 
+                className="p-6"
+                onClick={() => navigate({ to: '/admin/conductor/$rut', params: { rut: conductor.rut } })}
+              >
                 <div className="flex justify-between items-start mb-4">
                   <span className="text-sm font-semibold text-blue-600">
                     {conductor.rut}
@@ -310,7 +314,7 @@ function Conductores() {
                 </div>
 
                 <h2 className="text-xl font-bold mb-4 text-gray-800">
-                  {`${conductor.nombre} ${conductor.apellido_paterno || ''} ${conductor.apellido_materno || ''}`}
+                  {conductor.nombre}
                 </h2>
 
                 <div className="space-y-3 text-sm text-gray-600">
@@ -326,20 +330,19 @@ function Conductores() {
                     <IdCard className="w-4 h-4 mr-2 text-gray-400" />
                     <span><strong className="text-gray-700">Licencia hasta:</strong> {new Date(conductor.licencia_conducir).toLocaleDateString()}</span>
                   </p>
-                  <p className="flex items-center">
-                    <span><strong className="text-gray-700">Contratado:</strong> {new Date(conductor.fecha_contratacion).toLocaleDateString()}</span>
-                  </p>
-                  <p className="flex items-center">
-                    <span><strong className="text-gray-700">Nacionalidad:</strong> {conductor.nacionalidad}</span>
-                  </p>
                 </div>
+              </div>
 
-                <div className="absolute bottom-4 right-4 flex gap-2">
+              <div className="border-t border-gray-100 bg-gray-50/50">
+                <div className="px-6 py-3 flex justify-end gap-2">
                   <Button 
                     isIconOnly 
                     size="sm" 
                     variant="light"
-                    onPress={() => handleOpenModal(conductor)}
+                    onPress={() => {
+                      console.log('Edit button clicked for conductor:', conductor);
+                      handleOpenModal(conductor);
+                    }}
                   >
                     <Pencil size={18} />
                   </Button>

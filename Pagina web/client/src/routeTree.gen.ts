@@ -37,6 +37,7 @@ const AdminTaxisLazyImport = createFileRoute('/admin/taxis')()
 const AdminDashboardLazyImport = createFileRoute('/admin/dashboard')()
 const AdminCreateBookingLazyImport = createFileRoute('/admin/create-booking')()
 const AdminConductoresLazyImport = createFileRoute('/admin/conductores')()
+const AdminConductorRutLazyImport = createFileRoute('/admin/conductor/$rut')()
 
 // Create/Update Routes
 
@@ -148,6 +149,13 @@ const TaxiRutaRoute = TaxiRutaImport.update({
   path: '/taxi/ruta',
   getParentRoute: () => rootRoute,
 } as any)
+
+const AdminConductorRutLazyRoute = AdminConductorRutLazyImport.update({
+  path: '/admin/conductor/$rut',
+  getParentRoute: () => rootRoute,
+} as any).lazy(() =>
+  import('./routes/admin/conductor/$rut.lazy').then((d) => d.Route),
+)
 
 // Populate the FileRoutesByPath interface
 
@@ -286,6 +294,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ViajesIndexLazyImport
       parentRoute: typeof rootRoute
     }
+    '/admin/conductor/$rut': {
+      id: '/admin/conductor/$rut'
+      path: '/admin/conductor/$rut'
+      fullPath: '/admin/conductor/$rut'
+      preLoaderRoute: typeof AdminConductorRutLazyImport
+      parentRoute: typeof rootRoute
+    }
   }
 }
 
@@ -311,6 +326,7 @@ export interface FileRoutesByFullPath {
   '/taxi': typeof TaxiIndexRoute
   '/reservas': typeof ReservasIndexLazyRoute
   '/viajes': typeof ViajesIndexLazyRoute
+  '/admin/conductor/$rut': typeof AdminConductorRutLazyRoute
 }
 
 export interface FileRoutesByTo {
@@ -333,6 +349,7 @@ export interface FileRoutesByTo {
   '/taxi': typeof TaxiIndexRoute
   '/reservas': typeof ReservasIndexLazyRoute
   '/viajes': typeof ViajesIndexLazyRoute
+  '/admin/conductor/$rut': typeof AdminConductorRutLazyRoute
 }
 
 export interface FileRoutesById {
@@ -356,6 +373,7 @@ export interface FileRoutesById {
   '/taxi/': typeof TaxiIndexRoute
   '/reservas/': typeof ReservasIndexLazyRoute
   '/viajes/': typeof ViajesIndexLazyRoute
+  '/admin/conductor/$rut': typeof AdminConductorRutLazyRoute
 }
 
 export interface FileRouteTypes {
@@ -380,6 +398,7 @@ export interface FileRouteTypes {
     | '/taxi'
     | '/reservas'
     | '/viajes'
+    | '/admin/conductor/$rut'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -401,6 +420,7 @@ export interface FileRouteTypes {
     | '/taxi'
     | '/reservas'
     | '/viajes'
+    | '/admin/conductor/$rut'
   id:
     | '__root__'
     | '/'
@@ -422,6 +442,7 @@ export interface FileRouteTypes {
     | '/taxi/'
     | '/reservas/'
     | '/viajes/'
+    | '/admin/conductor/$rut'
   fileRoutesById: FileRoutesById
 }
 
@@ -445,6 +466,7 @@ export interface RootRouteChildren {
   TaxiIndexRoute: typeof TaxiIndexRoute
   ReservasIndexLazyRoute: typeof ReservasIndexLazyRoute
   ViajesIndexLazyRoute: typeof ViajesIndexLazyRoute
+  AdminConductorRutLazyRoute: typeof AdminConductorRutLazyRoute
 }
 
 const rootRouteChildren: RootRouteChildren = {
@@ -467,6 +489,7 @@ const rootRouteChildren: RootRouteChildren = {
   TaxiIndexRoute: TaxiIndexRoute,
   ReservasIndexLazyRoute: ReservasIndexLazyRoute,
   ViajesIndexLazyRoute: ViajesIndexLazyRoute,
+  AdminConductorRutLazyRoute: AdminConductorRutLazyRoute,
 }
 
 export const routeTree = rootRoute
@@ -499,7 +522,8 @@ export const routeTree = rootRoute
         "/viajes/$codigoViaje",
         "/taxi/",
         "/reservas/",
-        "/viajes/"
+        "/viajes/",
+        "/admin/conductor/$rut"
       ]
     },
     "/": {
@@ -558,6 +582,9 @@ export const routeTree = rootRoute
     },
     "/viajes/": {
       "filePath": "viajes/index.lazy.jsx"
+    },
+    "/admin/conductor/$rut": {
+      "filePath": "admin/conductor/$rut.lazy.jsx"
     }
   }
 }

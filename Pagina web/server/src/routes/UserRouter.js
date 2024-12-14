@@ -115,5 +115,16 @@ export class UserRouter extends BaseRouter {
         ['ADMINISTRADOR']
       )
     });
+
+    // Get specific driver details
+    this.addRoute('GET', '/drivers/:rut', {
+      handler: this.withAuth(
+        async (request, reply) => {
+          return this.controller.getDriverDetails(request, reply);
+        },
+        [],
+        ['ADMINISTRADOR']
+      )
+    });
   }
 } 
