@@ -1,0 +1,40 @@
+When writing react use as much NextUi components as possible, every module of the backend must be written in OOP following MVC pattern.
+Entire project uses esm modules import syntax. DO NOT USE require.
+For each method or function add a comment with the type of the return and the parameters to later generate the documentation.
+
+## Flow Overview
+
+1. **Route Match**:
+   - A user request (e.g., `GET /orders/:id`) triggers a specific controller method.
+
+2. **Controller**:
+   - Extracts and validates input from the request.
+   - Delegates business logic to the **Service Layer**.
+
+3. **Service Layer**:
+   - Validates and processes data.
+   - Coordinates repositories or external APIs to retrieve data.
+   - Enforces business rules and logic.
+
+4. **Repository Layer**:
+   - Fetches raw data from the database.
+   - Converts raw data into **Model** instances.
+
+5. **Model Layer**:
+   - Represents the application's domain entities.
+   - Provides entity-specific methods (e.g., `calculateTotal()`).
+   - Encapsulates logic related to individual entities.
+
+6. **Back to Controller**:
+   - The controller serializes the processed model data and sends it as an HTTP response.
+
+---
+
+## Interpretation of MVC
+
+- **Repository**: The data layer, which interacts with the database.
+- **Service**: Validates and processes data, coordinates repositories or external APIs to retrieve data, enforces business rules and logic.
+- **Controller**: The presentation layer, validates and processes data from the request, and delegates the business logic to the service layer.
+- **Model**: Domain entities, properties and methods specific to the entities.
+- **View**: The presentation layer, Json responses to the client.
+
