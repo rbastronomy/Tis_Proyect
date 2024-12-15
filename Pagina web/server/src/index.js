@@ -16,15 +16,15 @@ const startServer = async () => {
 
     const fastify = Fastify({
       logger: true,
-      http2: false
     });
 
     await fastify.register(fastifyCors, {
-      origin: [
-        'http://localhost:5173',
-        'http://127.0.0.1:5173'
-      ],
-      credentials: true
+      origin: (origin, callback) => {
+        console.log('Incoming request from origin:', origin);
+        // Allow all origins in development
+        callback(null, true);
+      },
+      credentials: true,
     });
 
     setupRoutes(fastify);

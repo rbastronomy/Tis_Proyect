@@ -7,6 +7,7 @@ import { Switch } from "@nextui-org/switch"
 import { MapPin, Clock, User, Bell, Car } from 'lucide-react'
 import { useDriverLocation } from '../../hooks/useDriverLocation'
 import { WS_EVENTS } from '../../constants/WebSocketEvents'
+import { useSocketContext } from '../../context/SocketContext'
 import PropTypes from 'prop-types'
 import { useNavigate } from '@tanstack/react-router'
 
