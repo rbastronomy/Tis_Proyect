@@ -22,7 +22,6 @@ import { Route as TaxiRutaImport } from './routes/taxi/ruta'
 const SobreLazyImport = createFileRoute('/sobre')()
 const RegistroLazyImport = createFileRoute('/registro')()
 const LoginLazyImport = createFileRoute('/login')()
-const DashboardLazyImport = createFileRoute('/dashboard')()
 const ContactoLazyImport = createFileRoute('/contacto')()
 const AyudaLazyImport = createFileRoute('/ayuda')()
 const RTMapLazyImport = createFileRoute('/RTMap')()
@@ -62,11 +61,6 @@ const LoginLazyRoute = LoginLazyImport.update({
   path: '/login',
   getParentRoute: () => rootRoute,
 } as any).lazy(() => import('./routes/login.lazy').then((d) => d.Route))
-
-const DashboardLazyRoute = DashboardLazyImport.update({
-  path: '/dashboard',
-  getParentRoute: () => rootRoute,
-} as any).lazy(() => import('./routes/dashboard.lazy').then((d) => d.Route))
 
 const ContactoLazyRoute = ContactoLazyImport.update({
   path: '/contacto',
@@ -239,13 +233,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ContactoLazyImport
       parentRoute: typeof rootRoute
     }
-    '/dashboard': {
-      id: '/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof DashboardLazyImport
-      parentRoute: typeof rootRoute
-    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -390,7 +377,6 @@ export interface FileRoutesByFullPath {
   '/RTMap': typeof RTMapLazyRoute
   '/ayuda': typeof AyudaLazyRoute
   '/contacto': typeof ContactoLazyRoute
-  '/dashboard': typeof DashboardLazyRoute
   '/login': typeof LoginLazyRoute
   '/registro': typeof RegistroLazyRoute
   '/sobre': typeof SobreLazyRoute
@@ -418,7 +404,6 @@ export interface FileRoutesByTo {
   '/RTMap': typeof RTMapLazyRoute
   '/ayuda': typeof AyudaLazyRoute
   '/contacto': typeof ContactoLazyRoute
-  '/dashboard': typeof DashboardLazyRoute
   '/login': typeof LoginLazyRoute
   '/registro': typeof RegistroLazyRoute
   '/sobre': typeof SobreLazyRoute
@@ -447,7 +432,6 @@ export interface FileRoutesById {
   '/RTMap': typeof RTMapLazyRoute
   '/ayuda': typeof AyudaLazyRoute
   '/contacto': typeof ContactoLazyRoute
-  '/dashboard': typeof DashboardLazyRoute
   '/login': typeof LoginLazyRoute
   '/registro': typeof RegistroLazyRoute
   '/sobre': typeof SobreLazyRoute
@@ -477,7 +461,6 @@ export interface FileRouteTypes {
     | '/RTMap'
     | '/ayuda'
     | '/contacto'
-    | '/dashboard'
     | '/login'
     | '/registro'
     | '/sobre'
@@ -504,7 +487,6 @@ export interface FileRouteTypes {
     | '/RTMap'
     | '/ayuda'
     | '/contacto'
-    | '/dashboard'
     | '/login'
     | '/registro'
     | '/sobre'
@@ -531,7 +513,6 @@ export interface FileRouteTypes {
     | '/RTMap'
     | '/ayuda'
     | '/contacto'
-    | '/dashboard'
     | '/login'
     | '/registro'
     | '/sobre'
@@ -560,7 +541,6 @@ export interface RootRouteChildren {
   RTMapLazyRoute: typeof RTMapLazyRoute
   AyudaLazyRoute: typeof AyudaLazyRoute
   ContactoLazyRoute: typeof ContactoLazyRoute
-  DashboardLazyRoute: typeof DashboardLazyRoute
   LoginLazyRoute: typeof LoginLazyRoute
   RegistroLazyRoute: typeof RegistroLazyRoute
   SobreLazyRoute: typeof SobreLazyRoute
@@ -588,7 +568,6 @@ const rootRouteChildren: RootRouteChildren = {
   RTMapLazyRoute: RTMapLazyRoute,
   AyudaLazyRoute: AyudaLazyRoute,
   ContactoLazyRoute: ContactoLazyRoute,
-  DashboardLazyRoute: DashboardLazyRoute,
   LoginLazyRoute: LoginLazyRoute,
   RegistroLazyRoute: RegistroLazyRoute,
   SobreLazyRoute: SobreLazyRoute,
@@ -628,7 +607,6 @@ export const routeTree = rootRoute
         "/RTMap",
         "/ayuda",
         "/contacto",
-        "/dashboard",
         "/login",
         "/registro",
         "/sobre",
@@ -664,9 +642,6 @@ export const routeTree = rootRoute
     },
     "/contacto": {
       "filePath": "contacto.lazy.jsx"
-    },
-    "/dashboard": {
-      "filePath": "dashboard.lazy.jsx"
     },
     "/login": {
       "filePath": "login.lazy.jsx"
