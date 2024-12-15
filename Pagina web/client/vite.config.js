@@ -6,8 +6,8 @@ export default defineConfig({
   plugins: [react(), TanStackRouterVite()],
   server: {
     hmr: {
-      protocol: 'wss',
-      port: 5000
+      protocol: 'ws',
+      host: 'localhost'
     },
     proxy: {
       '/api': {

@@ -394,7 +394,6 @@ class BookingController extends BaseController {
             console.log('Getting bookings for client:', clientRut);
 
             const bookings = await this.service.getClientBookings(clientRut);
-
             return reply.send({
                 message: 'Reservas recuperadas exitosamente',
                 reservas: bookings

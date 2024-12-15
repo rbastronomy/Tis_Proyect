@@ -8,6 +8,7 @@ import { HistoryService } from './HistoryService.js';
 import { OfferingService } from "./OfferingService.js";
 import { UserService } from "./UserService.js";
 import { ReceiptService } from "./ReceiptService.js";
+import { HistoryModel } from "../models/HistoryModel.js";
 
 export class BookingService extends BaseService {
     constructor() {
@@ -38,6 +39,19 @@ export class BookingService extends BaseService {
             if (!offeringId) {
                 throw new Error('Oferta no encontrada');
             }
+
+                        
+            // Ensure client RUT is present
+            if (!bookingData.rut_cliente) {
+                throw new Error('RUT del cliente es requerido');
+            }
+
+            // Verify client exists
+            const clientData = await this.userService.getByRut(bookingData.rut_cliente);
+            if (!clientData) {
+                throw new Error('Cliente no encontrado');
+            }
+
             
             // Remove service and rate IDs from booking data since they're not part of the domain model
             const { codigo_servicio, id_tarifa, ...bookingModelData } = bookingData;
@@ -55,6 +69,7 @@ export class BookingService extends BaseService {
                 const dbBooking = {
                     ...bookingModel.toJSON(),
                     id_oferta: offeringId,
+                    rut_cliente: bookingData.rut_cliente,
                     rut_conductor: null,
                     patente_taxi: null
                 };
@@ -204,7 +219,9 @@ export class BookingService extends BaseService {
                     {
                         observacion_historial: motivo || (action === 'APROBAR' ? 
                             'Reserva aprobada y conductor asignado' : 
-                            'Conductor reasignado')
+                            'Conductor reasignado'),
+                        estado_historial: action === 'APROBAR' ? 'RESERVA_CONFIRMADA' : 'RESERVA_RECHAZADA'
+    
                     }
                 );
 
@@ -485,6 +502,13 @@ export class BookingService extends BaseService {
                 return null;
             }
 
+
+            if (rawBooking.rut_cliente === null) {
+                console.log('Booking has no client assigned:', rawBooking);
+                throw new Error('Reserva no tiene cliente asignado');
+            }
+
+
             // Get the offering to get service and rate IDs
             const offering = await this.offeringService.findById(rawBooking.id_oferta);
             console.log('BookingService - Offering data:', offering);
@@ -509,7 +533,7 @@ export class BookingService extends BaseService {
                     this.taxiService.getTaxiByLicensePlate(rawBooking.patente_taxi) : 
                     null,
                 rawBooking.rut_cliente ?
-                    this.userService.findByRut(rawBooking.rut_cliente) :
+                    this.userService.getByRut(rawBooking.rut_cliente) :
                     null
             ]);
 
@@ -546,7 +570,7 @@ export class BookingService extends BaseService {
                     conductor: taxiData.conductor ? {
                         rut: taxiData.conductor.rut,
                         nombre: taxiData.conductor.nombre,
-                        apellido: taxiData.conductor.apellido,
+                        apellido: taxiData.conductor.apellido_paterno,
                         correo: taxiData.conductor.correo,
                         telefono: taxiData.conductor.telefono
                     } : null
@@ -636,6 +660,140 @@ export class BookingService extends BaseService {
             throw new Error(`Error al obtener las reservas del conductor: ${error.message}`);
         }
     }
+
+    
+    /**
+     * Gets a booking by code and filters sensitive data for client view
+     * @param {number} codigoReserva - The booking code to find
+     * @param {number} clientRut - The client's RUT for verification
+     * @returns {Promise<BookingModel|null>} The filtered booking or null
+     * @throws {Error} If retrieval fails or unauthorized
+     */
+    async getClientBookingByCode(codigoReserva, clientRut) {
+        try {
+            console.log('BookingService - Getting client booking:', codigoReserva);
+            
+            // Get raw booking data first
+            const rawBooking = await this.repository.findByCodigoReserva(codigoReserva);
+            
+            if (!rawBooking) {
+                return null;
+            }
+
+            if (rawBooking.rut_cliente === null) {
+                console.log('Booking has no client assigned:', rawBooking);
+                throw new Error('Reserva no tiene cliente asignado');
+            }
+
+            // Get client data from UserService
+            const clientData = await this.userService.getByRut(clientRut);
+            console.log('Client data:', clientData);
+
+            if (!clientData) {
+                throw new Error('Cliente no encontrado');
+            }
+
+            // Extract the actual RUT from the nested structure
+            const actualClientRut = clientData._data?._data?.rut || clientData._data?.rut;
+
+            // Verify ownership using client data
+            if (rawBooking.rut_cliente !== actualClientRut) {
+                console.log('Authorization failed:', {
+                    bookingClientRut: rawBooking.rut_cliente,
+                    requestingClientRut: actualClientRut
+                });
+                throw new Error('No autorizado para ver esta reserva');
+            }
+
+            // Rest of the code remains the same...
+            const offering = await this.offeringService.findById(rawBooking.id_oferta);
+            if (!offering) {
+                throw new Error('Oferta asociada no encontrada');
+            }
+
+            const [serviceModel, rateModel, historyEntries, taxiData] = await Promise.all([
+                this.serviceService.findByCodigos(offering.codigo_servicio),
+                this.rateService.findById(offering.id_tarifa),
+                this.historyService.getBookingHistory(codigoReserva),
+                rawBooking.patente_taxi ? 
+                    this.taxiService.getTaxiByLicensePlate(rawBooking.patente_taxi) : 
+                    null
+            ]);
+
+            // Filter taxi data to only include public information
+            const filteredTaxiData = taxiData ? {
+                patente: taxiData.patente,
+                marca: taxiData.marca,
+                modelo: taxiData.modelo,
+                color: taxiData.color,
+                ano: taxiData.ano,
+                estado_taxi: taxiData.estado_taxi,
+                vencimiento_revision_tecnica: taxiData.vencimiento_revision_tecnica,
+                vencimiento_permiso_circulacion: taxiData.vencimiento_permiso_circulacion
+            } : null;
+
+            // Filter history entries and convert them to HistoryModel instances
+            const filteredHistory = historyEntries.map(entry => {
+                // Create a HistoryModel instance for each entry
+                return new HistoryModel({
+                    id_historial: entry.id_historial,
+                    estado_historial: entry.estado_historial,
+                    fecha_cambio: entry.fecha_cambio,
+                    observacion_historial: entry.observacion_historial || '',
+                    accion: entry.accion || 'CREACION',
+                    codigo_reserva: codigoReserva
+                });
+            });
+
+            // Create a domain model with filtered information
+            const bookingModel = new BookingModel({
+                ...rawBooking,
+                servicio: serviceModel ? {
+                    tipo: serviceModel.tipo_servicio,
+                    descripcion: serviceModel.descripcion_servicio
+                } : null,
+                tarifa: rateModel ? {
+                    precio: rateModel.precio,
+                    descripcion: rateModel.descripcion_tarifa,
+                    tipo: rateModel.tipo_tarifa
+                } : null,
+                history: filteredHistory,
+                taxi: filteredTaxiData,
+                cliente: this._mapClientData(clientData),
+                // Remove sensitive fields
+                rut_conductor: undefined,
+                conductor: undefined
+            });
+
+            console.log('BookingService - Filtered booking data:', bookingModel.toJSON());
+            return bookingModel;
+        } catch (error) {
+            console.error('BookingService - Error:', error);
+            throw new Error(`Error getting client booking: ${error.message}`);
+        }
+    }
+
+    /**
+     * Maps user data from UserModel to client info object
+     * @private
+     * @param {UserModel} userData - User model instance
+     * @returns {Object|null} Mapped client info or null
+     */
+    _mapClientData(userData) {
+        if (!userData) return null;
+
+        // Get the innermost data object
+        const data = userData._data._data || userData._data;
+
+        return {
+            rut: data.rut,
+            nombre: data.nombre || '',
+            apellido: data.apellido_paterno || '',
+            correo: data.correo || '',
+            telefono: data.telefono || ''
+        };
+    }
+
 }
 
 export default BookingService;

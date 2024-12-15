@@ -6,10 +6,10 @@ import PropTypes from 'prop-types';
 
 // Create a taxi icon - you'll need to add a taxi icon image to your assets
 const icon = L.icon({
-  iconUrl: '/taxi-icon.png', // Add this image to your public folder
-  iconSize: [32, 32],
-  iconAnchor: [16, 32],
-  popupAnchor: [0, -32]
+  iconUrl: '/taxi.svg', // Add this image to your public folder
+  iconSize: [42, 42],
+  iconAnchor: [21, 21],
+  popupAnchor: [0, -21]
 });
 
 export default function TaxiMarker({ data }) {
@@ -40,8 +40,6 @@ export default function TaxiMarker({ data }) {
       icon={icon}
       position={[lat, lng]}
       previousPosition={prevPos}
-      duration={1000}
-      rotationAngle={0}
     >
       <Tooltip permanent direction="top" offset={[0, -20]}>
         <div className="text-sm font-medium">
