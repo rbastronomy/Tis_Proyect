@@ -19,59 +19,52 @@ export function useGeolocation({
 
   const handleSuccess = useCallback((pos) => {
     const now = Date.now();
-    // Skip update if it's too soon after the last one
-    if (now - lastUpdateTime.current < minUpdateInterval) {
-      return;
-    }
-
+    
+    // Enhanced position validation
     const newPosition = {
       latitude: pos.coords.latitude,
       longitude: pos.coords.longitude,
       accuracy: pos.coords.accuracy,
       speed: pos.coords.speed,
-      timestamp: pos.timestamp
+      timestamp: pos.timestamp,
+      heading: pos.coords.heading
     };
 
-    // Skip update if position hasn't changed significantly
-    if (lastPosition.current) {
-      const distance = Math.abs(
-        lastPosition.current.latitude - newPosition.latitude +
-        lastPosition.current.longitude - newPosition.longitude
-      );
-      if (distance < 0.00001) { // About 1 meter
+    // Skip invalid coordinates
+    if (!newPosition.latitude || !newPosition.longitude) {
+      console.warn('Invalid coordinates received:', newPosition);
+      return;
+    }
+
+    // Skip positions with very poor accuracy (> 100 meters)
+    if (newPosition.accuracy > 100) {
+      console.warn(`Poor accuracy (${newPosition.accuracy.toFixed(0)}m) - Skipping update`);
+      if (retryCount < maxRetries) {
+        setRetryCount(prev => prev + 1);
         return;
       }
     }
 
-    // If accuracy validation is provided
-    if (validateAccuracy) {
-      const isAccuracyValid = validateAccuracy(newPosition.accuracy);
-      if (!isAccuracyValid) {
-        if (retryCount < maxRetries) {
-          setRetryCount(prev => prev + 1);
-          setError(`GPS accuracy too low (${newPosition.accuracy.toFixed(0)}m)`);
-          // Don't clear position if we already have one
-          if (!position) {
-            setPosition(null);
-          }
-          return;
-        } else {
-          // Log only when accuracy state changes
-          if (!lastPosition.current || 
-              lastPosition.current.accuracy !== newPosition.accuracy) {
-            console.warn(`Using position despite low accuracy (${newPosition.accuracy.toFixed(0)}m)`);
-          }
-        }
+    // Skip if position hasn't changed significantly (< 2 meters)
+    if (lastPosition.current) {
+      const distance = Math.sqrt(
+        Math.pow(lastPosition.current.latitude - newPosition.latitude, 2) +
+        Math.pow(lastPosition.current.longitude - newPosition.longitude, 2)
+      ) * 111319.9; // Convert to meters
+
+      if (distance < 2) {
+        return;
       }
     }
 
+    // Update position if it passed all validations
     lastPosition.current = newPosition;
     lastUpdateTime.current = now;
     setPosition(newPosition);
     setError(null);
     setLoading(false);
     setRetryCount(0);
-  }, [validateAccuracy, maxRetries, retryCount, position, minUpdateInterval]);
+  }, [maxRetries, retryCount]);
 
   const handleError = useCallback((err) => {
     // Only update error if it's different
@@ -89,13 +82,21 @@ export function useGeolocation({
     }
 
     const options = {
-      enableHighAccuracy,
-      timeout,
-      maximumAge
+      enableHighAccuracy: true, // Always use high accuracy
+      timeout: 30000,
+      maximumAge: 0 // Don't use cached positions
     };
 
     let watchId;
     try {
+      // Request position with high accuracy first
+      navigator.geolocation.getCurrentPosition(
+        handleSuccess,
+        handleError,
+        options
+      );
+
+      // Then start watching position
       watchId = navigator.geolocation.watchPosition(
         handleSuccess,
         handleError,
@@ -111,14 +112,16 @@ export function useGeolocation({
         navigator.geolocation.clearWatch(watchId);
       }
     };
-  }, [skip, enableHighAccuracy, timeout, maximumAge, handleSuccess, handleError]);
+  }, [skip, handleSuccess, handleError]);
 
   return {
     position: position ? {
       lat: position.latitude,
-      lon: position.longitude,
+      lng: position.longitude,
       accuracy: position.accuracy,
-      speed: position.speed
+      speed: position.speed,
+      heading: position.heading,
+      timestamp: position.timestamp
     } : null,
     error,
     loading

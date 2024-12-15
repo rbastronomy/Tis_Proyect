@@ -461,6 +461,101 @@ class BookingController extends BaseController {
             this.handleError(reply, error);
         }
     }
+
+    /**
+     * Starts a trip and creates history entry
+     * @param {AuthenticatedRequest} request - Fastify request object with authenticated user
+     * @param {Object} reply - Fastify reply object
+     * @returns {Promise<Object>} Response object confirming trip start with history
+     */
+    async startTripWithHistory(request, reply) {
+        try {
+            const bookingId = parseInt(request.params.codigoreserva);
+            const driverId = request.user.rut;
+
+            console.log('Starting trip with history:', { bookingId, driverId });
+
+            const bookingModel = await this.service.startTripWithHistory(
+                bookingId,
+                driverId
+            );
+
+            return reply.send({
+                message: 'Viaje iniciado exitosamente',
+                booking: bookingModel.toJSON()
+            });
+        } catch (error) {
+            request.log.error(error);
+            
+            if (error.message.includes('no encontrada')) {
+                return reply.code(404).send({ error: error.message });
+            }
+            
+            if (error.message.includes('No autorizado')) {
+                return reply.code(403).send({ error: error.message });
+            }
+            
+            if (error.message.includes('no está en estado pendiente')) {
+                return reply.code(400).send({ error: error.message });
+            }
+
+            return reply.code(500).send({
+                error: 'Error al iniciar el viaje',
+                details: error.message
+            });
+        }
+    }
+
+    /**
+     * Complete a trip
+     * @param {Request} req - Express request object
+     * @param {Response} res - Express response object
+     */
+    async completeTrip(req, res) {
+        try {
+            const { codigoReserva } = req.params;
+            
+            const booking = await this.bookingService.completeTrip(codigoReserva);
+            
+            res.json({
+                success: true,
+                message: 'Trip completed successfully',
+                booking
+            });
+        } catch (error) {
+            console.error('Error completing trip:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Error completing trip',
+                error: error.message
+            });
+        }
+    }
+
+    /**
+     * Marks a booking as picked up
+     * @param {AuthenticatedRequest} request - Fastify request object
+     * @param {Object} reply - Fastify reply object
+     */
+    async markPickup(request, reply) {
+        try {
+            const bookingId = parseInt(request.params.codigoreserva);
+            const driverId = request.user.rut;
+
+            const bookingModel = await this.service.markPickup(
+                bookingId,
+                driverId
+            );
+
+            return reply.send({
+                message: 'Pasajero recogido exitosamente',
+                booking: bookingModel.toJSON()
+            });
+        } catch (error) {
+            request.log.error(error);
+            return this.handleError(reply, error);
+        }
+    }
 }
 
 export default BookingController;

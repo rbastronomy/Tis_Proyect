@@ -41,6 +41,8 @@ export class WebSocketController extends BaseSocketHandler {
   }
 
   async handleLocationUpdate(socket, data) {
+    console.log('Received location update:', data);
+
     const location = await this.geoService.updateLocation(data.patente, {
       latitude: data.lat,
       longitude: data.lng,
@@ -49,13 +51,17 @@ export class WebSocketController extends BaseSocketHandler {
       timestamp: data.timestamp
     });
 
-    this.emitToRoom('admin', WS_EVENTS.TAXI_LOCATION_UPDATE, {
+    const updateData = {
       patente: data.patente,
       lat: data.lat,
       lng: data.lng,
       estado: data.estado,
       timestamp: data.timestamp
-    });
+    };
+
+    console.log('Broadcasting location to admin room:', updateData);
+    
+    this.emitToRoom('admin', WS_EVENTS.TAXI_LOCATION_UPDATE, updateData);
   }
 
   handleDriverOffline(socket) {
@@ -77,7 +83,9 @@ export class WebSocketController extends BaseSocketHandler {
   }
 
   async handleJoinAdminRoom(socket) {
+    console.log('Client joining admin room:', socket.id);
     socket.join('admin');
+    console.log('Current rooms for socket:', socket.rooms);
   }
 
   initialize() {

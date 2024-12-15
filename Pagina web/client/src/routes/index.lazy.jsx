@@ -2,21 +2,21 @@ import { createLazyFileRoute } from '@tanstack/react-router';
 import { useState } from 'react';
 import Map from '../components/Map';
 import AddressAutocomplete from '../components/AddressAutocomplete';
+import { Marker, Tooltip } from 'react-leaflet';
+import L from 'leaflet';
 
 export const Route = createLazyFileRoute('/')({
   component: Index,
 });
 
 function Index() {
-  const [position, setPosition] = useState({ lat: -20.2133, lon: -70.1503 }); // Default to Iquique
+  const [position, setPosition] = useState({ lat: -20.2133, lng: -70.1503 }); // Default to Iquique
   const [isTracking, setIsTracking] = useState(false);
 
   const handleSelect = (coords) => {
-    console.log('Updating position to:', coords); // Verificar coordenadas
+    console.log('Updating position to:', coords);
     setPosition(coords);
-    setIsTracking(true); // Activa el seguimiento para centrar el mapa en la posición seleccionada
-
-    // Desactiva el seguimiento después de centrar el mapa
+    setIsTracking(true);
     setTimeout(() => setIsTracking(false), 500);
   };
 
@@ -30,7 +30,21 @@ function Index() {
 
       {/* Contenedor del mapa */}
       <div className="absolute inset-0 z-0 flex">
-        <Map position={position} isTracking={isTracking} className="w-full h-full" />
+        <Map position={position} isTracking={isTracking} className="w-full h-full">
+          {position && (
+            <Marker 
+              position={[position.lat, position.lng]}
+              icon={L.divIcon({
+                className: 'bg-blue-500 rounded-full w-4 h-4 -ml-2 -mt-2',
+                iconSize: [16, 16]
+              })}
+            >
+              <Tooltip permanent>
+                Ubicación seleccionada
+              </Tooltip>
+            </Marker>
+          )}
+        </Map>
       </div>
     </div>
   );

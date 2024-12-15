@@ -329,6 +329,7 @@ export class BookingRepository extends BaseRepository {
             .leftJoin('servicio', 'oferta.codigo_servicio', 'servicio.codigo_servicio')
             .leftJoin('tarifa', 'oferta.id_tarifa', 'tarifa.id_tarifa')
             .where('reserva.rut_conductor', driverId)
+            .whereIn('reserva.estado_reserva', ['PENDIENTE', 'CONFIRMADO', 'RECOGIDO'])
             .whereNull('reserva.deleted_at_reserva')
             .orderBy('reserva.fecha_reserva', 'desc');
 

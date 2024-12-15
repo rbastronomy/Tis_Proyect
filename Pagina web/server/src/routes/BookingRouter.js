@@ -502,5 +502,103 @@ export class BookingRouter extends BaseRouter {
         ['CONDUCTOR']
       )
     });
+
+    // Add this new route in setupRoutes()
+    this.addRoute('POST', '/:codigoreserva/start-trip', {
+      schema: {
+        params: {
+          type: 'object',
+          required: ['codigoreserva'],
+          properties: {
+            codigoreserva: { type: 'integer' }
+          }
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              message: { type: 'string' },
+              booking: {
+                type: 'object',
+                properties: {
+                  codigo_reserva: { type: 'integer' },
+                  estado_reserva: { type: 'string' },
+                  history: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        id_historial: { type: 'integer' },
+                        estado_historial: { type: 'string' },
+                        observacion_historial: { type: 'string' },
+                        fecha_cambio: { type: 'string' },
+                        accion: { type: 'string' }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      handler: this.withAuth(
+        this.controller.startTripWithHistory.bind(this.controller),
+        ['iniciar_viaje'],
+        ['CONDUCTOR']
+      )
+    });
+
+    // Add the pickup route
+    this.addRoute('POST', '/:codigoreserva/pickup', {
+      schema: {
+        params: {
+          type: 'object',
+          required: ['codigoreserva'],
+          properties: {
+            codigoreserva: { 
+              type: 'integer',
+              description: 'Código de la reserva a marcar como recogida'
+            }
+          }
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              message: { type: 'string' },
+              booking: {
+                type: 'object',
+                properties: {
+                  codigo_reserva: { type: 'integer' },
+                  estado_reserva: { 
+                    type: 'string',
+                    enum: ['RECOGIDO']
+                  },
+                  history: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        id_historial: { type: 'integer' },
+                        estado_historial: { type: 'string' },
+                        observacion_historial: { type: 'string' },
+                        fecha_cambio: { type: 'string' },
+                        accion: { type: 'string' }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      handler: this.withAuth(
+        this.controller.markPickup.bind(this.controller),
+        ['iniciar_viaje'],
+        ['CONDUCTOR']
+      )
+    });
   }
 } 

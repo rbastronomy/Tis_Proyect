@@ -87,7 +87,10 @@ export class MapsController {
       let dlng = ((result & 1) ? ~(result >> 1) : (result >> 1));
       lng += dlng;
 
-      points.push({ lat: lat / 1E5, lon: lng / 1E5 });
+      points.push({ 
+        lat: lat / 1E5, 
+        lng: lng / 1E5 
+      });
     }
     return points;
   }

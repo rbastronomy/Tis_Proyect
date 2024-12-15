@@ -788,6 +788,120 @@ export class BookingService extends BaseService {
         };
     }
 
+    /**
+     * Starts a trip and creates a history entry
+     * @param {number} bookingId - Booking ID
+     * @param {string} driverId - Driver's RUT
+     * @returns {Promise<BookingModel>} Updated booking with new history
+     * @throws {Error} If start fails
+     */
+    async startTripWithHistory(bookingId, driverId) {
+        try {
+            const booking = await this.repository.findById(bookingId);
+            if (!booking) {
+                throw new Error('Reserva no encontrada');
+            }
+
+            if (booking.estado_reserva !== 'PENDIENTE') {
+                throw new Error('La reserva no está en estado pendiente');
+            }
+
+            if (booking.rut_conductor !== driverId) {
+                throw new Error('No autorizado para iniciar este viaje');
+            }
+
+            return await this.repository.transaction(async (trx) => {
+                // Create history entry
+                const historyEntry = await this.historyService.createHistoryEntryWithTransaction(
+                    trx,
+                    'MODIFICACION',
+                    bookingId,
+                    {
+                        estado_historial: 'RESERVA_EN_PROGRESO',
+                        observacion_historial: 'Viaje iniciado por el conductor'
+                    }
+                );
+
+                // Update booking status
+                const updateData = {
+                    estado_reserva: 'CONFIRMADO',
+                    updated_at: new Date()
+                };
+
+                const updatedBooking = await this.repository.update(
+                    bookingId,
+                    updateData,
+                    trx
+                );
+
+                return new BookingModel({
+                    ...updatedBooking,
+                    history: [historyEntry]
+                });
+            });
+        } catch (error) {
+            console.error('Error starting trip with history:', error);
+            throw new Error(`Error al iniciar el viaje: ${error.message}`);
+        }
+    }
+
+    /**
+     * Marks a booking as picked up and creates history entry
+     * @param {number} bookingId - Booking ID
+     * @param {number} driverId - Driver's RUT
+     * @returns {Promise<BookingModel>} Updated booking with new history
+     * @throws {Error} If pickup fails
+     */
+    async markPickup(bookingId, driverId) {
+        try {
+            const booking = await this.repository.findById(bookingId);
+            if (!booking) {
+                throw new Error('Reserva no encontrada');
+            }
+
+            if (booking.estado_reserva !== 'CONFIRMADO') {
+                throw new Error('La reserva debe estar confirmada para marcar recogida');
+            }
+
+            if (booking.rut_conductor !== driverId) {
+                throw new Error('No autorizado para marcar recogida en este viaje');
+            }
+
+            return await this.repository.transaction(async (trx) => {
+                // Create history entry
+                const historyEntry = await this.historyService.createHistoryEntryWithTransaction(
+                    trx,
+                    'MODIFICACION',
+                    bookingId,
+                    {
+                        estado_historial: 'RESERVA_EN_PROGRESO',
+                        observacion_historial: 'Pasajero recogido por el conductor'
+                    }
+                );
+
+                // Update booking status
+                const updateData = {
+                    estado_reserva: 'RECOGIDO',
+                    updated_at: new Date()
+                };
+
+                const updatedBooking = await this.repository.update(
+                    bookingId,
+                    updateData,
+                    trx
+                );
+
+                return new BookingModel({
+                    ...updatedBooking,
+                    history: [historyEntry]
+                });
+            });
+        } catch (error) {
+            console.error('Error marking pickup:', error);
+            throw new Error(`Error al marcar recogida: ${error.message}`);
+        }
+    }
+
 }
 
 export default BookingService;
