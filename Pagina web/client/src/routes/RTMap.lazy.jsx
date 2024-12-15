@@ -1,51 +1,52 @@
 import React, { useEffect, useState } from 'react';
+import { GoogleMap, Marker, useJsApiLoader } from '@react-google-maps/api';
+import { createLazyFileRoute } from '@tanstack/react-router';
 
+// Componente RTMap
 const RTMap = () => {
-    const [locations, setLocations] = useState({});
-    const [ws, setWs] = useState(null);
+    const [positions, setPositions] = useState([]);
+    const { isLoaded } = useJsApiLoader({
+        googleMapsApiKey: 'AIzaSyBnDTpGimoFJe0bB-_UwE7wQeehmn2TPzU',
+    });
 
     useEffect(() => {
-        const socket = new WebSocket('ws://localhost:3000');
-        setWs(socket);
+        const ws = new WebSocket('ws://localhost:3000');
 
-  
-        socket.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            console.log('Datos recibidos:', data);
+        ws.onopen = () => {
+            ws.send(JSON.stringify({ type: 'subscribe', clientId: 'client123' }));
+        };
 
-            if (data.type === 'locations_update') {
-                setLocations(data.payload);
+        ws.onmessage = (event) => {
+            const message = JSON.parse(event.data);
+            if (message.type === 'location-update') {
+                setPositions((prev) => [...prev, message.payload]);
             }
         };
 
-     
-        return () => socket.close();
+        return () => {
+            ws.close();
+        };
     }, []);
 
-    const updateLocation = () => {
-        if (ws) {
-            const fakeLocation = {
-                userId: '1234',
-                lat: -33.45, 
-                lng: -70.66,
-            };
-            ws.send(JSON.stringify({ type: 'update_location', payload: fakeLocation }));
-        }
-    };
+    if (!isLoaded) return <div>Loading...</div>;
 
     return (
-        <div>
-            <h1>Mapa de Rastreo en Tiempo Real</h1>
-            <button onClick={updateLocation}>Enviar Ubicación Falsa</button>
-            <ul>
-                {Object.entries(locations).map(([userId, { lat, lng }]) => (
-                    <li key={userId}>
-                        {userId}: {lat}, {lng}
-                    </li>
-                ))}
-            </ul>
-        </div>
+        <GoogleMap
+            mapContainerStyle={{ width: '100%', height: '100vh' }}
+            center={{ lat: 51.505, lng: -0.09 }}
+            zoom={13}
+        >
+            {positions.map((pos, index) => (
+                <Marker
+                    key={index}
+                    position={{ lat: pos.latitude, lng: pos.longitude }}
+                    label={pos.label}
+                />
+            ))}
+        </GoogleMap>
     );
 };
 
-export default RTMap;
+export const Route = createLazyFileRoute('/RTMap')({
+    component: RTMap, 
+});
