@@ -1,156 +1,175 @@
 import { BaseRepository } from '../core/BaseRepository.js';
-import { ReceiptModel } from '../models/ReceiptModel.js';
 
 export class ReceiptRepository extends BaseRepository {
-  constructor() {
-    super('boleta', 'codigo_boleta');
-  }
-
-  /**
-   * Find invoice by ID
-   * @param {number} codigo_boleta - Invoice ID
-   * @returns {Promise<ReceiptModel>} Invoice instance
-   */
-  async findById(codigo_boleta) {
-    try {
-      const result = await this.db(this.tableName)
-        .where('codigo_boleta', codigo_boleta)
-        .first();
-      return ReceiptModel.toModel(result);
-    } catch (error) {
-      throw new Error(`Error buscando boleta por id: ${error.message}`);
+    constructor() {
+        super('boleta', 'codigo_boleta');
     }
-  }
 
-  /**
-   * Create new invoice
-   * @param {Object} receiptData - Invoice data
-   * @returns {Promise<Object>} Created invoice
-   */
-  async create(receiptData) {
-    try {
-      const [created] = await this.db(this.tableName)
-        .insert(receiptData)
-        .returning('*');
-      return ReceiptModel.toModel(created);
-    } catch (error) {
-      throw new Error(`Error creando boleta: ${error.message}`);
+    /**
+     * Creates a new receipt
+     * @param {Object} receiptData - Receipt data
+     * @param {Object} [trx] - Optional transaction object
+     * @returns {Promise<Object>} Created receipt
+     */
+    async create(receiptData, trx = null) {
+        try {
+            const query = (trx || this.db)(this.tableName)
+                .insert({
+                    ...receiptData,
+                    created_at: new Date(),
+                    updated_at: new Date()
+                })
+                .returning('*');
+
+            const [created] = await query;
+            return created;
+        } catch (error) {
+            throw new Error(`Error creating receipt: ${error.message}`);
+        }
     }
-  }
 
-  /**
-   * Update invoice
-   * @param {number} codigo_boleta - Invoice ID
-   * @param {Object} updateData - Updated invoice data
-   * @returns {Promise<Object|null>} Updated invoice or null
-   */
-  async update(codigo_boleta, updateData) {
-    try {
-      const [updated] = await this.db(this.tableName)
-        .where('codigo_boleta', codigo_boleta)
-        .update(updateData)
-        .returning('*');
-      return updated ? ReceiptModel.toModel(updated) : null;
-    } catch (error) {
-      throw new Error(`Error actualizando una boleta: ${error.message}`);
+    /**
+     * Finds receipt by ID
+     * @param {number} codigo_boleta - Receipt ID
+     * @returns {Promise<Object|null>} Receipt data or null
+     */
+    async findById(codigo_boleta) {
+        try {
+            return await this.db(this.tableName)
+                .where('codigo_boleta', codigo_boleta)
+                .whereNull('deleted_at_boleta')
+                .first();
+        } catch (error) {
+            throw new Error(`Error finding receipt: ${error.message}`);
+        }
     }
-  }
 
-  /**
-   * Soft delete invoice
-   * @param {number} codigo_boleta - Invoice ID
-   * @returns {Promise<Object|null>} Deleted invoice or null
-   */
-  async softDelete(codigo_boleta) {
-    try {
-      const [deletedInvoice] = await this.db(this.tableName)
-        .where('codigo_boleta', codigo_boleta)
-        .update({
-          estado_boleta: 'ELIMINADO',
-          deleted_at_boleta: new Date()
-        })
-        .returning('*');
-      return deletedInvoice ? ReceiptModel.toModel(deletedInvoice) : null;
-    } catch (error) {
-      throw new Error(`Error soft deleting invoice: ${error.message}`);
+    /**
+     * Updates receipt
+     * @param {number} codigo_boleta - Receipt ID
+     * @param {Object} updateData - Updated data
+     * @param {Object} [trx] - Optional transaction object
+     * @returns {Promise<Object|null>} Updated receipt or null
+     */
+    async update(codigo_boleta, updateData, trx = null) {
+        try {
+            const query = (trx || this.db)(this.tableName)
+                .where('codigo_boleta', codigo_boleta)
+                .whereNull('deleted_at_boleta')
+                .update({
+                    ...updateData,
+                    updated_at: new Date()
+                })
+                .returning('*');
+
+            const [updated] = await query;
+            return updated || null;
+        } catch (error) {
+            throw new Error(`Error updating receipt: ${error.message}`);
+        }
     }
-  }
 
-  /**
-   * Find invoice by trip
-   * @param {number} codigo_viaje - Trip ID
-   * @returns {Promise<InvoiceModel|null>} Invoice instance or null
-   */
-  async findByTrip(codigo_viaje) {
-    try {
-      const result = await this.db(this.tableName)
-        .where('codigo_viaje', codigo_viaje)
-        .first();
-      return result ? ReceiptModel.toModel(result) : null;
-    } catch (error) {
-      throw new Error(`Error finding invoice by trip: ${error.message}`);
+    /**
+     * Soft deletes receipt
+     * @param {number} codigo_boleta - Receipt ID
+     * @param {Object} [trx] - Optional transaction object
+     * @returns {Promise<Object|null>} Deleted receipt or null
+     */
+    async softDelete(codigo_boleta, trx = null) {
+        try {
+            const query = (trx || this.db)(this.tableName)
+                .where('codigo_boleta', codigo_boleta)
+                .whereNull('deleted_at_boleta')
+                .update({
+                    deleted_at_boleta: new Date(),
+                    updated_at: new Date()
+                })
+                .returning('*');
+
+            const [deleted] = await query;
+            return deleted || null;
+        } catch (error) {
+            throw new Error(`Error soft deleting receipt: ${error.message}`);
+        }
     }
-  }
 
-  /**
-   * Find invoice by reservation
-   * @param {number} codigo_reserva - Reservation ID
-   * @returns {Promise<InvoiceModel|null>} Invoice instance or null
-   */
-  async findByReservation(codigo_reserva) {
-    try {
-      const result = await this.db(this.tableName)
-        .where('codigo_reserva', codigo_reserva)
-        .first();
-      return result ? ReceiptModel.toModel(result) : null;
-    } catch (error) {
-      throw new Error(`Error finding invoice by reservation: ${error.message}`);
+    /**
+     * Find receipt by trip through junction table
+     * @param {number} codigo_viaje - Trip ID
+     * @returns {Promise<Object|null>} Receipt data or null
+     */
+    async findByTrip(codigo_viaje) {
+        try {
+            return await this.db(this.tableName)
+                .select('boleta.*')
+                .join('genera', 'boleta.codigo_boleta', 'genera.codigo_boleta')
+                .where('genera.codigo_viaje', codigo_viaje)
+                .whereNull('boleta.deleted_at_boleta')
+                .first();
+        } catch (error) {
+            throw new Error(`Error finding receipt by trip: ${error.message}`);
+        }
     }
-  }
 
-  /**
-   * Find invoice with full details
-   * @param {number} codigo_boleta - Invoice ID
-   * @returns {Promise<InvoiceModel|null>} Invoice with details or null
-   */
-  async findWithDetails(codigo_boleta) {
-    try {
-      const result = await this.db(this.tableName)
-        .select(
-          'boleta.*',
-          'viaje.duracion',
-          'viaje.fecha_viaje',
-          'reserva.origen_reserva',
-          'reserva.destino_reserva'
-        )
-        .leftJoin('viaje', 'boleta.codigo_viaje', 'viaje.codigo_viaje')
-        .leftJoin('reserva', 'boleta.codigo_reserva', 'reserva.codigo_reserva')
-        .where('boleta.codigo_boleta', codigo_boleta)
-        .first();
-
-      return result ? ReceiptModel.toModel(result) : null;
-    } catch (error) {
-      throw new Error(`Error finding invoice with details: ${error.message}`);
+    /**
+     * Find receipt by booking through junction table
+     * @param {number} codigo_reserva - Booking ID
+     * @returns {Promise<Object|null>} Receipt data or null
+     */
+    async findByBooking(codigo_reserva) {
+        try {
+            return await this.db(this.tableName)
+                .select('boleta.*')
+                .join('genera', 'boleta.codigo_boleta', 'genera.codigo_boleta')
+                .where('genera.codigo_reserva', codigo_reserva)
+                .whereNull('boleta.deleted_at_boleta')
+                .first();
+        } catch (error) {
+            throw new Error(`Error finding receipt by booking: ${error.message}`);
+        }
     }
-  }
 
-  /**
-   * Find invoices by status
-   * @param {string} status - Invoice status
-   * @returns {Promise<Array>} List of invoices
-   */
-  async findByStatus(status) {
-    try {
-      const results = await this.db(this.tableName)
-        .select('*')
-        .where('estado_boleta', status)
-        .whereNull('deleted_at_boleta');
-
-      return results.map(result => ReceiptModel.toModel(result));
-    } catch (error) {
-      throw new Error(`Error finding invoices by status: ${error.message}`);
+    /**
+     * Find receipt with full details including trip and booking data
+     * @param {number} codigo_boleta - Receipt ID
+     * @returns {Promise<Object|null>} Receipt with details or null
+     */
+    async findWithDetails(codigo_boleta) {
+        try {
+            return await this.db(this.tableName)
+                .select(
+                    'boleta.*',
+                    'viaje.duracion',
+                    'viaje.fecha_viaje',
+                    'reserva.origen_reserva',
+                    'reserva.destino_reserva'
+                )
+                .join('genera', 'boleta.codigo_boleta', 'genera.codigo_boleta')
+                .join('viaje', 'genera.codigo_viaje', 'viaje.codigo_viaje')
+                .join('reserva', 'genera.codigo_reserva', 'reserva.codigo_reserva')
+                .where('boleta.codigo_boleta', codigo_boleta)
+                .whereNull('boleta.deleted_at_boleta')
+                .first();
+        } catch (error) {
+            throw new Error(`Error finding receipt with details: ${error.message}`);
+        }
     }
-  }
+
+    /**
+     * Find receipts by status
+     * @param {string} estado_boleta - Receipt status
+     * @returns {Promise<Array>} List of receipts
+     */
+    async findByStatus(estado_boleta) {
+        try {
+            return await this.db(this.tableName)
+                .where({ estado_boleta })
+                .whereNull('deleted_at_boleta')
+                .orderBy('fecha_emision', 'desc');
+        } catch (error) {
+            throw new Error(`Error finding receipts by status: ${error.message}`);
+        }
+    }
 }
 
 export default ReceiptRepository;

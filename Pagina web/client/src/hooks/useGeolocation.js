@@ -8,7 +8,7 @@ export function useGeolocation({
   retryOnError = true,
   maxRetries = 3,
   validateAccuracy = null,
-  minUpdateInterval = 1000 // Minimum time between updates in ms
+  minUpdateInterval = 1000
 }) {
   const [position, setPosition] = useState(null);
   const [error, setError] = useState(null);
@@ -20,21 +20,21 @@ export function useGeolocation({
   const handleSuccess = useCallback((pos) => {
     const now = Date.now();
     
-    // Enhanced position validation
-    const newPosition = {
-      latitude: pos.coords.latitude,
-      longitude: pos.coords.longitude,
-      accuracy: pos.coords.accuracy,
-      speed: pos.coords.speed,
-      timestamp: pos.timestamp,
-      heading: pos.coords.heading
-    };
-
-    // Skip invalid coordinates
-    if (!newPosition.latitude || !newPosition.longitude) {
-      console.warn('Invalid coordinates received:', newPosition);
+    // Validate and transform coordinates immediately
+    if (!pos.coords || !pos.coords.latitude || !pos.coords.longitude || 
+        isNaN(pos.coords.latitude) || isNaN(pos.coords.longitude)) {
+      console.warn('Invalid coordinates received:', pos);
       return;
     }
+
+    const newPosition = {
+      lat: pos.coords.latitude,
+      lng: pos.coords.longitude,
+      accuracy: pos.coords.accuracy,
+      speed: pos.coords.speed,
+      heading: pos.coords.heading,
+      timestamp: pos.timestamp
+    };
 
     // Skip positions with very poor accuracy (> 100 meters)
     if (newPosition.accuracy > 100) {
@@ -48,8 +48,8 @@ export function useGeolocation({
     // Skip if position hasn't changed significantly (< 2 meters)
     if (lastPosition.current) {
       const distance = Math.sqrt(
-        Math.pow(lastPosition.current.latitude - newPosition.latitude, 2) +
-        Math.pow(lastPosition.current.longitude - newPosition.longitude, 2)
+        Math.pow(lastPosition.current.lat - newPosition.lat, 2) +
+        Math.pow(lastPosition.current.lng - newPosition.lng, 2)
       ) * 111319.9; // Convert to meters
 
       if (distance < 2) {
@@ -115,14 +115,7 @@ export function useGeolocation({
   }, [skip, handleSuccess, handleError]);
 
   return {
-    position: position ? {
-      lat: position.latitude,
-      lng: position.longitude,
-      accuracy: position.accuracy,
-      speed: position.speed,
-      heading: position.heading,
-      timestamp: position.timestamp
-    } : null,
+    position,
     error,
     loading
   };

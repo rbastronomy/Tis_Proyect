@@ -376,69 +376,58 @@ export class BookingService extends BaseService {
     }
 
     /**
-     * Completes a trip and creates viaje record
+     * Completes a trip
      * @param {number} bookingId - Booking ID
-     * @param {number} driverId - Driver's RUT
-     * @param {number} duracion - Trip duration
-     * @param {string} observacion - Trip observations
-     * @returns {Promise<Object>} Updated booking and created viaje
-     * @throws {Error} If completion fails
+     * @param {string} driverId - Driver's RUT
+     * @returns {Promise<BookingModel>} Updated booking
      */
-    async completeTrip(bookingId, driverId, duracion, observacion) {
+    async completeTrip(bookingId, driverId) {
         try {
             const booking = await this.repository.findById(bookingId);
             if (!booking) {
                 throw new Error('Reserva no encontrada');
             }
 
-            if (booking.estados !== 'EN_CAMINO') {
-                throw new Error('El viaje no está en curso');
+            if (booking.estado_reserva !== 'RECOGIDO') {
+                throw new Error('La reserva no está en estado RECOGIDO');
             }
 
             if (booking.rut_conductor !== driverId) {
                 throw new Error('No autorizado para completar este viaje');
             }
 
-            const historial = await this.HistoryRepository.create({
-                rut: driverId,
-                accion: 'COMPLETAR_VIAJE',
-                descripcion: 'Viaje completado',
-                fecha: new Date()
+            return await this.repository.transaction(async (trx) => {
+                // Create history entry
+                const historyEntry = await this.historyService.createHistoryEntryWithTransaction(
+                    trx,
+                    'MODIFICACION',
+                    bookingId,
+                    {
+                        estado_historial: 'RESERVA_COMPLETADA',
+                        observacion_historial: 'Viaje completado por el conductor'
+                    }
+                );
+
+                // Update booking status
+                const updateData = {
+                    estado_reserva: 'COMPLETADO',
+                    fecha_realizado: new Date(),
+                    updated_at: new Date()
+                };
+
+                const updatedBooking = await this.repository.update(
+                    bookingId,
+                    updateData,
+                    trx
+                );
+
+                return new BookingModel({
+                    ...updatedBooking,
+                    history: [historyEntry]
+                });
             });
-
-            const viaje = await this.tripRepository.create({
-                codigoreserva: bookingId,
-                duracionv: duracion,
-                observacionv: observacion,
-                fechav: new Date()
-            });
-
-            await this.generaRepository.create({
-                codigo: viaje.codigo,
-                codigoreserva: bookingId,
-                codigoboleta: null,
-                fechagenerada: new Date()
-            });
-
-            const updatedBooking = await this.repository.update(bookingId, {
-                estados: 'COMPLETADO',
-                idhistorial: historial.idhistorial,
-                frealizado: new Date()
-            });
-
-            const receiptData ={
-                codigoReserva: bookingId,
-                total: booking.total,
-                fecha_emision: new Date(),
-                metodo_pago: 'efectivo',
-                descripcion_boleta: 'Viaje completado',
-            };
-            await this.receiptService.create(receiptData);
-
-            return { booking: updatedBooking, viaje };
         } catch (error) {
-            console.error('Error completing trip:', error);
-            throw new Error(`Error al completar el viaje: ${error.message}`);
+            throw new Error(`Error al completar viaje: ${error.message}`);
         }
     }
 

@@ -10,9 +10,11 @@ export function useDriverLocation({
 }) {
   const { socket, isConnected, isConnecting } = useSocketContext();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [smoothedPosition, setSmoothedPosition] = useState(null);
+  const positionBuffer = useRef([]);
+  const BUFFER_SIZE = 3;
   const authTimeoutRef = useRef(null);
   const authAttemptedRef = useRef(false);
-  const lastLoggedAccuracy = useRef(null);
 
   const { position, error: geoError, loading } = useGeolocation({ 
     skip: !isOnline || !isAuthenticated,
@@ -31,13 +33,16 @@ export function useDriverLocation({
     }
   });
 
-  // Add position smoothing
-  const [smoothedPosition, setSmoothedPosition] = useState(null);
-  const positionBuffer = useRef([]);
-  const BUFFER_SIZE = 3;
-
+  // Position smoothing
   useEffect(() => {
     if (!position) return;
+
+    // Validate position
+    if (!position.lat || !position.lng || 
+        isNaN(position.lat) || isNaN(position.lng)) {
+      console.warn('Invalid position received:', position);
+      return;
+    }
 
     // Add new position to buffer
     positionBuffer.current.push(position);
@@ -47,26 +52,26 @@ export function useDriverLocation({
       positionBuffer.current.shift();
     }
 
-    // Calculate smoothed position (average of buffer)
+    // Calculate smoothed position
     if (positionBuffer.current.length >= 2) {
-      const smoothed = {
-        lat: positionBuffer.current.reduce((sum, pos) => sum + pos.latitude, 0) / positionBuffer.current.length,
-        lng: positionBuffer.current.reduce((sum, pos) => sum + pos.longitude, 0) / positionBuffer.current.length,
-        accuracy: position.accuracy,
-        speed: position.speed,
-        heading: position.heading,
-        timestamp: position.timestamp
-      };
-      setSmoothedPosition(smoothed);
+      const validPositions = positionBuffer.current.filter(pos => 
+        pos && pos.lat && pos.lng && 
+        !isNaN(pos.lat) && !isNaN(pos.lng)
+      );
+
+      if (validPositions.length >= 2) {
+        const smoothed = {
+          lat: validPositions.reduce((sum, pos) => sum + pos.lat, 0) / validPositions.length,
+          lng: validPositions.reduce((sum, pos) => sum + pos.lng, 0) / validPositions.length,
+          accuracy: position.accuracy,
+          speed: position.speed,
+          heading: position.heading,
+          timestamp: position.timestamp
+        };
+        setSmoothedPosition(smoothed);
+      }
     } else {
-      setSmoothedPosition({
-        lat: position.latitude,
-        lng: position.longitude,
-        accuracy: position.accuracy,
-        speed: position.speed,
-        heading: position.heading,
-        timestamp: position.timestamp
-      });
+      setSmoothedPosition(position);
     }
   }, [position]);
 

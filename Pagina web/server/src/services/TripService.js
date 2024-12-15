@@ -1,210 +1,193 @@
 import { BaseService } from "../core/BaseService.js";
-import TripRepository from "../repository/TripRepository.js";
-import TripModel from "../models/TripModel.js";
+import { TripRepository } from "../repository/TripRepository.js";
+import { TripModel } from "../models/TripModel.js";
+import { BookingService } from "./BookingService.js";
+import { UserService } from "./UserService.js";
+import { TaxiService } from "./TaxiService.js";
+import { ReceiptService } from './ReceiptService.js';
+import { GeneraRepository } from '../repository/GeneraRepository.js';
 
 export class TripService extends BaseService {
-    constructor() {     
-        super();
-        this.repository = new TripRepository();
+    constructor() {
+        const tripRepository = new TripRepository();
+        super(tripRepository);
+        this.bookingService = new BookingService();
+        this.userService = new UserService();
+        this.taxiService = new TaxiService();
+        this.receiptService = new ReceiptService();
+        this.generaRepository = new GeneraRepository();
     }
 
     /**
-     * Get trip by ID
-     * @param {string} code - Trip code
-     * @returns {Promise<TripModel>} Trip details
-     */
-    async getTripById(code) {
-        try {
-            const trip = await this.repository.findById(code);
-            if (!trip) {
-                throw new Error('Trip not found');
-            }
-            return trip;
-        } catch (error) {
-            console.error('Error getting trip by id:', error);
-            throw new Error('Failed to retrieve trip details');
-        }
-    }
-
-    /**
-     * Create a new trip
-     * @param {Object} tripData - Trip data
+     * Creates a trip record from a completed booking with receipt
+     * @param {number} bookingId - Booking ID
+     * @param {Object} tripData - Trip completion data
+     * @param {number} tripData.duracion - Trip duration in minutes
+     * @param {number} tripData.pasajeros - Number of passengers
+     * @param {string} tripData.observacion_viaje - Trip observations
+     * @param {string} tripData.metodo_pago - Payment method (EFECTIVO/TRANSFERENCIA)
      * @returns {Promise<TripModel>} Created trip
      */
-    async createTrip(tripData) {
+    async createFromBooking(bookingId, tripData) {
         try {
-            this.validateTripData(tripData);
-            return await this.repository.create(tripData);
-        } catch (error) {
-            console.error('Error creating trip:', error);
-            throw new Error('Failed to create trip');
-        }
-    }
+            // Validate booking exists and is in correct state
+            const booking = await this.bookingService.getBookingByCode(bookingId);
+            if (!booking) {
+                throw new Error('Reserva no encontrada');
+            }
+            if (booking.estado_reserva !== 'RECOGIDO') {
+                throw new Error('La reserva debe estar en estado RECOGIDO');
+            }
 
-    /**
-     * Mark a trip as completed
-     * @param {string} code - Trip code
-     * @param {Object} tripData - Trip update data
-     * @returns {Promise<TripModel>} Updated trip
-     */
-    async completeTrip(code, tripData) {
-        try {
-            return await this.repository.update(code, {
-                ...tripData,
-                status: 'completed',
+            return await this.repository.transaction(async (trx) => {
+                // 1. Create trip record
+                const newTrip = await this.repository.create({
+                    codigo_reserva: bookingId,
+                    origen_viaje: booking.origen_reserva,
+                    destino_viaje: booking.destino_reserva,
+                    duracion: tripData.duracion,
+                    pasajeros: tripData.pasajeros,
+                    observacion_viaje: tripData.observacion_viaje || '',
+                    fecha_viaje: new Date(),
+                    estado_viaje: 'COMPLETADO'
+                }, trx);
+
+                // 2. Create receipt with payment method from frontend
+                const receipt = await this.receiptService.create({
+                    total: booking.tarifa.precio,
+                    fecha_emision: new Date(),
+                    metodo_pago: tripData.metodo_pago,
+                    descripcion_boleta: `Viaje desde ${booking.origen_reserva} hasta ${booking.destino_reserva}`,
+                    estado_boleta: 'PAGADO'
+                }, trx);
+
+                // 3. Create junction record
+                await this.generaRepository.create({
+                    codigo_viaje: newTrip.codigo_viaje,
+                    codigo_reserva: bookingId,
+                    codigo_boleta: receipt.codigo_boleta
+                }, trx);
+
+                // Return trip with related data
+                return new TripModel({
+                    ...newTrip,
+                    booking,
+                    receipt
+                });
             });
         } catch (error) {
-            console.error('Error completing trip:', error);
-            throw new Error('Failed to complete trip');
-        }
-    }
-
-    /**
-     * Cancel a trip
-     * @param {string} code - Trip code
-     * @returns {Promise<TripModel>} Updated trip
-     */
-    async cancelTrip(code) {
-        try {
-            const trip = await this.repository.findById(code);
-            if (!trip) {
-                throw new Error('Trip not found');
+            // Add more context to the error
+            if (error.message.includes('metodo_pago')) {
+                throw new Error('Método de pago inválido');
             }
-            return await this.repository.update(code, {
-                status: 'cancelled',
-            });
-        } catch (error) {
-            console.error('Error cancelling trip:', error);
-            throw new Error('Failed to cancel trip');
-        }
-    }
-
-    /**
-     * Validate trip data
-     * @param {Object} tripData - Trip data to validate
-     * @throws {Error} If required fields are missing
-     */
-    validateTripData(tripData) {
-        const requiredFields = ['origin', 'destination', 'passengers'];
-        for (const field of requiredFields) {
-            if (!(field in tripData)) {
-                throw new Error(`Field ${field} is required`);
+            if (error.message.includes('duracion')) {
+                throw new Error('La duración del viaje es requerida');
             }
+            if (error.message.includes('pasajeros')) {
+                throw new Error('El número de pasajeros es requerido');
+            }
+            throw new Error(`Error al crear viaje: ${error.message}`);
         }
     }
 
     /**
-     * Get trips by user
-     * @param {string} userId - User's ID
-     * @returns {Promise<Array<TripModel>>} List of trips
+     * Gets trips by driver
+     * @param {number} driverId - Driver's RUT
+     * @returns {Promise<Array<TripModel>>} Driver's trips
      */
-    async getTripsByUser(userId) {
-        try {   
-            const trips = await this.repository.findByUser(userId);
-            return TripModel.toModels(trips);
-        } catch (error) {
-            console.error('Error getting trips by user:', error);
-            throw new Error('Failed to retrieve trips for the user');
-        }
-    }
-
-    /**
-     * Get trips by driver
-     * @param {string} driverId - Driver's ID
-     * @returns {Promise<Array<TripModel>>} List of trips
-     */
-    async getTripsByDriver(driverId) {
+    async getDriverTrips(driverId) {
         try {
             const trips = await this.repository.findByDriver(driverId);
-            return TripModel.toModels(trips);
+            return trips.map(trip => new TripModel(trip));
         } catch (error) {
-            console.error('Error getting trips by driver:', error);
-            throw new Error('Failed to retrieve trips for the driver');
+            throw new Error(`Error al obtener viajes del conductor: ${error.message}`);
         }
     }
 
     /**
-     * Get trips within a date range
+     * Gets trips by client
+     * @param {number} clientId - Client's RUT
+     * @returns {Promise<Array<TripModel>>} Client's trips
+     */
+    async getClientTrips(clientId) {
+        try {
+            const trips = await this.repository.findByUser(clientId);
+            return trips.map(trip => new TripModel(trip));
+        } catch (error) {
+            throw new Error(`Error al obtener viajes del cliente: ${error.message}`);
+        }
+    }
+
+    /**
+     * Gets trip with full details
+     * @param {number} tripId - Trip ID
+     * @returns {Promise<TripModel>} Trip with details
+     */
+    async getTripWithDetails(tripId) {
+        try {
+            const tripWithRef = await this.repository.findWithBookingRef(tripId);
+            if (!tripWithRef) {
+                throw new Error('Viaje no encontrado');
+            }
+
+            const booking = await this.bookingService.getBookingByCode(tripWithRef.codigo_reserva);
+
+            return new TripModel({
+                ...tripWithRef,
+                booking
+            });
+        } catch (error) {
+            throw new Error(`Error al obtener detalles del viaje: ${error.message}`);
+        }
+    }
+
+    /**
+     * Gets trips by date range
      * @param {Date} startDate - Start date
      * @param {Date} endDate - End date
-     * @returns {Promise<Array<TripModel>>} List of trips
+     * @returns {Promise<Array<TripModel>>} Trips in range
      */
     async getTripsByDateRange(startDate, endDate) {
         try {
             if (startDate > endDate) {
-                throw new Error('Start date must be before or equal to end date');
+                throw new Error('Fecha inicial debe ser anterior a fecha final');
             }
-            return await this.repository.findByDateRange(startDate, endDate);
+            const trips = await this.repository.findByDateRange(startDate, endDate);
+            return trips.map(trip => new TripModel(trip));
         } catch (error) {
-            console.error('Error getting trips by date range:', error);
-            throw new Error('Failed to retrieve trips for the specified date range');
+            throw new Error(`Error al obtener viajes por rango de fecha: ${error.message}`);
         }
     }
 
     /**
-     * Get detailed trip information
-     * @param {string} code - Trip code
-     * @returns {Promise<TripModel>} Trip details
+     * Gets trips for a booking
+     * @param {number} bookingId - Booking ID
+     * @returns {Promise<Array<TripModel>>} Booking's trips
      */
-    async getTripDetails(code) {
+    async getTripsByBooking(bookingId) {
         try {
-            const trip = await this.repository.findWithDetails(code);
-            if (!trip) {
-                throw new Error('Trip not found');
-            }
-            return trip;
+            const trips = await this.repository.findByBooking(bookingId);
+            return trips.map(trip => new TripModel(trip));
         } catch (error) {
-            console.error('Error getting trip details:', error);
-            throw new Error('Failed to retrieve trip details');
+            throw new Error(`Error al obtener viajes de la reserva: ${error.message}`);
         }
     }
 
     /**
-     * Get trips by reservation
-     * @param {string} reservationCode - Reservation code
-     * @returns {Promise<Array<TripModel>>} List of trips
-     */
-    async getTripsByReservation(reservationCode) {
-        try {
-            return await this.repository.findByReservation(reservationCode);
-        } catch (error) {
-            console.error('Error getting trips by reservation:', error);
-            throw new Error('Failed to retrieve trips for the reservation');
-        }
-    }
-
-    /**
-     * Update trip
-     * @param {string} code - Trip code
-     * @param {Object} tripData - Trip update data
-     * @returns {Promise<TripModel>} Updated trip
-     */
-    async updateTrip(code, tripData) {
-        const updatedTrip = await this.repository.update(code, tripData);
-        return updatedTrip;
-    }
-
-    /**
-     * Delete trip (soft delete)
-     * @param {string} code - Trip code
+     * Soft deletes a trip record
+     * @param {number} tripId - Trip ID
      * @returns {Promise<TripModel>} Deleted trip
      */
-    async deleteTrip(code) {
-        const deletedTrip = await this.repository.softDelete(code);
-        if (!deletedTrip) {
-            throw new Error('Trip not found');
+    async softDelete(tripId) {
+        try {
+            const deletedTrip = await this.repository.softDelete(tripId);
+            if (!deletedTrip) {
+                throw new Error('Viaje no encontrado');
+            }
+            return new TripModel(deletedTrip);
+        } catch (error) {
+            throw new Error(`Error al eliminar viaje: ${error.message}`);
         }
-        return deletedTrip;
-    }
-
-    /**
-     * Get all trips
-     * @param {Object} query - Query parameters
-     * @returns {Promise<Array<TripModel>>} List of trips
-     */
-    async getAll(query) {
-        const trips = await this.repository.getAll(query);
-        return trips;
     }
 }
 

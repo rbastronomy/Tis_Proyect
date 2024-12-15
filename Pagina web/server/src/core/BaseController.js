@@ -65,5 +65,33 @@ export class BaseController {
 
       return reply.code(200).send(result);
     }
+
+    /**
+     * Handles errors in a standardized way
+     * @param {import('fastify').FastifyReply} reply - Fastify reply object
+     * @param {Error} error - Error to handle
+     */
+    handleError(reply, error) {
+        console.error('Controller Error:', error);
+
+        if (error.message.includes('no encontrada') || error.message.includes('not found')) {
+            return reply.code(404).send({ 
+                error: 'Not Found',
+                message: error.message 
+            });
+        }
+
+        if (error.message.includes('No autorizado') || error.message.includes('unauthorized')) {
+            return reply.code(403).send({ 
+                error: 'Forbidden',
+                message: error.message 
+            });
+        }
+
+        return reply.code(500).send({ 
+            error: 'Internal Server Error',
+            message: error.message 
+        });
+    }
   }
   

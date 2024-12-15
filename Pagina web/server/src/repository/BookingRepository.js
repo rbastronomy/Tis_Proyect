@@ -349,6 +349,24 @@ export class BookingRepository extends BaseRepository {
         throw new Error(`Error finding bookings for driver: ${error.message}`);
     }
   }
+
+  /**
+   * Validates if a booking state transition is allowed
+   * @param {string} currentState - Current booking state
+   * @param {string} newState - New booking state
+   * @returns {boolean} True if transition is allowed
+   */
+  validateStateTransition(currentState, newState) {
+    const allowedTransitions = {
+      'PENDIENTE': ['CONFIRMADO', 'CANCELADO'],
+      'CONFIRMADO': ['RECOGIDO', 'CANCELADO'],
+      'RECOGIDO': ['COMPLETADO', 'CANCELADO'],
+      'COMPLETADO': [],
+      'CANCELADO': []
+    };
+
+    return allowedTransitions[currentState]?.includes(newState) || false;
+  }
 }
 
 export default BookingRepository;

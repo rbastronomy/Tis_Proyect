@@ -600,5 +600,57 @@ export class BookingRouter extends BaseRouter {
         ['CONDUCTOR']
       )
     });
+
+    // Add the complete trip route
+    this.addRoute('POST', '/:codigoreserva/complete-trip', {
+      schema: {
+        params: {
+          type: 'object',
+          required: ['codigoreserva'],
+          properties: {
+            codigoreserva: { 
+              type: 'integer',
+              description: 'Código de la reserva a completar'
+            }
+          }
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              message: { type: 'string' },
+              booking: {
+                type: 'object',
+                properties: {
+                  codigo_reserva: { type: 'integer' },
+                  estado_reserva: { 
+                    type: 'string',
+                    enum: ['COMPLETADO']
+                  },
+                  history: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        id_historial: { type: 'integer' },
+                        estado_historial: { type: 'string' },
+                        observacion_historial: { type: 'string' },
+                        fecha_cambio: { type: 'string' },
+                        accion: { type: 'string' }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      handler: this.withAuth(
+        this.controller.completeTrip.bind(this.controller),
+        ['completar_viaje'],
+        ['CONDUCTOR']
+      )
+    });
   }
 } 

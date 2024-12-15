@@ -4,61 +4,157 @@ import { UserModel } from './UserModel.js';
 import { TaxiModel } from './TaxiModel.js';
 import { ReceiptModel } from './ReceiptModel.js';
 
+/**
+ * @typedef {Object} TripModelData
+ * @property {number|null} codigo_viaje - Trip ID
+ * @property {string} origen_viaje - Trip origin location
+ * @property {string} destino_viaje - Trip destination location
+ * @property {number} duracion - Trip duration in minutes
+ * @property {number} pasajeros - Number of passengers
+ * @property {string} observacion_viaje - Trip observations
+ * @property {Date|null} fecha_viaje - Trip completion date
+ * @property {string} estado_viaje - Trip status (always COMPLETADO for valid trips)
+ * @property {Date|null} deleted_at_viaje - Soft delete timestamp
+ * @property {Date|null} created_at - Creation timestamp
+ * @property {Date|null} updated_at - Last update timestamp
+ */
+
 export class TripModel extends BaseModel {
+    static VALID_ESTADOS = [
+        'COMPLETADO',    // Trip record is valid and complete
+        'ANULADO'       // Trip record was voided/cancelled after creation
+    ];
+
+    /**
+     * Default values for a new trip instance
+     * @type {TripModelData}
+     */
     static defaultData = {
-        // Campos de la tabla 'viaje'
-        codigo_viaje: null,           // ID del viaje
-        origen_viaje: '',            // Origen del viaje
-        destino_viaje: '',           // Destino del viaje
-        duracion: 0,                 // Duración del viaje minutos
-        pasajeros: 0,                // Número de pasajeros
-        observacion_viaje: '',       // Observaciones del viaje
-        fecha_viaje: null,           // Fecha del viaje
-        estado_viaje: 'REGISTRADO',   // Estado del viaje
-        deleted_at_viaje: null,      // Soft delete
-
-        // Relaciones
-        booking: null,          // Reserva asociada (BookingModel)
-        driver: null,           // Conductor (UserModel)
-        taxi: null,             // Taxi (TaxiModel)
-        receipt: null,          // Boleta (ReceiptModel)
-
-        // Relaciones ternarias
-        generates: [],          // Relación viaje-reserva-boleta
-        ratings: []             // Relación persona-viaje-valoración
+        codigo_viaje: null,
+        origen_viaje: '',
+        destino_viaje: '',
+        duracion: 0,
+        pasajeros: 1,
+        observacion_viaje: '',
+        fecha_viaje: null,
+        estado_viaje: 'COMPLETADO',
+        deleted_at_viaje: null,
+        created_at: null,
+        updated_at: null,
+        booking: null,
+        driver: null,
+        taxi: null,
+        receipt: null
     };
 
+    /**
+     * Creates a new TripModel instance representing a completed trip
+     * @param {Partial<TripModelData>} data - Initial trip data
+     * @throws {Error} If validation fails
+     */
     constructor(data = {}) {
-        const modelData = {
-            ...data,
-            booking: data.booking instanceof BookingModel ? data.booking : null,
-            driver: data.driver instanceof UserModel ? data.driver : null,
-            taxi: data.taxi instanceof TaxiModel ? data.taxi : null,
-            receipt: data.receipt instanceof ReceiptModel ? data.receipt : null
-        };
+        // Ensure fecha_viaje is set to completion time if not provided
+        if (!data.fecha_viaje) {
+            data.fecha_viaje = new Date();
+        }
+        
+        super(data, TripModel.defaultData);
+        this.validate();
 
-        super(modelData, TripModel.defaultData);
-
-        // Inicializar modelos si se proporcionan datos crudos
-        if (data.booking && !(data.booking instanceof BookingModel)) {
-            this._data.booking = new BookingModel(data.booking);
+        // Initialize related models if raw data is provided
+        if (data.booking) {
+            this.booking = data.booking instanceof BookingModel ? 
+                data.booking : new BookingModel(data.booking);
         }
-        if (data.driver && !(data.driver instanceof UserModel)) {
-            this._data.driver = new UserModel(data.driver);
+        if (data.driver) {
+            this.driver = data.driver instanceof UserModel ? 
+                data.driver : new UserModel(data.driver);
         }
-        if (data.taxi && !(data.taxi instanceof TaxiModel)) {
-            this._data.taxi = new TaxiModel(data.taxi);
+        if (data.taxi) {
+            this.taxi = data.taxi instanceof TaxiModel ? 
+                data.taxi : new TaxiModel(data.taxi);
         }
-        if (data.receipt && !(data.receipt instanceof ReceiptModel)) {
-            this._data.receipt = new ReceiptModel(data.receipt);
+        if (data.receipt) {
+            this.receipt = data.receipt instanceof ReceiptModel ? 
+                data.receipt : new ReceiptModel(data.receipt);
         }
-
-        // Inicializar arreglos de relaciones
-        this._data.generates = Array.isArray(data.generates) ? data.generates : [];
-        this._data.ratings = Array.isArray(data.ratings) ? data.ratings : [];
     }
 
-    // Getters básicos (mantienen nombres de BD)
+    /**
+     * Validates the trip record data
+     * @private
+     * @throws {Error} If validation fails
+     */
+    validate() {
+        this.clearErrors();
+
+        this.validateString('origen_viaje', this._data.origen_viaje);
+        this.validateString('destino_viaje', this._data.destino_viaje);
+        this.validateNumber('duracion', this._data.duracion, { min: 1 });
+        this.validateNumber('pasajeros', this._data.pasajeros, { min: 1 });
+        this.validateString('observacion_viaje', this._data.observacion_viaje, { required: false });
+        this.validateDate('fecha_viaje', this._data.fecha_viaje);
+        this.validateEnum('estado_viaje', this._data.estado_viaje, TripModel.VALID_ESTADOS);
+
+        // Additional validation for completed trip
+        if (!this._data.booking) {
+            this.addError('booking', 'El viaje debe estar asociado a una reserva');
+        }
+        if (!this._data.driver) {
+            this.addError('driver', 'El viaje debe tener un conductor asignado');
+        }
+        if (!this._data.taxi) {
+            this.addError('taxi', 'El viaje debe tener un taxi asignado');
+        }
+
+        this.throwIfErrors();
+    }
+
+    // Setters with validation
+    /** @param {string} value */
+    set origen_viaje(value) {
+        if (typeof value !== 'string' || value.trim().length === 0) {
+            throw new Error('Origen debe ser una dirección válida');
+        }
+        this._data.origen_viaje = value.trim();
+    }
+
+    /** @param {string} value */
+    set destino_viaje(value) {
+        if (typeof value !== 'string' || value.trim().length === 0) {
+            throw new Error('Destino debe ser una dirección válida');
+        }
+        this._data.destino_viaje = value.trim();
+    }
+
+    /** @param {number} value */
+    set duracion(value) {
+        const duration = Number(value);
+        if (isNaN(duration) || duration < 1) {
+            throw new Error('Duración debe ser al menos 1 minuto');
+        }
+        this._data.duracion = duration;
+    }
+
+    /** @param {number} value */
+    set pasajeros(value) {
+        const passengers = Number(value);
+        if (isNaN(passengers) || passengers < 1) {
+            throw new Error('Debe haber al menos un pasajero');
+        }
+        this._data.pasajeros = passengers;
+    }
+
+    /** @param {Date|string} value */
+    set fecha_viaje(value) {
+        const date = value instanceof Date ? value : new Date(value);
+        if (isNaN(date.getTime())) {
+            throw new Error('Fecha de viaje debe ser una fecha válida');
+        }
+        this._data.fecha_viaje = date;
+    }
+
+    // Getters
     get codigo_viaje() { return this._data.codigo_viaje; }
     get origen_viaje() { return this._data.origen_viaje; }
     get destino_viaje() { return this._data.destino_viaje; }
@@ -67,56 +163,15 @@ export class TripModel extends BaseModel {
     get observacion_viaje() { return this._data.observacion_viaje; }
     get fecha_viaje() { return this._data.fecha_viaje; }
     get estado_viaje() { return this._data.estado_viaje; }
-    get deleted_at_viaje() { return this._data.deleted_at_viaje; }
-
-    // Getters de relaciones (nombres en inglés)
     get booking() { return this._data.booking; }
     get driver() { return this._data.driver; }
     get taxi() { return this._data.taxi; }
     get receipt() { return this._data.receipt; }
-    get generates() { return this._data.generates; }
-    get ratings() { return this._data.ratings; }
 
-    getDuracionEnHoras() {
-        return this._data.duracion / 60;
-    }
-
-    // Métodos de estado
-    isPending() { return this._data.estado_viaje === 'PENDIENTE'; }
-    isInProgress() { return this._data.estado_viaje === 'EN_CURSO'; }
-    isCompleted() { return this._data.estado_viaje === 'COMPLETADO'; }
-    isCancelled() { return this._data.estado_viaje === 'CANCELADO'; }
-
-
-    // Métodos de relaciones
-    hasBooking() { return !!this._data.booking; }
-    hasDriver() { return !!this._data.driver; }
-    hasTaxi() { return !!this._data.taxi; }
-    hasReceipt() { return !!this._data.receipt; }
-
-    // Métodos para relaciones ternarias
-    addGenerate(booking, invoice = null) {
-        const generateRecord = {
-            codigo_viaje: this.codigo_viaje,
-            codigoreserva: booking.codigoreserva,
-            codigoboleta: invoice?.codigoboleta || null,
-            fechagenerada: new Date()
-        };
-        this._data.generates.push(generateRecord);
-        return generateRecord;
-    }
-
-    addRating(userId, ratingId) {
-        const ratingRecord = {
-            rut: userId,
-            codigo_viaje: this.codigo_viaje,
-            idvaloracion: ratingId,
-            fechavaloracion: new Date()
-        };
-        this._data.ratings.push(ratingRecord);
-        return ratingRecord;
-    }
-
+    /**
+     * Converts the trip record to a JSON object
+     * @returns {Object} Trip data as JSON
+     */
     toJSON() {
         const json = {
             codigo_viaje: this._data.codigo_viaje,
@@ -127,21 +182,16 @@ export class TripModel extends BaseModel {
             observacion_viaje: this._data.observacion_viaje,
             fecha_viaje: this._data.fecha_viaje,
             estado_viaje: this._data.estado_viaje,
-            generates: this._data.generates,
-            ratings: this._data.ratings
+            deleted_at_viaje: this._data.deleted_at_viaje,
+            created_at: this._data.created_at,
+            updated_at: this._data.updated_at
         };
 
-        // Agregar relaciones si existen
         if (this._data.booking) json.booking = this._data.booking.toJSON();
         if (this._data.driver) json.driver = this._data.driver.toJSON();
         if (this._data.taxi) json.taxi = this._data.taxi.toJSON();
-        if (this._data.invoice) json.invoice = this._data.invoice.toJSON();
+        if (this._data.receipt) json.receipt = this._data.receipt.toJSON();
 
         return json;
-    }
-
-    static fromDB(data) {
-        if (!data) return null;
-        return new TripModel(data);
     }
 }

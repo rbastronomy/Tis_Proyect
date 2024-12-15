@@ -29,6 +29,8 @@ export function FormModal({
       isDismissable={isDismissable && !isSubmitting}
       classNames={{
         base: "bg-white dark:bg-gray-900",
+        backdrop: "z-[1000]",
+        wrapper: "z-[1001]",
       }}
     >
       <ModalContent>

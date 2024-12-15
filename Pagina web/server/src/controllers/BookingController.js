@@ -250,41 +250,51 @@ class BookingController extends BaseController {
     }
 
     /**
-     * Completes a trip
-     * @param {Object} request - Fastify request object
-     * @param {Object} request.params - Request parameters
-     * @param {Object} request.body - Request body
-     * @param {Object} reply - Fastify reply object
-     * @returns {Promise<Object>} Response object confirming trip completion
+     * Complete a trip
+     * @param {FastifyRequest} request - Fastify request object
+     * @param {FastifyReply} reply - Fastify reply object
      */
     async completeTrip(request, reply) {
         try {
-            const { bookingId } = request.params;
-            const { duracion, observacion } = request.body;
+            const bookingId = parseInt(request.params.codigoreserva);
             const driverId = request.user.rut;
 
-            const result = await this.service.completeTrip(
+            const bookingModel = await this.service.completeTrip(
                 bookingId,
-                driverId,
-                duracion,
-                observacion
+                driverId
             );
 
             return reply.send({
                 message: 'Viaje completado exitosamente',
-                trip: result.toJSON()
+                booking: bookingModel.toJSON()
             });
         } catch (error) {
             request.log.error(error);
+            
             if (error.message.includes('no encontrada')) {
-                return reply.code(404).send({ error: error.message });
+                return reply.code(404).send({ 
+                    error: 'Not Found',
+                    message: 'Reserva no encontrada' 
+                });
             }
+            
             if (error.message.includes('No autorizado')) {
-                return reply.code(403).send({ error: error.message });
+                return reply.code(403).send({ 
+                    error: 'Forbidden',
+                    message: 'No autorizado para completar este viaje' 
+                });
             }
+            
+            if (error.message.includes('no está en estado RECOGIDO')) {
+                return reply.code(400).send({ 
+                    error: 'Bad Request',
+                    message: 'La reserva debe estar en estado RECOGIDO para completar el viaje' 
+                });
+            }
+
             return reply.code(500).send({
-                error: 'Error al completar el viaje',
-                details: error.message
+                error: 'Internal Server Error',
+                message: error.message
             });
         }
     }
@@ -502,32 +512,6 @@ class BookingController extends BaseController {
             return reply.code(500).send({
                 error: 'Error al iniciar el viaje',
                 details: error.message
-            });
-        }
-    }
-
-    /**
-     * Complete a trip
-     * @param {Request} req - Express request object
-     * @param {Response} res - Express response object
-     */
-    async completeTrip(req, res) {
-        try {
-            const { codigoReserva } = req.params;
-            
-            const booking = await this.bookingService.completeTrip(codigoReserva);
-            
-            res.json({
-                success: true,
-                message: 'Trip completed successfully',
-                booking
-            });
-        } catch (error) {
-            console.error('Error completing trip:', error);
-            res.status(500).json({
-                success: false,
-                message: 'Error completing trip',
-                error: error.message
             });
         }
     }

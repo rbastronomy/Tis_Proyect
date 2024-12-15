@@ -1,72 +1,89 @@
 import { BaseService } from "../core/BaseService.js";
 import { ReceiptRepository } from "../repository/ReceiptRepository.js";
+import { ReceiptModel } from "../models/ReceiptModel.js";
 
 export class ReceiptService extends BaseService {
-    constructor(){
-        super();
-        this.repository = new ReceiptRepository();
+    constructor() {
+        const receiptRepository = new ReceiptRepository();
+        super(receiptRepository);
     }
 
-    async getBoletaById(codigo_boleta){
+    /**
+     * Creates a new receipt
+     * @param {Object} receiptData - Receipt data
+     * @param {Object} [trx] - Optional transaction object
+     * @returns {Promise<Object>} Created receipt
+     */
+    async create(receiptData, trx = null) {
         try {
-            const boleta = await this.repository.findById(codigo_boleta);
-            if(!boleta){
+            this.validateReceiptData(receiptData);
+            const receipt = await this.repository.create(receiptData, trx);
+            return receipt;
+        } catch (error) {
+            throw new Error(`Error al crear boleta: ${error.message}`);
+        }
+    }
+
+    /**
+     * Gets receipt by ID
+     * @param {number} codigo_boleta - Receipt ID
+     * @returns {Promise<Object>} Receipt data
+     */
+    async getReceiptById(codigo_boleta) {
+        try {
+            const receipt = await this.repository.findById(codigo_boleta);
+            if (!receipt) {
                 throw new Error('Boleta no encontrada');
             }
-            return boleta;
+            return receipt;
         } catch (error) {
-            console.error('Error obteniendo id de boleta:', error);
-            throw new Error('Error al recuperar los detalles de la boleta');
+            throw new Error(`Error al obtener boleta: ${error.message}`);
         }
     }
 
-    async createBoleta(receiptData){
+    /**
+     * Updates receipt status
+     * @param {number} codigo_boleta - Receipt ID
+     * @param {Object} receiptData - Updated data
+     * @returns {Promise<Object>} Updated receipt
+     */
+    async updateReceipt(codigo_boleta, receiptData) {
         try {
-            this.validateBoletaData(receiptData);
-            const createdBoleta= await this.repository.create(receiptData);
-            return createdBoleta;
-        } catch (error) {
-            console.error('Error creando boleta:', error);
-            throw new Error('fallo en crear boleta');
-        }
-    }
-
-    async updateBoleta(codigo_boleta, boletaData){
-        try {
-            const boleta = await this.repository.findById(codigo_boleta);
-            if(!boleta){
+            const receipt = await this.repository.findById(codigo_boleta);
+            if (!receipt) {
                 throw new Error('Boleta no encontrada');
-            }
-            return await this.repository.update(codigo_boleta, boletaData);
-        } catch (error) {
-            console.error('Error actualizado boleta:', error);
-            throw new Error('fallo en actualizar boleta');
-        }
-    }
-
-    async cancelBoleta(codigo_boleta){
-        try {
-            const boleta = await this.repository.findById(codigo_boleta);
-            if(!boleta){
-                throw new Error('Boleta not found');
             }
             return await this.repository.update(codigo_boleta, {
-                estado_boleta: 'CANCELADA',
+                ...receiptData,
+                updated_at: new Date()
             });
         } catch (error) {
-            console.error('Error actualizado boleta:', error);
-            throw new Error('Fallo en actualizar boleta');
+            throw new Error(`Error al actualizar boleta: ${error.message}`);
         }
     }
 
-    validateBoletaData(boletaData){
-        const requieredFields = ['total','fecha_emision','metodo_pago'];
-        for (const field of requieredFields){
-            if(!boletaData[field]){
-                throw new Error(`Field ${field} is required`);
+    /**
+     * Validates receipt data
+     * @private
+     * @param {Object} receiptData - Data to validate
+     * @throws {Error} If validation fails
+     */
+    validateReceiptData(receiptData) {
+        const requiredFields = ['total', 'fecha_emision', 'metodo_pago'];
+        for (const field of requiredFields) {
+            if (!receiptData[field]) {
+                throw new Error(`Campo ${field} es requerido`);
             }
         }
-    }
-    
 
+        if (typeof receiptData.total !== 'number' || receiptData.total <= 0) {
+            throw new Error('Total debe ser un número positivo');
+        }
+
+        if (!['EFECTIVO', 'TARJETA', 'TRANSFERENCIA'].includes(receiptData.metodo_pago)) {
+            throw new Error('Método de pago no válido');
+        }
+    }
 }
+
+export default ReceiptService;

@@ -72,7 +72,12 @@ const getTimeOptions = () => {
 const getMinDateTime = () => {
   const now = new Date();
   now.setMinutes(now.getMinutes() + 30);
-  return now.toISOString().slice(0, 16);
+  return now;
+};
+
+const toLocalISOString = (date) => {
+  const tzOffset = new Date().getTimezoneOffset() * 60000; // offset in milliseconds
+  return new Date(date.getTime() - tzOffset).toISOString().slice(0, 16);
 };
 
 const TimeSelector = ({ field, error, bookingType }) => {
@@ -87,14 +92,14 @@ const TimeSelector = ({ field, error, bookingType }) => {
   });
 
   useEffect(() => {
-    if (!field.value) {
+    if (!field.value && bookingType === 'NORMAL') {
       const asapOption = getTimeOptions().find(opt => opt.key === 'ASAP');
       if (asapOption) {
         field.onChange(asapOption.value);
         setSelectedTimeKey('ASAP');
       }
     }
-  }, [field]);
+  }, [field, bookingType]);
 
   useEffect(() => {
     if (field.value) {
@@ -116,10 +121,36 @@ const TimeSelector = ({ field, error, bookingType }) => {
     }
   };
 
+  const handleDateTimeChange = (e) => {
+    const selectedDateTime = e.target.value;
+    if (!selectedDateTime) {
+      field.onChange('');
+      return;
+    }
+    
+    try {
+      // Create a date object in local time
+      const localDate = new Date(selectedDateTime);
+      if (isNaN(localDate.getTime())) {
+        field.onChange('');
+        return;
+      }
+      
+      // Convert to UTC ISO string
+      field.onChange(localDate.toISOString());
+      
+      // Trigger blur to help with form validation
+      field.onBlur();
+    } catch (error) {
+      console.error('Error parsing date:', error);
+      field.onChange('');
+    }
+  };
+
   return (
     <div className="space-y-2">
       <label className="text-sm font-medium">
-        Hora de recogida
+        {bookingType === 'NORMAL' ? 'Hora de recogida' : 'Fecha y hora programada'}
       </label>
       {bookingType === 'NORMAL' ? (
         <div className="relative">
@@ -156,8 +187,10 @@ const TimeSelector = ({ field, error, bookingType }) => {
           <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
           <Input
             type="datetime-local"
-            {...field}
-            min={getMinDateTime()}
+            value={field.value ? toLocalISOString(new Date(field.value)) : ''}
+            onChange={handleDateTimeChange}
+            onBlur={field.onBlur}
+            min={toLocalISOString(getMinDateTime())}
             className="pl-10"
             classNames={{
               input: "bg-transparent",
@@ -192,7 +225,7 @@ function CreateBooking() {
   const [loadingServices, setLoadingServices] = useState(true)
   const [rideType, setRideType] = useState(null) // 'CITY' or 'AIRPORT'
 
-  const { control, handleSubmit, setValue, watch, formState: { errors } } = useForm({
+  const { control, handleSubmit, watch, setValue, formState: { errors, isValid } } = useForm({
     defaultValues: {
       origen_reserva: '',
       destino_reserva: '',
@@ -200,7 +233,8 @@ function CreateBooking() {
       codigo_servicio: '',
       id_tarifa: '',
       observacion_reserva: ''
-    }
+    },
+    mode: 'onChange'
   });
 
   // Check for specific permission in the nested structure
@@ -271,10 +305,19 @@ function CreateBooking() {
    * @returns {Promise<void>}
    */
   const onSubmit = async (data) => {
-    console.log('Form submitted with data:', data)
-    setLoading(true)
-    setSubmitError('')
+    console.log('Form submitted with data:', data);
+    
     try {
+      // Validate fecha_reserva
+      const selectedDate = new Date(data.fecha_reserva);
+      if (isNaN(selectedDate.getTime())) {
+        setSubmitError('Fecha de reserva inválida');
+        return;
+      }
+
+      setLoading(true);
+      setSubmitError('');
+      
       const response = await fetch('/api/bookings/', {
         method: 'POST',
         headers: {
@@ -285,24 +328,24 @@ function CreateBooking() {
           ...data,
           codigo_servicio: parseInt(data.codigo_servicio),
           id_tarifa: parseInt(data.id_tarifa),
-          fecha_reserva: new Date(data.fecha_reserva).toISOString(),
+          fecha_reserva: selectedDate.toISOString(),
           tipo_reserva: rideType === 'CITY' ? 'CIUDAD' : 'AEROPUERTO'
         })
-      })
+      });
 
       if (response.ok) {
-        navigate({ to: '/reservas' })
+        navigate({ to: '/reservas' });
       } else {
-        const errorData = await response.json()
-        setSubmitError(errorData.message || 'Error al crear la reserva')
+        const errorData = await response.json();
+        setSubmitError(errorData.message || 'Error al crear la reserva');
       }
     } catch (error) {
-      console.error('Error:', error)
-      setSubmitError('Error de conexión al servidor')
+      console.error('Error:', error);
+      setSubmitError('Error de conexión al servidor');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div className="flex justify-center items-center min-h-[calc(100vh-64px)] bg-gradient-to-b from-gray-50 to-white p-4">
@@ -366,6 +409,8 @@ function CreateBooking() {
                       isLoading={loadingServices}
                       isInvalid={!!error}
                       errorMessage={error?.message}
+                      aria-label="Seleccione el tipo de servicio"
+                      label="Tipo de Servicio"
                     >
                       {services.map((service) => (
                         <SelectItem 
@@ -388,9 +433,25 @@ function CreateBooking() {
                 <Controller
                   name="fecha_reserva"
                   control={control}
-                  rules={{ required: "La hora es requerida" }}
+                  rules={{ 
+                    required: "La hora es requerida",
+                    validate: value => {
+                      if (!value) return "La hora es requerida";
+                      const selectedDate = new Date(value);
+                      if (isNaN(selectedDate.getTime())) return "Fecha inválida";
+                      
+                      const minDate = getMinDateTime();
+                      // Compare timestamps in milliseconds
+                      return selectedDate.getTime() >= minDate.getTime() || 
+                        "La fecha y hora debe ser al menos 30 minutos en el futuro";
+                    }
+                  }}
                   render={({ field, fieldState: { error } }) => (
-                    <TimeSelector field={field} error={error} bookingType={bookingType} />
+                    <TimeSelector 
+                      field={field} 
+                      error={error} 
+                      bookingType={selectedServiceData?.tipo_servicio} 
+                    />
                   )}
                 />
 
@@ -405,7 +466,7 @@ function CreateBooking() {
                     
                     // Filter tariffs based on time
                     const filteredTariffs = availableTariffs.filter(tariff => {
-                      if (!selectedTime) return true; // Show all tariffs if no time selected
+                      if (!selectedTime) return true;
                       const isNightTariff = tariff.tipo_tarifa.includes('NOCTURNO');
                       return isNight ? isNightTariff : !isNightTariff;
                     });
@@ -423,7 +484,9 @@ function CreateBooking() {
                           }}
                           isInvalid={!!error}
                           errorMessage={error?.message}
-                          isDisabled={!selectedTime} // Disable selection until time is chosen
+                          isDisabled={!selectedTime}
+                          aria-label="Seleccione la tarifa"
+                          label="Tarifa"
                         >
                           {filteredTariffs.map((tariff) => (
                             <SelectItem 
@@ -557,7 +620,7 @@ function CreateBooking() {
               className="w-full"
               size="lg"
               isLoading={loading}
-              isDisabled={!watch('id_tarifa') || Object.keys(errors).length > 0}
+              isDisabled={!isValid || loading || Object.keys(errors).length > 0}
             >
               {loading ? "Procesando..." : "Solicitar Servicio"}
             </Button>

@@ -14,6 +14,12 @@ import { Polyline } from 'react-leaflet'
 import { Marker, Tooltip, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import { calculateDistance, findClosestPointIndex } from '../../utils/geoUtils'
+import { Modal } from '@nextui-org/modal'
+import { toast } from 'react-hot-toast'
+import { FormModal } from "../../components/FormModal";
+import { Input } from "@nextui-org/input";
+import { Select, SelectItem } from "@nextui-org/select";
+import { Textarea } from "@nextui-org/input";
 
 const Map = lazy(() => import('../../components/Map'))
 
@@ -55,6 +61,14 @@ function TaxiDashboard() {
   const [routeCoordinates, setRouteCoordinates] = useState(null)
   const [remainingRoute, setRemainingRoute] = useState(null)
   const [lastPosition, setLastPosition] = useState(null)
+  const [showTripModal, setShowTripModal] = useState(false)
+  const [tripData, setTripData] = useState({
+    pasajeros: 1,
+    duracion: 0,
+    observacion_viaje: ''
+  })
+  const [isArrived, setIsArrived] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   // 3. Custom hooks
   const { 
@@ -82,6 +96,192 @@ function TaxiDashboard() {
       }
     }
   });
+
+  // Move fetchRoute definition before the useEffect
+  const lastFetchRef = useRef(0);
+  const abortControllerRef = useRef(null);
+
+  const fetchRoute = useCallback(
+    debounce(async (currentPosition, currentTrip) => {
+      if (!currentPosition || !currentTrip) return;
+
+      // Cancel previous fetch if it exists
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+
+      // Create new abort controller
+      abortControllerRef.current = new AbortController();
+
+      // Check if we should fetch (minimum 5 seconds between fetches)
+      const now = Date.now();
+      if (now - lastFetchRef.current < 5000) return;
+
+      try {
+        const origin = `${currentPosition.lat},${currentPosition.lng}`;
+        // Determine destination based on trip state
+        let destination;
+        
+        if (currentTrip.estado_reserva === 'CONFIRMADO') {
+          // If trip is just started, route to pickup location
+          destination = `${currentTrip.origen_lat},${currentTrip.origen_lng}`;
+        } else if (currentTrip.estado_reserva === 'RECOGIDO') {
+          // If passenger is picked up, route to final destination
+          destination = `${currentTrip.destino_lat},${currentTrip.destino_lng}`;
+        } else {
+          return; // Don't fetch route for other states
+        }
+
+        console.log('Fetching route:', {
+          origin,
+          destination,
+          tripState: currentTrip.estado_reserva,
+          tripDetails: {
+            origen: [currentTrip.origen_lat, currentTrip.origen_lng],
+            destino: [currentTrip.destino_lat, currentTrip.destino_lng]
+          }
+        });
+
+        const response = await fetch(
+          `/api/maps/directions?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}`,
+          {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            signal: abortControllerRef.current.signal
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`Error en la respuesta: ${response.status}`);
+        }
+
+        const data = await response.json();
+        if (data.status === 'OK' && data.routes?.length > 0) {
+          setRouteCoordinates(data.routes[0].decodedCoordinates);
+          lastFetchRef.current = now;
+        }
+      } catch (error) {
+        if (error.name === 'AbortError') {
+          console.log('Route fetch aborted');
+        } else {
+          console.error('Error al obtener la ruta:', error);
+        }
+      }
+    }, 1000),
+    [] // Empty dependencies since we're using parameters
+  );
+
+  // Then the useEffect that uses fetchRoute
+  useEffect(() => {
+    const fetchAssignedBookings = async () => {
+      if (!user?.rut) return;
+
+      try {
+        setLoading(true);
+        const response = await fetch(`/api/bookings/driver/${user.rut}`, {
+          credentials: 'include'
+        });
+        
+        if (!response.ok) {
+          throw new Error('Error fetching bookings');
+        }
+
+        const data = await response.json();
+        // Filter bookings for current day
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        const todayBookings = (data.reservas || []).filter(booking => {
+          const bookingDate = new Date(booking.fecha_reserva);
+          bookingDate.setHours(0, 0, 0, 0);
+          return bookingDate.getTime() === today.getTime();
+        });
+
+        setAssignedBookings(todayBookings);
+
+        // Find any active booking (CONFIRMADO or RECOGIDO)
+        const activeBooking = todayBookings.find(
+          booking => booking.estado_reserva === 'CONFIRMADO' || booking.estado_reserva === 'RECOGIDO'
+        );
+
+        if (activeBooking) {
+          console.log('Found active booking:', activeBooking);
+          
+          // Geocode both origin and destination addresses
+          const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+          const [originResponse, destinationResponse] = await Promise.all([
+            fetch(
+              `https://maps.googleapis.com/maps/api/geocode/json?` +
+              `address=${encodeURIComponent(activeBooking.origen_reserva)}` +
+              `&components=country:CL|administrative_area:Tarapacá|locality:Iquique|locality:Alto Hospicio` +
+              `&key=${apiKey}`
+            ),
+            fetch(
+              `https://maps.googleapis.com/maps/api/geocode/json?` +
+              `address=${encodeURIComponent(activeBooking.destino_reserva)}` +
+              `&components=country:CL|administrative_area:Tarapacá|locality:Iquique|locality:Alto Hospicio` +
+              `&key=${apiKey}`
+            )
+          ]);
+
+          const [originData, destinationData] = await Promise.all([
+            originResponse.json(),
+            destinationResponse.json()
+          ]);
+
+          const tripData = {
+            ...activeBooking,
+          };
+
+          if (originData.status === 'OK' && originData.results[0]) {
+            const location = originData.results[0].geometry.location;
+            tripData.origen_lat = location.lat;
+            tripData.origen_lng = location.lng;
+          }
+
+          if (destinationData.status === 'OK' && destinationData.results[0]) {
+            const location = destinationData.results[0].geometry.location;
+            tripData.destino_lat = location.lat;
+            tripData.destino_lng = location.lng;
+          }
+
+          console.log('Setting active trip with data:', tripData);
+          setActiveTrip(tripData);
+
+          // If trip is in RECOGIDO state, fetch route to destination
+          if (activeBooking.estado_reserva === 'RECOGIDO' && position && tripData.destino_lat) {
+            fetchRoute({
+              lat: position.lat,
+              lng: position.lng
+            }, {
+              lat: tripData.destino_lat,
+              lng: tripData.destino_lng
+            });
+          } 
+          // If trip is in CONFIRMADO state, fetch route to pickup
+          else if (activeBooking.estado_reserva === 'CONFIRMADO' && position && tripData.origen_lat) {
+            fetchRoute({
+              lat: position.lat,
+              lng: position.lng
+            }, {
+              lat: tripData.origen_lat,
+              lng: tripData.origen_lng
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAssignedBookings();
+    const interval = setInterval(fetchAssignedBookings, 60000);
+    return () => clearInterval(interval);
+  }, [user?.rut, position, fetchRoute]);
 
   // 4. All useEffect hooks
   useEffect(() => {
@@ -118,154 +318,44 @@ function TaxiDashboard() {
     fetchAssignedTaxi();
   }, [user?.rut]);
 
-  useEffect(() => {
-    const fetchAssignedBookings = async () => {
-      if (!user?.rut) return;
-
-      try {
-        setLoading(true);
-        const response = await fetch(`/api/bookings/driver/${user.rut}`, {
-          credentials: 'include'
-        });
-        
-        if (!response.ok) {
-          throw new Error('Error fetching bookings');
-        }
-
-        const data = await response.json();
-        // Filter bookings for current day
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        
-        const todayBookings = (data.reservas || []).filter(booking => {
-          const bookingDate = new Date(booking.fecha_reserva);
-          bookingDate.setHours(0, 0, 0, 0);
-          return bookingDate.getTime() === today.getTime();
-        });
-
-        setAssignedBookings(todayBookings);
-
-        // Find any CONFIRMADO booking and set it as active
-        const confirmedBooking = todayBookings.find(
-          booking => booking.estado_reserva === 'CONFIRMADO'
-        );
-
-        if (confirmedBooking) {
-          // Geocode the origin address to get coordinates
-          const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-          const geocodeResponse = await fetch(
-            `https://maps.googleapis.com/maps/api/geocode/json?` +
-            `address=${encodeURIComponent(confirmedBooking.origen_reserva)}` +
-            `&components=country:CL|administrative_area:Tarapacá|locality:Iquique|locality:Alto Hospicio` +
-            `&key=${apiKey}`
-          );
-
-          if (geocodeResponse.ok) {
-            const geocodeData = await geocodeResponse.json();
-            if (geocodeData.status === 'OK' && geocodeData.results[0]) {
-              const location = geocodeData.results[0].geometry.location;
-              setActiveTrip({
-                ...confirmedBooking,
-                origen_lat: location.lat,
-                origen_lng: location.lng
-              });
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Error:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchAssignedBookings();
-    const interval = setInterval(fetchAssignedBookings, 60000);
-    return () => clearInterval(interval);
-  }, [user?.rut]);
-
-  // Add a ref to track the last fetch time and abort controller
-  const lastFetchRef = useRef(0);
-  const abortControllerRef = useRef(null);
-
-  const fetchRoute = useCallback(
-    debounce(async (currentPosition, currentTrip) => {
-      if (!currentPosition || !currentTrip) return;
-
-      // Cancel previous fetch if it exists
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-
-      // Create new abort controller
-      abortControllerRef.current = new AbortController();
-
-      // Check if we should fetch (minimum 5 seconds between fetches)
-      const now = Date.now();
-      if (now - lastFetchRef.current < 5000) return;
-
-      try {
-        const origin = `${currentPosition.lat},${currentPosition.lng}`;
-        const destination = `${currentTrip.origen_lat},${currentTrip.origen_lng}`;
-
-        const response = await fetch(
-          `/api/maps/directions?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}`,
-          {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            signal: abortControllerRef.current.signal
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error(`Error en la respuesta: ${response.status}`);
-        }
-
-        const data = await response.json();
-        if (data.status === 'OK' && data.routes?.length > 0) {
-          setRouteCoordinates(data.routes[0].decodedCoordinates);
-          lastFetchRef.current = now;
-        }
-      } catch (error) {
-        if (error.name === 'AbortError') {
-          console.log('Route fetch aborted');
-        } else {
-          console.error('Error al obtener la ruta:', error);
-        }
-      }
-    }, 1000), // Reduced debounce time since we have other controls
-    [] // Empty dependencies since we're using parameters
-  );
-
-  // Clean up on unmount
-  useEffect(() => {
-    return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-    };
-  }, []);
-
-  // Update the useEffect to use the debounced function
+  // Update the useEffect that handles route updates
   useEffect(() => {
     if (position && activeTrip) {
-      // Only fetch if we've moved more than 10 meters
+      // Force route recalculation when trip state changes
+      if (activeTrip.estado_reserva === 'RECOGIDO') {
+        console.log('Trip state changed to RECOGIDO, recalculating route to destination');
+        setRouteCoordinates(null); // Clear existing route
+        setRemainingRoute(null);
+        // Force immediate route calculation to destination
+        fetchRoute(position, activeTrip);
+        return;
+      }
+
+      // Regular movement updates
       if (lastPosition) {
         const distanceMoved = calculateDistance(position, lastPosition);
         if (distanceMoved < 10) return;
       }
-      fetchRoute(position, activeTrip);
+      
+      // Make sure we have all required coordinates before fetching
+      if (activeTrip.estado_reserva === 'CONFIRMADO' && 
+          activeTrip.origen_lat && activeTrip.origen_lng) {
+        fetchRoute(position, activeTrip);
+      } else if (activeTrip.estado_reserva === 'RECOGIDO' && 
+                 activeTrip.destino_lat && activeTrip.destino_lng) {
+        fetchRoute(position, activeTrip);
+      }
     }
   }, [position, activeTrip, fetchRoute, lastPosition]);
 
-  // Update useEffect for route tracking
+  // Also update the route tracking effect
   useEffect(() => {
     if (!position || !routeCoordinates || !activeTrip) return;
 
-    // Initialize remaining route if not set
-    if (!remainingRoute) {
+    // Initialize remaining route if not set or if trip state changed
+    if (!remainingRoute || 
+        (activeTrip.estado_reserva === 'RECOGIDO' && remainingRoute.length > 0)) {
+      console.log('Initializing/Resetting route tracking');
       setRemainingRoute(routeCoordinates);
       setLastPosition(position);
       return;
@@ -287,15 +377,21 @@ function TaxiDashboard() {
     setRemainingRoute(newRemainingRoute);
     setLastPosition(position);
 
-    // If we're close to destination (e.g., within 50 meters)
-    if (calculateDistance(position, {
-      lat: activeTrip.origen_lat,
-      lng: activeTrip.origen_lng
-    }) < 50) {
-      // Handle arrival logic
+    // Check arrival based on trip state
+    if (activeTrip.estado_reserva === 'CONFIRMADO' && 
+        calculateDistance(position, {
+          lat: activeTrip.origen_lat,
+          lng: activeTrip.origen_lng
+        }) < 50) {
       console.log('Arrived at pickup location');
+    } else if (activeTrip.estado_reserva === 'RECOGIDO' && 
+               calculateDistance(position, {
+                 lat: activeTrip.destino_lat,
+                 lng: activeTrip.destino_lng
+               }) < 50) {
+      console.log('Arrived at destination');
     }
-  }, [position, routeCoordinates, activeTrip]);
+  }, [position, routeCoordinates, activeTrip, lastPosition, remainingRoute]);
 
   // 5. Event handlers
   const handleOnlineToggle = async (checked) => {
@@ -365,24 +461,28 @@ function TaxiDashboard() {
   };
 
   const handleTripComplete = useCallback((bookingId, updatedBooking) => {
+    // Update bookings list
     setAssignedBookings(prev => prev.map(booking => 
       booking.codigo_reserva === bookingId 
-        ? { ...booking, estado_reserva: updatedBooking.estado_reserva }
+        ? { ...booking, estado_reserva: 'COMPLETADO' }
         : booking
     ));
     
-    // Don't clear active trip immediately, just update its status
-    if (activeTrip && activeTrip.codigo_reserva === bookingId) {
-      setActiveTrip(prev => ({
-        ...prev,
-        estado_reserva: updatedBooking.estado_reserva
-      }));
-    }
-    
-    // Clear route data
+    // Clear all trip-related state
+    setActiveTrip(null);
     setRouteCoordinates(null);
     setRemainingRoute(null);
-  }, [activeTrip]);
+    setLastPosition(null);
+    setShowTripModal(false);
+    
+    // Reset any other related states
+    if (map.current) {
+      map.current.setView([position.lat, position.lng], 13);
+    }
+    
+    // Show success notification
+    toast.success('Viaje completado exitosamente');
+  }, [position]);
 
   const handlePickup = useCallback((bookingId, updatedBooking) => {
     console.log('Handling pickup for booking:', bookingId, 'Updated booking:', updatedBooking);
@@ -402,25 +502,117 @@ function TaxiDashboard() {
       });
     });
     
-    // Update active trip with new status
+    // Update active trip with new status and destination coordinates
     if (activeTrip && activeTrip.codigo_reserva === bookingId) {
-      setActiveTrip(prev => ({
-        ...prev,
-        estado_reserva: 'RECOGIDO'
-      }));
-      
-      // Fetch new route to destination if coordinates are available
-      if (activeTrip.destino_lat && activeTrip.destino_lng) {
-        fetchRoute({
-          lat: position.lat,
-          lng: position.lng
-        }, {
-          lat: activeTrip.destino_lat,
-          lng: activeTrip.destino_lng
-        });
-      }
+      const updateTripWithDestination = async () => {
+        try {
+          const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+          const response = await fetch(
+            `https://maps.googleapis.com/maps/api/geocode/json?` +
+            `address=${encodeURIComponent(activeTrip.destino_reserva)}` +
+            `&components=country:CL|administrative_area:Tarapacá|locality:Iquique|locality:Alto Hospicio` +
+            `&key=${apiKey}`
+          );
+
+          if (!response.ok) throw new Error('Geocoding failed');
+          const data = await response.json();
+
+          if (data.status === 'OK' && data.results[0]) {
+            const location = data.results[0].geometry.location;
+            const updatedTrip = {
+              ...activeTrip,
+              estado_reserva: 'RECOGIDO',
+              destino_lat: location.lat,
+              destino_lng: location.lng
+            };
+
+            // Update active trip state
+            setActiveTrip(updatedTrip);
+
+            // Update route to destination
+            if (position) {
+              fetchRoute({
+                lat: position.lat,
+                lng: position.lng
+              }, updatedTrip); // Pass the updated trip with destination coordinates
+            }
+          }
+        } catch (error) {
+          console.error('Error geocoding destination:', error);
+          // Still update the state even if geocoding fails
+          setActiveTrip(prev => ({
+            ...prev,
+            estado_reserva: 'RECOGIDO'
+          }));
+        }
+      };
+
+      // Execute the async function
+      updateTripWithDestination();
     }
   }, [activeTrip, position, fetchRoute]);
+
+  const handleArrival = () => {
+    setIsArrived(true);
+    setShowTripModal(true);
+  };
+
+  const handleTripFormSubmit = async (formData) => {
+    try {
+        // Validate form data first
+        const duracion = parseInt(formData.duracion);
+        const pasajeros = parseInt(formData.pasajeros);
+
+        if (!duracion || duracion <= 0) {
+            throw new Error('La duración debe ser mayor a 0 minutos');
+        }
+        if (!pasajeros || pasajeros <= 0) {
+            throw new Error('Debe haber al menos 1 pasajero');
+        }
+        if (!formData.metodo_pago) {
+            throw new Error('Debe seleccionar un método de pago');
+        }
+
+        setIsSubmitting(true);
+
+        // Create trip record
+        const tripResponse = await fetch(`/api/trips/complete/${activeTrip.codigo_reserva}`, {
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                duracion,  // Already parsed to integer
+                pasajeros, // Already parsed to integer
+                metodo_pago: formData.metodo_pago,
+                observacion_viaje: formData.observacion_viaje || ''
+            })
+        });
+
+        if (!tripResponse.ok) {
+            const error = await tripResponse.json();
+            throw new Error(error.message || 'Error creating trip record');
+        }
+
+        const tripData = await tripResponse.json();
+
+        // Reset states
+        setShowTripModal(false);
+        setActiveTrip(null);
+        setRouteCoordinates(null);
+        setIsArrived(false);
+
+        // Show success notification
+        toast.success('Viaje completado exitosamente');
+
+    } catch (error) {
+        console.error('Error completing trip:', error);
+        toast.error(error.message || 'Error al completar el viaje');
+    } finally {
+        setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -444,7 +636,7 @@ function TaxiDashboard() {
         </div>
 
         {/* Map Section */}
-        <div className="w-full md:flex-1 h-[calc(100vh-20rem)] md:h-[calc(100vh-4rem)]">
+        <div className="w-full md:flex-1 h-[calc(100vh-20rem)] md:h-[calc(100vh-4rem)] relative z-0">
           <Suspense fallback={<div className="h-full flex items-center justify-center">Cargando mapa...</div>}>
             {console.log('Active Trip:', activeTrip)}
             {console.log('Route Coordinates:', routeCoordinates)}
@@ -453,6 +645,58 @@ function TaxiDashboard() {
               position={position} 
               error={geoError}
             >
+              {/* Only render route if there's an active trip */}
+              {activeTrip && remainingRoute && activeTrip.estado_reserva !== 'COMPLETADO' && (
+                <Polyline 
+                  positions={remainingRoute.map(coord => [coord.lat, coord.lng])}
+                  color="blue"
+                  weight={3}
+                  opacity={0.7}
+                />
+              )}
+              
+              {/* Only render markers if trip is not completed */}
+              {activeTrip && activeTrip.estado_reserva !== 'COMPLETADO' && (
+                <>
+                  {activeTrip.estado_reserva === 'CONFIRMADO' && activeTrip.origen_lat && activeTrip.origen_lng && (
+                    <Marker 
+                      position={[activeTrip.origen_lat, activeTrip.origen_lng]}
+                      icon={L.divIcon({
+                        className: 'custom-div-icon',
+                        html: `<div class="w-6 h-6 bg-green-500 rounded-full border-2 border-white shadow-lg flex items-center justify-center">
+                          <div class="w-2 h-2 bg-white rounded-full"></div>
+                        </div>`,
+                        iconSize: [24, 24],
+                        iconAnchor: [12, 12]
+                      })}
+                    >
+                      <Tooltip permanent offset={[0, -20]}>
+                        Punto de recogida
+                      </Tooltip>
+                    </Marker>
+                  )}
+                  
+                  {activeTrip.estado_reserva === 'RECOGIDO' && activeTrip.destino_lat && activeTrip.destino_lng && (
+                    <Marker 
+                      position={[activeTrip.destino_lat, activeTrip.destino_lng]}
+                      icon={L.divIcon({
+                        className: 'custom-div-icon',
+                        html: `<div class="w-6 h-6 bg-red-500 rounded-full border-2 border-white shadow-lg flex items-center justify-center">
+                          <div class="w-2 h-2 bg-white rounded-full"></div>
+                        </div>`,
+                        iconSize: [24, 24],
+                        iconAnchor: [12, 12]
+                      })}
+                    >
+                      <Tooltip permanent offset={[0, -20]}>
+                        Destino Final
+                      </Tooltip>
+                    </Marker>
+                  )}
+                </>
+              )}
+
+              {/* Driver marker is always shown if position is available */}
               {position && (
                 <TaxiMarker 
                   data={{
@@ -463,24 +707,9 @@ function TaxiDashboard() {
                   }}
                 />
               )}
-              {activeTrip && remainingRoute && (
-                <Polyline 
-                  positions={remainingRoute.map(coord => [coord.lat, coord.lng])}
-                  color="blue"
-                  weight={3}
-                  opacity={0.7}
-                />
-              )}
-              {activeTrip && activeTrip.origen_lat && activeTrip.origen_lng && (
-                <Marker 
-                  position={[activeTrip.origen_lat, activeTrip.origen_lng]}
-                >
-                  <Tooltip permanent>
-                    Punto de recogida
-                  </Tooltip>
-                </Marker>
-              )}
-              {activeTrip && (
+
+              {/* Only fit bounds if there's an active trip that's not completed */}
+              {position && activeTrip && activeTrip.estado_reserva !== 'COMPLETADO' && (
                 <FitBounds 
                   position={position}
                   activeTrip={activeTrip}
@@ -564,6 +793,10 @@ function TaxiDashboard() {
                         onStartTrip={handleStartTrip}
                         onPickup={handlePickup}
                         onTripComplete={handleTripComplete}
+                        onArrival={() => {
+                          setShowTripModal(true);
+                          console.log('Opening trip completion modal'); // Debug log
+                        }}
                         className="w-full"
                       />
                     </div>
@@ -573,6 +806,14 @@ function TaxiDashboard() {
           </Card>
         </div>
       </div>
+
+      {showTripModal && (
+        <TripCompletionModal
+          show={showTripModal}
+          onClose={() => setShowTripModal(false)}
+          onSubmit={handleTripFormSubmit}
+        />
+      )}
     </div>
   );
 }
@@ -581,12 +822,35 @@ function FitBounds({ position, activeTrip }) {
   const map = useMap();
 
   useEffect(() => {
-    if (position && activeTrip) {
-      const bounds = L.latLngBounds([
-        [position.lat, position.lng],
-        [activeTrip.origen_lat, activeTrip.origen_lng]
-      ]);
-      map.fitBounds(bounds, { padding: [50, 50] });
+    if (!position || !activeTrip) return;
+
+    try {
+      // Create array of points to include in bounds
+      const points = [[position.lat, position.lng]];
+      
+      // Add appropriate destination point based on trip state
+      if (activeTrip.estado_reserva === 'CONFIRMADO' && activeTrip.origen_lat && activeTrip.origen_lng) {
+        points.push([activeTrip.origen_lat, activeTrip.origen_lng]);
+        console.log('Fitting bounds to include pickup point:', points);
+      } else if (activeTrip.estado_reserva === 'RECOGIDO' && activeTrip.destino_lat && activeTrip.destino_lng) {
+        points.push([activeTrip.destino_lat, activeTrip.destino_lng]);
+        console.log('Fitting bounds to include destination point:', points);
+      }
+
+      // Only adjust bounds if we have multiple points
+      if (points.length > 1) {
+        const bounds = L.latLngBounds(points);
+        map.fitBounds(bounds, { 
+          padding: [50, 50],
+          maxZoom: 15 // Limit max zoom to keep context
+        });
+      }
+    } catch (error) {
+      console.error('Error setting map bounds:', error);
+      // Fallback to centering on current position
+      if (position.lat && position.lng) {
+        map.setView([position.lat, position.lng], 13);
+      }
     }
   }, [position, activeTrip, map]);
 
@@ -595,12 +859,15 @@ function FitBounds({ position, activeTrip }) {
 
 FitBounds.propTypes = {
   position: PropTypes.shape({
-    lat: PropTypes.number,
-    lng: PropTypes.number,
+    lat: PropTypes.number.isRequired,
+    lng: PropTypes.number.isRequired,
   }),
   activeTrip: PropTypes.shape({
     origen_lat: PropTypes.number,
     origen_lng: PropTypes.number,
+    destino_lat: PropTypes.number,
+    destino_lng: PropTypes.number,
+    estado_reserva: PropTypes.string
   })
 };
 
@@ -699,7 +966,7 @@ VehicleCard.propTypes = {
   loading: PropTypes.bool
 };
 
-function TripCard({ booking, onStartTrip, onPickup, onTripComplete, className }) {
+function TripCard({ booking, onStartTrip, onPickup, onTripComplete, onArrival, className }) {
   const [pickupCoords, setPickupCoords] = useState(null);
   const [destinationCoords, setDestinationCoords] = useState(null);
   const [isGeocoding, setIsGeocoding] = useState(false);
@@ -793,28 +1060,9 @@ function TripCard({ booking, onStartTrip, onPickup, onTripComplete, className })
     }
   };
 
-  const handleArrival = async () => {
-    try {
-      const response = await fetch(`/api/bookings/${booking.codigo_reserva}/complete-trip`, {
-        method: 'POST',
-        credentials: 'include'
-      });
-
-      if (!response.ok) {
-        throw new Error('Error completing trip');
-      }
-
-      const data = await response.json();
-      setIsArrived(true);
-
-      // Update the booking state in the parent component
-      if (onTripComplete) {
-        onTripComplete(booking.codigo_reserva, data.booking);
-      }
-    } catch (error) {
-      console.error('Error marking trip as complete:', error);
-      // You might want to show an error notification here
-    }
+  const handleArrival = () => {
+    // Just trigger the modal
+    onArrival();
   };
 
   const bookingTime = new Date(booking.fecha_reserva);
@@ -962,6 +1210,7 @@ TripCard.propTypes = {
   onStartTrip: PropTypes.func.isRequired,
   onPickup: PropTypes.func,
   onTripComplete: PropTypes.func,
+  onArrival: PropTypes.func.isRequired,
   className: PropTypes.string
 };
 
@@ -977,4 +1226,140 @@ VehicleCard.propTypes = {
   loading: PropTypes.bool
 };
 
+function TripCompletionModal({ show, onClose, onSubmit }) {
+  const [formData, setFormData] = useState({
+    pasajeros: 1,
+    duracion: 0,
+    observacion_viaje: '',
+    metodo_pago: 'EFECTIVO'
+  });
+
+  const [errors, setErrors] = useState({});
+
+  const validateForm = () => {
+    const newErrors = {};
+
+    if (!formData.duracion || formData.duracion <= 0) {
+      newErrors.duracion = 'La duración debe ser mayor a 0 minutos';
+    }
+    if (!formData.pasajeros || formData.pasajeros <= 0) {
+      newErrors.pasajeros = 'Debe haber al menos 1 pasajero';
+    }
+    if (!formData.metodo_pago) {
+      newErrors.metodo_pago = 'Debe seleccionar un método de pago';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (validateForm()) {
+      try {
+        await onSubmit(formData);
+      } catch (error) {
+        console.error('Error submitting form:', error);
+        toast.error('Error al completar el viaje');
+      }
+    }
+  };
+
+  return (
+    <FormModal
+      isOpen={show}
+      onClose={onClose}
+      onSubmit={handleSubmit}
+      title="Completar Viaje"
+      submitLabel="Completar Viaje"
+      size="md"
+    >
+      <div className="space-y-6">
+        <Input
+          type="number"
+          label="Número de Pasajeros"
+          placeholder="Ingrese número de pasajeros"
+          min={1}
+          value={formData.pasajeros.toString()}
+          onChange={(e) => {
+            setFormData(prev => ({ ...prev, pasajeros: parseInt(e.target.value) }));
+            setErrors(prev => ({ ...prev, pasajeros: null }));
+          }}
+          isInvalid={!!errors.pasajeros}
+          errorMessage={errors.pasajeros}
+          variant="bordered"
+          classNames={{
+            label: "text-sm font-medium",
+          }}
+        />
+
+        <Input
+          type="number"
+          label="Duración (minutos)"
+          placeholder="Ingrese duración del viaje"
+          min={0}
+          value={formData.duracion.toString()}
+          onChange={(e) => {
+            setFormData(prev => ({ ...prev, duracion: parseInt(e.target.value) }));
+            setErrors(prev => ({ ...prev, duracion: null }));
+          }}
+          isInvalid={!!errors.duracion}
+          errorMessage={errors.duracion}
+          variant="bordered"
+          classNames={{
+            label: "text-sm font-medium",
+          }}
+        />
+
+        <Select
+          label="Método de Pago"
+          placeholder="Seleccione método de pago"
+          selectedKeys={[formData.metodo_pago]}
+          onChange={(e) => {
+            setFormData(prev => ({ ...prev, metodo_pago: e.target.value }));
+            setErrors(prev => ({ ...prev, metodo_pago: null }));
+          }}
+          isInvalid={!!errors.metodo_pago}
+          errorMessage={errors.metodo_pago}
+          variant="bordered"
+          classNames={{
+            label: "text-sm font-medium",
+          }}
+        >
+          <SelectItem key="EFECTIVO" value="EFECTIVO">
+            Efectivo
+          </SelectItem>
+          <SelectItem key="TRANSFERENCIA" value="TRANSFERENCIA">
+            Transferencia
+          </SelectItem>
+        </Select>
+
+        <Textarea
+          label="Observaciones"
+          placeholder="Ingrese observaciones del viaje"
+          value={formData.observacion_viaje}
+          onChange={(e) => {
+            setFormData(prev => ({ ...prev, observacion_viaje: e.target.value }));
+            setErrors(prev => ({ ...prev, observacion_viaje: null }));
+          }}
+          isInvalid={!!errors.observacion_viaje}
+          errorMessage={errors.observacion_viaje}
+          variant="bordered"
+          classNames={{
+            label: "text-sm font-medium",
+          }}
+          minRows={3}
+        />
+      </div>
+    </FormModal>
+  );
+}
+
+TripCompletionModal.propTypes = {
+  show: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  onSubmit: PropTypes.func.isRequired
+};
+
 export default TaxiDashboard;
+
