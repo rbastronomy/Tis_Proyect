@@ -265,15 +265,15 @@ export class BookingService extends BaseService {
      * @returns {Promise<Object>} Cancelled booking
      * @throws {Error} If cancellation fails
      */
-    async cancelBooking(codigoreserva) {
-        const booking = await this.repository.findByCodigoReserva(codigoreserva);
+    async cancelBooking(codigo_reserva) {
+        const booking = await this.repository.findByCodigoReserva(codigo_reserva);
         
         if (!booking) {
             throw new Error('Reserva no encontrada');
         }
 
         const bookingCanceled = await this.repository.updateReservaEstado(
-            codigoreserva, 
+            codigo_reserva, 
             'cancelada'
         );
 
@@ -281,7 +281,7 @@ export class BookingService extends BaseService {
             await this.taxiService.updateEstado(booking.taxi_rut, 'disponible');
         }
     
-        const reserva = await this.repository.findByCodigoReserva(codigoreserva);
+        const reserva = await this.repository.findByCodigoReserva(codigo_reserva);
         await this.taxiService.updateEstado(reserva.taxiRut, 'disponible');
 
         const receiptData = {
@@ -542,7 +542,7 @@ export class BookingService extends BaseService {
                 rate: rateModel?.toJSON(),
                 history: historyEntries?.map(h => h.toJSON()),
                 taxi: taxiData?.toJSON(),
-                client: clienteData?.toJSON()
+                client: clienteData
             });
 
             // Create a domain model with all the information
@@ -575,13 +575,7 @@ export class BookingService extends BaseService {
                         telefono: taxiData.conductor.telefono
                     } : null
                 } : null,
-                cliente: clienteData ? {
-                    rut: clienteData.rut,
-                    nombre: clienteData.nombre,
-                    apellido: clienteData.apellido,
-                    correo: clienteData.correo,
-                    telefono: clienteData.telefono
-                } : null,
+                cliente: clienteData,
                 created_at: rawBooking.created_at,
                 updated_at: rawBooking.updated_at,
                 deleted_at_reserva: rawBooking.deleted_at_reserva

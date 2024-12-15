@@ -80,7 +80,28 @@ export class UserModel extends BaseModel {
    * @param {Partial<UserModelData>} data - Initial user data
    */
   constructor(data = {}) {
+    console.log('UserModel - Constructor received data:', data);
     super(data, UserModel.defaultData);
+    this.validate();
+    console.log('UserModel - Constructor finished, data:', this._data);
+  }
+
+  /**
+   * Validates the user data
+   * @private
+   * @throws {Error} If validation fails
+   */
+  validate() {
+    this.clearErrors();
+
+    this.validateString('nombre', this._data.nombre);
+    this.validateString('correo', this._data.correo);
+    this.validateEnum('estado_persona', this._data.estado_persona, ['ACTIVO', 'INACTIVO']);
+    if (this._data.fecha_nacimiento) {
+      this.validateDate('fecha_nacimiento', this._data.fecha_nacimiento);
+    }
+
+    this.throwIfErrors();
   }
 
   // Getters

@@ -70,7 +70,12 @@ export class UserService extends BaseService {
    */
   async getByRut(rut) {
     const userData = await this.repository.findByRut(rut);
-    return UserModel.toModel(userData);
+    if (!userData) {
+        return null;
+    }
+    // Ensure userData is a plain object
+    const plainUserData = userData instanceof UserModel ? userData.toJSON() : userData;
+    return new UserModel(plainUserData);
   }
 
   /**
