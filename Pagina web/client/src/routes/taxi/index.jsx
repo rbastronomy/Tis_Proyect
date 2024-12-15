@@ -1,7 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useState, useEffect, lazy, Suspense } from 'react'
 import { useAuth } from '../../hooks/useAuth'
-import { useSocketContext } from '../../context/SocketContext'
 import { Card } from "@nextui-org/card"
 import { Button } from "@nextui-org/button"
 import { Switch } from "@nextui-org/switch"
@@ -36,7 +35,14 @@ function TaxiDashboard() {
   const [taxiLoading, setTaxiLoading] = useState(true)
 
   // 3. Custom hooks
-  const { position, error: geoError, isConnected, isConnecting, isAuthenticated: isDriverAuthenticated } = useDriverLocation({
+  const { 
+    position, 
+    error: geoError, 
+    isConnected, 
+    isConnecting, 
+    isAuthenticated: isDriverAuthenticated,
+    socket
+  } = useDriverLocation({
     isOnline,
     driverId: user?.rut,
     patente: assignedTaxi?.patente,

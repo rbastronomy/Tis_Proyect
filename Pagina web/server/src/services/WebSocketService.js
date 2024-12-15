@@ -39,7 +39,7 @@ export class WebSocketService {
 
     return {
       patente,
-      location: locationData
+      location
     };
   }
 

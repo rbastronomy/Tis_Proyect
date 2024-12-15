@@ -10,19 +10,20 @@ export const useSocket = () => {
     if (!socketRef.current) {
       console.log('🔌 Initializing socket connection...');
       
-      // Use the same origin, let Vite proxy handle '/socket.io'
-      const baseUrl = window.location.origin;
+      const protocol = 'ws:';
+      const port = '3000';
+      const host = import.meta.env.VITE_WS_URL || `${protocol}//${window.location.hostname}:${port}`;
 
-      console.log('🔌 Connecting to WebSocket server:', baseUrl);
+      console.log('🔌 Connecting to WebSocket server:', host);
 
-      socketRef.current = io(baseUrl, {
+      socketRef.current = io(host, {
         withCredentials: true,
         reconnection: true,
         reconnectionAttempts: 5,
         reconnectionDelay: 1000,
         transports: ['websocket'],
         path: '/socket.io',
-        secure: window.location.protocol === 'https:',
+        secure: false,
         rejectUnauthorized: false
       });
 
@@ -31,7 +32,7 @@ export const useSocket = () => {
           id: socketRef.current.id,
           connected: socketRef.current.connected,
           transport: socketRef.current.io.engine.transport.name,
-          url: baseUrl
+          url: host
         });
         setIsConnected(true);
         setIsConnecting(false);
@@ -41,7 +42,7 @@ export const useSocket = () => {
         console.error('🔌 Socket connection error:', {
           error: error.message,
           id: socketRef.current?.id,
-          url: baseUrl
+          url: host
         });
         setIsConnected(false);
         setIsConnecting(false);
