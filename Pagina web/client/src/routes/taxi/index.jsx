@@ -7,7 +7,9 @@ import { Button } from "@nextui-org/button"
 import { Switch } from "@nextui-org/switch"
 import { MapPin, Clock, User, Bell, Car } from 'lucide-react'
 import { useDriverLocation } from '../../hooks/useDriverLocation'
+import { WS_EVENTS } from '../../constants/WebSocketEvents'
 import PropTypes from 'prop-types'
+import { useNavigate } from '@tanstack/react-router'
 
 const Map = lazy(() => import('../../components/Map'))
 
@@ -16,8 +18,15 @@ export const Route = createFileRoute('/taxi/')({
 })
 
 function TaxiDashboard() {
-  // 1. Context hooks first
-  const { user } = useAuth()
+  const { user, isAuthenticated } = useAuth()
+  const navigate = useNavigate()
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate({ to: '/login' })
+    }
+  }, [isAuthenticated, navigate])
 
   // 2. All useState hooks
   const [isOnline, setIsOnline] = useState(false)
@@ -27,7 +36,7 @@ function TaxiDashboard() {
   const [taxiLoading, setTaxiLoading] = useState(true)
 
   // 3. Custom hooks
-  const { position, error: geoError, isConnected, isConnecting, isAuthenticated } = useDriverLocation({
+  const { position, error: geoError, isConnected, isConnecting, isAuthenticated: isDriverAuthenticated } = useDriverLocation({
     isOnline,
     driverId: user?.rut,
     patente: assignedTaxi?.patente,
@@ -99,33 +108,7 @@ function TaxiDashboard() {
           return bookingDate.getTime() === today.getTime();
         });
 
-        // Add mock booking for testing scroll snap
-        const mockBooking = {
-          codigo_reserva: 999,
-          rut_cliente: 20247469,
-          id_oferta: 1,
-          origen_reserva: "Mall Plaza Iquique",
-          destino_reserva: "Terminal Agropecuario",
-          fecha_reserva: new Date().toISOString(), // Today's date
-          tipo_reserva: "CIUDAD",
-          observacion_reserva: "",
-          estado_reserva: "PENDIENTE",
-          servicio: {
-            tipo: "NORMAL",
-            descripcion: "Servicio normal de transporte"
-          },
-          tarifa: {
-            precio: 5000,
-            descripcion: "Tarifa urbana",
-            tipo: "CIUDAD"
-          },
-          cliente: {
-            nombre: "Juan",
-            apellido: "Pérez"
-          }
-        };
-
-        setAssignedBookings([...todayBookings, mockBooking]);
+        setAssignedBookings(todayBookings);
       } catch (error) {
         console.error('Error:', error);
       } finally {
@@ -168,6 +151,8 @@ function TaxiDashboard() {
       }
     } else {
       setIsOnline(false);
+      // Emit offline event when driver goes offline
+      socket?.emit(WS_EVENTS.DRIVER_OFFLINE);
     }
   };
 

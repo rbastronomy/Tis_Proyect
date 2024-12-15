@@ -149,13 +149,14 @@ export function useDriverLocation({
     if (!isAuthenticated || !position || !isOnline || !socket) return;
 
     try {
-      socket.volatile.emit('location:update', {
+      socket.volatile.emit('taxi:location', {
         patente,
-        latitude: position.latitude,
-        longitude: position.longitude,
+        lat: position.lat,
+        lng: position.lon,
         accuracy: position.accuracy,
         speed: position.speed,
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        estado: 'DISPONIBLE'
       });
     } catch (error) {
       console.error('Error sending location update:', error);

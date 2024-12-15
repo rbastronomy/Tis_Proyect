@@ -9,17 +9,29 @@ export const useSocket = () => {
   const connect = useCallback(() => {
     if (!socketRef.current) {
       console.log('🔌 Initializing socket connection...');
-      socketRef.current = io(import.meta.env.VITE_WS_URL || 'http://localhost:3000', {
+      
+      // Use the same origin, let Vite proxy handle '/socket.io'
+      const baseUrl = window.location.origin;
+
+      console.log('🔌 Connecting to WebSocket server:', baseUrl);
+
+      socketRef.current = io(baseUrl, {
         withCredentials: true,
         reconnection: true,
         reconnectionAttempts: 5,
         reconnectionDelay: 1000,
+        transports: ['websocket'],
+        path: '/socket.io',
+        secure: window.location.protocol === 'https:',
+        rejectUnauthorized: false
       });
 
       socketRef.current.on('connect', () => {
         console.log('🔌 Socket connected:', {
           id: socketRef.current.id,
-          connected: socketRef.current.connected
+          connected: socketRef.current.connected,
+          transport: socketRef.current.io.engine.transport.name,
+          url: baseUrl
         });
         setIsConnected(true);
         setIsConnecting(false);
@@ -28,7 +40,8 @@ export const useSocket = () => {
       socketRef.current.on('connect_error', (error) => {
         console.error('🔌 Socket connection error:', {
           error: error.message,
-          id: socketRef.current?.id
+          id: socketRef.current?.id,
+          url: baseUrl
         });
         setIsConnected(false);
         setIsConnecting(false);

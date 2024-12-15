@@ -5,10 +5,21 @@ import { TanStackRouterVite } from '@tanstack/router-plugin/vite'
 export default defineConfig({
   plugins: [react(), TanStackRouterVite()],
   server: {
+    hmr: {
+      protocol: 'wss',
+      port: 5000
+    },
     proxy: {
       '/api': {
-        target: 'http://localhost:3000', // Your backend server URL
-        changeOrigin: true
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        secure: false
+      },
+      '/socket.io': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        secure: false,
+        ws: true
       }
     }
   }

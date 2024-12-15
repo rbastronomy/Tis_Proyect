@@ -1,36 +1,36 @@
 import { useEffect, useState } from 'react';
-import Map from './Map';
-import { Card, CardBody, Chip } from "@nextui-org/react";
+import { MapContainer, TileLayer } from 'react-leaflet';
+import TaxiMarker from './TaxiMarker';
+import PropTypes from 'prop-types';
 
 export function FleetMap({ activeTaxis = [] }) {
-  const [mapCenter, setMapCenter] = useState({ lat: -20.2133, lon: -70.1503 }); // Iquique center
+  const [mapCenter] = useState([-20.2133, -70.1503]); // Iquique center
 
   return (
-    <Card className="w-full h-[500px]">
-      <CardBody className="p-0 relative">
-        <Map position={mapCenter} className="w-full h-full">
-          {activeTaxis.map((taxi) => (
-            <div 
-              key={taxi.patente}
-              className="absolute z-10 transform -translate-x-1/2 -translate-y-1/2"
-              style={{ 
-                left: `${taxi.location.lng}%`, 
-                top: `${taxi.location.lat}%` 
-              }}
-            >
-              <Chip
-                variant="shadow"
-                classNames={{
-                  base: "bg-gradient-to-br from-indigo-500 to-pink-500 border-small border-white/50 shadow-pink-500/30",
-                  content: "drop-shadow shadow-black text-white",
-                }}
-              >
-                {taxi.patente}
-              </Chip>
-            </div>
-          ))}
-        </Map>
-      </CardBody>
-    </Card>
+    <MapContainer
+      center={mapCenter}
+      zoom={13}
+      style={{ width: '100%', height: '500px' }}
+    >
+      <TileLayer
+        attribution='&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+      />
+      {activeTaxis.map((taxi) => (
+        <TaxiMarker
+          key={taxi.patente}
+          data={taxi}
+        />
+      ))}
+    </MapContainer>
   );
-} 
+}
+
+FleetMap.propTypes = {
+  activeTaxis: PropTypes.arrayOf(PropTypes.shape({
+    patente: PropTypes.string.isRequired,
+    lat: PropTypes.number.isRequired,
+    lng: PropTypes.number.isRequired,
+    estado: PropTypes.string.isRequired
+  })).isRequired
+}; 

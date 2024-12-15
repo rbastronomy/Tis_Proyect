@@ -18,11 +18,15 @@ import {
   Input,
   Select,
   SelectItem,
-  Chip
+  Chip,
+  Card,
+  CardBody,
+  CardHeader
 } from "@nextui-org/react";
 import { useNavigate } from '@tanstack/react-router';
 import { FleetMap } from '../../components/FleetMap';
-import { Card, CardBody, CardHeader } from "@nextui-org/react";
+import { useSocketContext } from '../../context/SocketContext';
+import { WS_EVENTS } from '../../constants/WebSocketEvents';
 
 export const Route = createLazyFileRoute('/admin/dashboard')({
   component: DashboardPage
@@ -43,69 +47,118 @@ function DashboardPage() {
     patente_taxi: '',
     observacion: ''
   });
-  const [activeTaxis, setActiveTaxis] = useState([]);
+  const [activeTaxis, setActiveTaxis] = useState(new Map());
+  const { socket } = useSocketContext();
 
+  // Check authentication and role
   useEffect(() => {
     if (!isAuthenticated || user?.role?.nombre_rol !== 'ADMINISTRADOR') {
       navigate({ to: '/login' });
       return;
     }
-
-    fetchBookings();
-    fetchDrivers();
-    fetchTaxis();
-    fetchActiveTaxis();
   }, [isAuthenticated, user, navigate]);
+
+  // Load initial data
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        await Promise.all([
+          fetchBookings(),
+          fetchDrivers(),
+          fetchTaxis()
+        ]);
+      } catch (error) {
+        console.error('Error loading dashboard data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, [isAuthenticated]);
+
+  // Socket connection for real-time updates
+  useEffect(() => {
+    if (!socket) return;
+
+    // Join admin room
+    socket.emit(WS_EVENTS.JOIN_ADMIN_ROOM);
+
+    // Listen for taxi location updates
+    socket.on(WS_EVENTS.TAXI_LOCATION_UPDATE, (data) => {
+      console.log('Received taxi location update:', data);
+      setActiveTaxis(prev => {
+        const updated = new Map(prev);
+        updated.set(data.patente, data);
+        return updated;
+      });
+    });
+
+    // Listen for taxi disconnections
+    socket.on(WS_EVENTS.TAXI_OFFLINE, ({ patente }) => {
+      console.log('Taxi went offline:', patente);
+      setActiveTaxis(prev => {
+        const updated = new Map(prev);
+        updated.delete(patente);
+        return updated;
+      });
+    });
+
+    return () => {
+      socket.off(WS_EVENTS.TAXI_LOCATION_UPDATE);
+      socket.off(WS_EVENTS.TAXI_OFFLINE);
+    };
+  }, [socket]);
 
   const fetchBookings = async () => {
     try {
-      const response = await fetch('/api/reservas', {
+      const response = await fetch('/api/bookings', {
         credentials: 'include'
       });
-      if (response.ok) {
-        const data = await response.json();
-        setBookings(data.reservas);
-      }
+      if (!response.ok) throw new Error('Error fetching bookings');
+      const data = await response.json();
+      setBookings(data.reservas || []);
     } catch (error) {
-      console.error('Error fetching bookings:', error);
-    } finally {
-      setLoading(false);
+      console.error('Error:', error);
     }
   };
 
   const fetchDrivers = async () => {
-    // Mock data until we create the conductores endpoint
-    setDrivers([
-      { rut: 123456789, nombre: "Juan Conductor" },
-      { rut: 987654321, nombre: "Maria Conductora" }
-    ]);
+    try {
+      const response = await fetch('/api/conductores', {
+        credentials: 'include'
+      });
+      if (!response.ok) throw new Error('Error fetching drivers');
+      const data = await response.json();
+      setDrivers(data.conductores || []);
+    } catch (error) {
+      console.error('Error:', error);
+      // Fallback to mock data if API fails
+      setDrivers([
+        { rut: "123456789", nombre: "Juan Conductor" },
+        { rut: "987654321", nombre: "Maria Conductora" }
+      ]);
+    }
   };
 
   const fetchTaxis = async () => {
-    // Mock data until we create the taxis endpoint
-    setTaxis([
-      { patente: "ABC123", modelo: "Toyota Corolla" },
-      { patente: "XYZ789", modelo: "Hyundai Accent" }
-    ]);
-  };
-
-  const fetchActiveTaxis = async () => {
     try {
-      // This will be replaced with actual API call when backend is ready
-      setActiveTaxis([
-        { 
-          patente: "ABC123", 
-          location: { lat: 40, lng: 50 },
-          status: "OCCUPIED" 
-        },
-        { 
-          patente: "XYZ789", 
-          location: { lat: 45, lng: 55 },
-          status: "AVAILABLE" 
-        }
-      ]);
+      const response = await fetch('/api/taxis', {
+        credentials: 'include'
+      });
+      if (!response.ok) throw new Error('Error fetching taxis');
+      const data = await response.json();
+      setTaxis(data.taxis || []);
     } catch (error) {
-      console.error('Error fetching active taxis:', error);
+      console.error('Error:', error);
+      // Fallback to mock data if API fails
+      setTaxis([
+        { patente: "ABC123", modelo: "Toyota Corolla" },
+        { patente: "XYZ789", modelo: "Hyundai Accent" }
+      ]);
     }
   };
 
@@ -131,15 +184,12 @@ function DashboardPage() {
         body: JSON.stringify(assignmentData)
       });
 
-      if (response.ok) {
-        await fetchBookings();
-        onClose();
-      } else {
-        const error = await response.json();
-        console.error('Error assigning driver:', error);
-      }
+      if (!response.ok) throw new Error('Error assigning driver');
+      
+      await fetchBookings();
+      onClose();
     } catch (error) {
-      console.error('Error submitting assignment:', error);
+      console.error('Error:', error);
     }
   };
 
@@ -155,145 +205,147 @@ function DashboardPage() {
   };
 
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-lg">Cargando panel de administración...</div>
+      </div>
+    );
   }
 
   return (
-    <div>
-      <div className="space-y-6 p-4">
-        
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Fleet Map Section */}
-          <Card className="col-span-full">
-            <CardHeader className="px-6 py-4">
-              <h2 className="text-xl font-semibold">Flota Activa</h2>
-            </CardHeader>
-            <CardBody>
-              <FleetMap activeTaxis={activeTaxis} />
-            </CardBody>
-          </Card>
+    <div className="container mx-auto p-4 space-y-6">
+      {/* Fleet Map Section */}
+      <Card className="w-full">
+        <CardHeader className="px-6 py-4">
+          <h2 className="text-xl font-semibold">Flota Activa</h2>
+        </CardHeader>
+        <CardBody className="p-0" style={{ height: '500px' }}>
+          <FleetMap activeTaxis={Array.from(activeTaxis.values())} />
+        </CardBody>
+      </Card>
 
-          {/* Bookings Table Section */}
-          <Card className="col-span-full">
-            <CardHeader className="px-6 py-4">
-              <h2 className="text-xl font-semibold">Reservas Pendientes</h2>
-            </CardHeader>
-            <CardBody>
-              <Table aria-label="Reservas de taxi">
-                <TableHeader>
-                  <TableColumn>CÓDIGO</TableColumn>
-                  <TableColumn>ORIGEN</TableColumn>
-                  <TableColumn>DESTINO</TableColumn>
-                  <TableColumn>FECHA</TableColumn>
-                  <TableColumn>ESTADO</TableColumn>
-                  <TableColumn>TIPO</TableColumn>
-                  <TableColumn>ACCIONES</TableColumn>
-                </TableHeader>
-                <TableBody>
-                  {bookings.map((booking) => (
-                    <TableRow key={booking.codigoreserva}>
-                      <TableCell>{booking.codigoreserva}</TableCell>
-                      <TableCell>{booking.origenv}</TableCell>
-                      <TableCell>{booking.destinov}</TableCell>
-                      <TableCell>{new Date(booking.freserva).toLocaleString()}</TableCell>
-                      <TableCell>
-                        <Chip color={getStatusColor(booking.estados)} variant="flat">
-                          {booking.estados}
-                        </Chip>
-                      </TableCell>
-                      <TableCell>{booking.tipo}</TableCell>
-                      <TableCell>
-                        {booking.estados === 'EN_REVISION' && (
-                          <Button 
-                            color="primary" 
-                            size="sm"
-                            onClick={() => handleAssignDriver(booking)}
-                          >
-                            Asignar Conductor
-                          </Button>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardBody>
-          </Card>
-        </div>
+      {/* Bookings Table Section */}
+      <Card>
+        <CardHeader className="px-6 py-4">
+          <h2 className="text-xl font-semibold">Reservas Pendientes</h2>
+        </CardHeader>
+        <CardBody>
+          <Table aria-label="Reservas de taxi">
+            <TableHeader>
+              <TableColumn>CÓDIGO</TableColumn>
+              <TableColumn>ORIGEN</TableColumn>
+              <TableColumn>DESTINO</TableColumn>
+              <TableColumn>FECHA</TableColumn>
+              <TableColumn>ESTADO</TableColumn>
+              <TableColumn>ACCIONES</TableColumn>
+            </TableHeader>
+            <TableBody>
+              {bookings.map((booking) => (
+                <TableRow key={booking.codigoreserva}>
+                  <TableCell>{booking.codigoreserva}</TableCell>
+                  <TableCell>{booking.origenv}</TableCell>
+                  <TableCell>{booking.destinov}</TableCell>
+                  <TableCell>
+                    {new Date(booking.freserva).toLocaleString()}
+                  </TableCell>
+                  <TableCell>
+                    <Chip color={getStatusColor(booking.estados)} variant="flat">
+                      {booking.estados}
+                    </Chip>
+                  </TableCell>
+                  <TableCell>
+                    {booking.estados === 'EN_REVISION' && (
+                      <Button 
+                        color="primary" 
+                        size="sm"
+                        onClick={() => handleAssignDriver(booking)}
+                      >
+                        Asignar Conductor
+                      </Button>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardBody>
+      </Card>
 
-        <Modal isOpen={isOpen} onClose={onClose}>
-          <ModalContent>
-            <ModalHeader>Asignar Conductor y Taxi</ModalHeader>
-            <ModalBody>
-              <div className="space-y-4">
-                <Select
-                  label="Acción"
-                  value={assignmentData.estados}
-                  onChange={(e) => setAssignmentData({
-                    ...assignmentData,
-                    estados: e.target.value
-                  })}
-                >
-                  <SelectItem key="APROBAR" value="APROBAR">Aprobar</SelectItem>
-                  <SelectItem key="RECHAZAR" value="RECHAZAR">Rechazar</SelectItem>
-                </Select>
+      {/* Assignment Modal */}
+      <Modal isOpen={isOpen} onClose={onClose}>
+        <ModalContent>
+          <ModalHeader>Asignar Conductor y Taxi</ModalHeader>
+          <ModalBody>
+            <div className="space-y-4">
+              <Select
+                label="Acción"
+                value={assignmentData.estados}
+                onChange={(e) => setAssignmentData({
+                  ...assignmentData,
+                  estados: e.target.value
+                })}
+              >
+                <SelectItem key="APROBAR" value="APROBAR">Aprobar</SelectItem>
+                <SelectItem key="RECHAZAR" value="RECHAZAR">Rechazar</SelectItem>
+              </Select>
 
-                {assignmentData.estados === 'APROBAR' && (
-                  <>
-                    <Select
-                      label="Conductor"
-                      value={assignmentData.rut_conductor}
-                      onChange={(e) => setAssignmentData({
-                        ...assignmentData,
-                        rut_conductor: e.target.value
-                      })}
-                    >
-                      {drivers.map(driver => (
-                        <SelectItem key={driver.rut} value={driver.rut}>
-                          {driver.nombre}
-                        </SelectItem>
-                      ))}
-                    </Select>
+              {assignmentData.estados === 'APROBAR' && (
+                <>
+                  <Select
+                    label="Conductor"
+                    value={assignmentData.rut_conductor}
+                    onChange={(e) => setAssignmentData({
+                      ...assignmentData,
+                      rut_conductor: e.target.value
+                    })}
+                  >
+                    {drivers.map(driver => (
+                      <SelectItem key={driver.rut} value={driver.rut}>
+                        {driver.nombre}
+                      </SelectItem>
+                    ))}
+                  </Select>
 
-                    <Select
-                      label="Taxi"
-                      value={assignmentData.patente_taxi}
-                      onChange={(e) => setAssignmentData({
-                        ...assignmentData,
-                        patente_taxi: e.target.value
-                      })}
-                    >
-                      {taxis.map(taxi => (
-                        <SelectItem key={taxi.patente} value={taxi.patente}>
-                          {taxi.patente} - {taxi.modelo}
-                        </SelectItem>
-                      ))}
-                    </Select>
-                  </>
-                )}
+                  <Select
+                    label="Taxi"
+                    value={assignmentData.patente_taxi}
+                    onChange={(e) => setAssignmentData({
+                      ...assignmentData,
+                      patente_taxi: e.target.value
+                    })}
+                  >
+                    {taxis.map(taxi => (
+                      <SelectItem key={taxi.patente} value={taxi.patente}>
+                        {taxi.patente} - {taxi.modelo}
+                      </SelectItem>
+                    ))}
+                  </Select>
+                </>
+              )}
 
-                <Input
-                  label="Observación"
-                  value={assignmentData.observacion}
-                  onChange={(e) => setAssignmentData({
-                    ...assignmentData,
-                    observacion: e.target.value
-                  })}
-                  required={assignmentData.estados === 'RECHAZAR'}
-                />
-              </div>
-            </ModalBody>
-            <ModalFooter>
-              <Button color="danger" variant="light" onPress={onClose}>
-                Cancelar
-              </Button>
-              <Button color="primary" onPress={handleSubmitAssignment}>
-                Confirmar
-              </Button>
-            </ModalFooter>
-          </ModalContent>
-        </Modal>
-      </div>
+              <Input
+                label="Observación"
+                value={assignmentData.observacion}
+                onChange={(e) => setAssignmentData({
+                  ...assignmentData,
+                  observacion: e.target.value
+                })}
+                required={assignmentData.estados === 'RECHAZAR'}
+              />
+            </div>
+          </ModalBody>
+          <ModalFooter>
+            <Button color="danger" variant="light" onPress={onClose}>
+              Cancelar
+            </Button>
+            <Button color="primary" onPress={handleSubmitAssignment}>
+              Confirmar
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </div>
   );
-} 
+}
+
+export default DashboardPage; 

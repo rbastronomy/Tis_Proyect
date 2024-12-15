@@ -100,8 +100,7 @@ function ConductorDetail() {
       });
       if (response.ok) {
         const data = await response.json();
-        console.log('Assigned taxis response:', data);
-        setAssignedTaxis(data.taxis || []);
+        setAssignedTaxis(data || []);
       }
     } catch (error) {
       console.error('Error fetching assigned taxis:', error);
@@ -117,7 +116,7 @@ function ConductorDetail() {
       });
       if (response.ok) {
         const data = await response.json();
-        setAvailableTaxis(Array.isArray(data.taxis) ? data.taxis : data);
+        setAvailableTaxis(data.taxis || data || []);
       }
     } catch (error) {
       console.error('Error fetching available taxis:', error);
@@ -218,7 +217,7 @@ function ConductorDetail() {
                 <TableCell className="hidden"></TableCell>
                 <TableCell className="hidden"></TableCell>
               </TableRow>
-            ) : assignedTaxis && Array.isArray(assignedTaxis) && assignedTaxis.length > 0 ? (
+            ) : assignedTaxis && assignedTaxis.length > 0 ? (
               assignedTaxis.map((taxi) => (
                 <TableRow key={taxi.patente}>
                   <TableCell>{taxi.patente}</TableCell>

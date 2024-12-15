@@ -1,79 +1,89 @@
+import { BaseSocketHandler } from '../core/BaseSocketHandler.js';
 import { WebSocketService } from '../services/WebSocketService.js';
+import { GeolocalizationService } from '../services/GeolocalizationService.js';
+import { WS_EVENTS } from '../constants/WebSocketEvents.js';
 
-export class WebSocketController {
-  constructor() {
+export class WebSocketController extends BaseSocketHandler {
+  constructor(io) {
+    super(io);
     this.wsService = new WebSocketService();
+    this.geoService = new GeolocalizationService();
+    
+    // Register all event handlers
+    this.registerHandlers();
   }
 
-  async handleTaxiAuth(io, socket, data) {
-    try {
-      console.log('🚕 Auth request received:', { 
-        socketId: socket.id, 
-        data,
-        rooms: Array.from(socket.rooms),
-        currentTaxiId: socket.taxiId,
-        timestamp: Date.now()
-      });
+  registerHandlers() {
+    this
+      .on(WS_EVENTS.TAXI_AUTH, this.handleTaxiAuth)
+      .on(WS_EVENTS.TAXI_LOCATION, this.handleLocationUpdate)
+      .on(WS_EVENTS.DRIVER_OFFLINE, this.handleDriverOffline)
+      .on(WS_EVENTS.DISCONNECT, this.handleDisconnect)
+      .on(WS_EVENTS.JOIN_ADMIN_ROOM, this.handleJoinAdminRoom);
+  }
 
-      await this.wsService.authenticateTaxi(data.patente);
-      
-      socket.taxiId = data.patente;
-      socket.join(`taxi:${data.patente}`);
-      
-      // Send success event back to the client
-      console.log('🚕 Emitting auth success to:', socket.id);
-      
-      // Emit both events with acknowledgment
-      socket.emit('taxi:auth:success', { 
-        patente: data.patente,
-        socketId: socket.id,
-        timestamp: Date.now()
-      }, (error) => {
-        if (error) {
-          console.error('🚕 Error in auth success acknowledgment:', error);
-        } else {
-          console.log('🚕 Auth success acknowledged by client');
-        }
-      });
-      
-      io.emit('taxi:online', { 
-        patente: data.patente,
-        timestamp: Date.now()
-      });
+  async handleTaxiAuth(socket, data) {
+    const { patente } = data;
+    await this.wsService.authenticateTaxi(patente);
+    
+    socket.taxiData = { patente };
+    socket.join(`taxi:${patente}`);
+    
+    socket.emit(WS_EVENTS.TAXI_AUTH_SUCCESS, { 
+      patente,
+      timestamp: Date.now()
+    });
+    
+    this.io.emit(WS_EVENTS.TAXI_ONLINE, { 
+      patente,
+      timestamp: Date.now()
+    });
+  }
 
-      console.log('🚕 Taxi fully authenticated:', {
-        patente: data.patente,
-        socketId: socket.id,
-        rooms: Array.from(socket.rooms),
-        timestamp: Date.now()
-      });
-    } catch (error) {
-      console.error('❌ Error in authentication:', {
-        error: error.message,
-        socketId: socket.id,
-        data,
-        timestamp: Date.now()
-      });
-      socket.emit('error', { 
-        message: error.message,
-        timestamp: Date.now()
-      });
+  async handleLocationUpdate(socket, data) {
+    const location = await this.geoService.updateLocation(data.patente, {
+      latitude: data.lat,
+      longitude: data.lng,
+      accuracy: data.accuracy,
+      speed: data.speed,
+      timestamp: data.timestamp
+    });
+
+    this.emitToRoom('admin', WS_EVENTS.TAXI_LOCATION_UPDATE, {
+      patente: data.patente,
+      lat: data.lat,
+      lng: data.lng,
+      estado: data.estado,
+      timestamp: data.timestamp
+    });
+  }
+
+  handleDriverOffline(socket) {
+    if (socket.taxiData?.patente) {
+      this.handleTaxiOffline(socket);
     }
   }
 
-  async handleLocationUpdate(io, socket, data) {
-    try {
-      const location = await this.wsService.updateTaxiLocation(data);
-      io.emit('taxi:location', location);
-    } catch (error) {
-      socket.emit('error', { message: error.message });
+  handleDisconnect(socket) {
+    if (socket.taxiData?.patente) {
+      this.handleTaxiOffline(socket);
     }
   }
 
-  handleDisconnect(io, socket) {
-    if (socket.taxiId) {
-      this.wsService.handleTaxiDisconnection(socket.taxiId);
-      io.emit('taxi:offline', { patente: socket.taxiId });
-    }
+  handleTaxiOffline(socket) {
+    const { patente } = socket.taxiData;
+    this.emitToRoom('admin', WS_EVENTS.TAXI_OFFLINE, { patente });
+    this.wsService.handleTaxiDisconnection(patente);
+  }
+
+  async handleJoinAdminRoom(socket) {
+    socket.join('admin');
+  }
+
+  initialize() {
+    this.io.on(WS_EVENTS.CONNECT, (socket) => {
+      console.log('🔌 New client connected:', socket.id);
+      super.initialize(socket);
+    });
   }
 } 

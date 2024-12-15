@@ -6,23 +6,36 @@ export class WebSocketService {
     this.connectedTaxis = new Map();
   }
 
-  // Lógica de negocio relacionada con la autenticación del taxi
   async authenticateTaxi(patente) {
-    // Validar que el taxi existe y está activo
-    // Actualizar estado online
-    // etc...
+    if (!patente) {
+      throw new Error('Patente is required');
+    }
+
+    // Here you would typically validate the taxi exists in your database
+    // For now, we'll just track it in memory
+    this.connectedTaxis.set(patente, {
+      connectedAt: Date.now(),
+      lastUpdate: Date.now()
+    });
+
+    return true;
   }
 
-  // Lógica de negocio para actualizar ubicación
   async updateTaxiLocation(locationData) {
-    const { patente, latitude, longitude, speed, accuracy } = locationData;
+    const { patente, lat, lng, accuracy, speed } = locationData;
     
+    if (!this.connectedTaxis.has(patente)) {
+      throw new Error('Taxi not authenticated');
+    }
+
     const location = await this.geoService.updateLocation(patente, {
-      latitude,
-      longitude,
-      speed,
-      accuracy
+      latitude: lat,
+      longitude: lng,
+      accuracy,
+      speed
     });
+
+    this.connectedTaxis.get(patente).lastUpdate = Date.now();
 
     return {
       patente,
@@ -30,10 +43,7 @@ export class WebSocketService {
     };
   }
 
-  // Lógica de negocio para manejar desconexión
   async handleTaxiDisconnection(patente) {
-    // Actualizar estado offline
-    // Limpiar recursos
-    // etc...
+    this.connectedTaxis.delete(patente);
   }
 } 

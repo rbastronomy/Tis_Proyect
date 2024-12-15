@@ -19,18 +19,22 @@ const startServer = async () => {
     });
 
     await fastify.register(fastifyCors, {
-      origin: 'http://localhost:5173',
+      origin: (origin, callback) => {
+        console.log('Incoming request from origin:', origin);
+        // Allow all origins in development
+        callback(null, true);
+      },
       credentials: true,
     });
 
     setupRoutes(fastify);
 
-    // Inicializar WebSocket ANTES de listen
+    // Initialize WebSocket BEFORE listen
     const wsConfig = new WebSocketConfig(fastify.server);
     const io = wsConfig.initialize();
     fastify.decorate('io', io);
 
-    // Iniciar el servidor después de configurar todo
+    // Start the server after everything is set up
     await fastify.listen({ port: 3000, host: '0.0.0.0' });
     fastify.log.info('Server is running on port 3000');
 
