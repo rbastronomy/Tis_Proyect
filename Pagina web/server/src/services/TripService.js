@@ -6,6 +6,7 @@ import { UserService } from "./UserService.js";
 import { TaxiService } from "./TaxiService.js";
 import { ReceiptService } from './ReceiptService.js';
 import { GeneraRepository } from '../repository/GeneraRepository.js';
+import { ReceiptModel } from '../models/ReceiptModel.js';
 
 export class TripService extends BaseService {
     constructor() {
@@ -30,8 +31,15 @@ export class TripService extends BaseService {
      */
     async createFromBooking(bookingId, tripData) {
         try {
-            // Validate booking exists and is in correct state
+            console.log('TripService - Creating trip from booking:', {
+                bookingId,
+                tripData
+            });
+
+            // Get booking with full details
             const booking = await this.bookingService.getBookingByCode(bookingId);
+            console.log('TripService - Found booking with details:', booking);
+
             if (!booking) {
                 throw new Error('Reserva no encontrada');
             }
@@ -39,10 +47,28 @@ export class TripService extends BaseService {
                 throw new Error('La reserva debe estar en estado RECOGIDO');
             }
 
+            // Get the rate from the service
+            const rate = booking._data.servicio?.tarifas?.[0];
+            console.log('TripService - Rate data:', rate);
+
+            if (!rate || typeof rate.precio !== 'number' || rate.precio <= 0) {
+                console.error('TripService - Invalid rate:', {
+                    servicio: booking._data.servicio,
+                    tarifas: booking._data.servicio?.tarifas,
+                    rate
+                });
+                throw new Error('La reserva no tiene una tarifa asociada');
+            }
+
+            // Validate required fields
+            if (!tripData.duracion) {
+                console.error('TripService - Missing duration:', tripData);
+                throw new Error('La duración del viaje es requerida');
+            }
+
             return await this.repository.transaction(async (trx) => {
-                // 1. Create trip record
+                // Create trip record
                 const newTrip = await this.repository.create({
-                    codigo_reserva: bookingId,
                     origen_viaje: booking.origen_reserva,
                     destino_viaje: booking.destino_reserva,
                     duracion: tripData.duracion,
@@ -52,23 +78,24 @@ export class TripService extends BaseService {
                     estado_viaje: 'COMPLETADO'
                 }, trx);
 
-                // 2. Create receipt with payment method from frontend
+                // Create receipt with service rate
                 const receipt = await this.receiptService.create({
-                    total: booking.tarifa.precio,
+                    total: rate.precio,
                     fecha_emision: new Date(),
                     metodo_pago: tripData.metodo_pago,
                     descripcion_boleta: `Viaje desde ${booking.origen_reserva} hasta ${booking.destino_reserva}`,
                     estado_boleta: 'PAGADO'
                 }, trx);
 
-                // 3. Create junction record
+                // Create junction record to link trip, booking and receipt
                 await this.generaRepository.create({
                     codigo_viaje: newTrip.codigo_viaje,
                     codigo_reserva: bookingId,
-                    codigo_boleta: receipt.codigo_boleta
+                    codigo_boleta: receipt.codigo_boleta,
+                    fecha_generada: new Date()
                 }, trx);
 
-                // Return trip with related data
+                // Return TripModel with all required data
                 return new TripModel({
                     ...newTrip,
                     booking,
@@ -76,16 +103,7 @@ export class TripService extends BaseService {
                 });
             });
         } catch (error) {
-            // Add more context to the error
-            if (error.message.includes('metodo_pago')) {
-                throw new Error('Método de pago inválido');
-            }
-            if (error.message.includes('duracion')) {
-                throw new Error('La duración del viaje es requerida');
-            }
-            if (error.message.includes('pasajeros')) {
-                throw new Error('El número de pasajeros es requerido');
-            }
+            console.error('TripService - Error:', error);
             throw new Error(`Error al crear viaje: ${error.message}`);
         }
     }
@@ -120,23 +138,53 @@ export class TripService extends BaseService {
 
     /**
      * Gets trip with full details
-     * @param {number} tripId - Trip ID
+     * @param {number} codigoReserva - Booking ID
      * @returns {Promise<TripModel>} Trip with details
      */
-    async getTripWithDetails(tripId) {
+    async getTripWithDetails(codigoReserva) {
         try {
-            const tripWithRef = await this.repository.findWithBookingRef(tripId);
+            // Get trip data with references
+            const tripWithRef = await this.repository.findWithBookingRef(codigoReserva);
             if (!tripWithRef) {
                 throw new Error('Viaje no encontrado');
             }
 
-            const booking = await this.bookingService.getBookingByCode(tripWithRef.codigo_reserva);
+            // Get full booking details
+            const booking = await this.bookingService.getBookingByCode(codigoReserva);
+            if (!booking) {
+                throw new Error('Reserva no encontrada');
+            }
 
+            // Create receipt model if we have receipt data
+            let receipt = null;
+            if (tripWithRef.codigo_boleta) {
+                receipt = new ReceiptModel({
+                    codigo_boleta: tripWithRef.codigo_boleta,
+                    total: tripWithRef.total,
+                    metodo_pago: tripWithRef.metodo_pago,
+                    fecha_emision: tripWithRef.fecha_emision,
+                    descripcion_boleta: tripWithRef.descripcion_boleta
+                });
+            }
+
+            // Create trip model with booking and receipt
             return new TripModel({
-                ...tripWithRef,
-                booking
+                codigo_viaje: tripWithRef.codigo_viaje,
+                origen_viaje: tripWithRef.origen_viaje,
+                destino_viaje: tripWithRef.destino_viaje,
+                duracion: tripWithRef.duracion,
+                pasajeros: tripWithRef.pasajeros,
+                observacion_viaje: tripWithRef.observacion_viaje,
+                fecha_viaje: tripWithRef.fecha_viaje,
+                estado_viaje: tripWithRef.estado_viaje,
+                booking,  // Include the full booking model
+                receipt,  // Include receipt if available
+                created_at: tripWithRef.created_at,
+                updated_at: tripWithRef.updated_at,
+                deleted_at_viaje: tripWithRef.deleted_at_viaje
             });
         } catch (error) {
+            console.error('Error getting trip details:', error);
             throw new Error(`Error al obtener detalles del viaje: ${error.message}`);
         }
     }

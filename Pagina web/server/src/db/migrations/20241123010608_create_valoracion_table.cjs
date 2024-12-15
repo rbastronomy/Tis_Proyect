@@ -1,6 +1,6 @@
 exports.up = function(knex) {
     return knex.schema.createTable('valoracion', function(table) {
-        table.integer('id_valoracion').primary();
+        table.increments('id_valoracion').primary();
         table.string('comentario_valoracion', 256);
         table.integer('calificacion');
         table.timestamp('fecha_valoracion');

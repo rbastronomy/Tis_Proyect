@@ -44,34 +44,39 @@ const isNightTime = (date) => {
 };
 
 const getTimeOptions = () => {
-  const now = Date.now();
+  const now = new Date();
+  now.setSeconds(0);
+  now.setMilliseconds(0);
+  
   return [
     {
       key: 'ASAP',
       label: 'Lo antes posible (30 minutos)',
-      value: new Date(now + 30 * 60000).toISOString()
+      value: new Date(now.getTime() + 30 * 60000).toISOString()
     },
     {
       key: 'HOUR_1',
       label: 'En 1 hora',
-      value: new Date(now + 60 * 60000).toISOString()
+      value: new Date(now.getTime() + 60 * 60000).toISOString()
     },
     {
       key: 'HOUR_2',
       label: 'En 2 horas',
-      value: new Date(now + 120 * 60000).toISOString()
+      value: new Date(now.getTime() + 120 * 60000).toISOString()
     },
     {
       key: 'HOUR_3',
       label: 'En 3 horas',
-      value: new Date(now + 180 * 60000).toISOString()
+      value: new Date(now.getTime() + 180 * 60000).toISOString()
     }
   ];
 };
 
 const getMinDateTime = () => {
   const now = new Date();
-  now.setMinutes(now.getMinutes() + 30);
+  now.setSeconds(0);
+  now.setMilliseconds(0);
+  now.setMinutes(now.getMinutes() + 29);
   return now;
 };
 

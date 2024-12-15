@@ -1,4 +1,11 @@
 import { BaseModel } from '../core/BaseModel.js';
+import PDFDocument from 'pdfkit';
+import fs from 'fs';
+import { promises as fsPromises } from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /**
  * @typedef {Object} ReceiptModelData
@@ -92,6 +99,112 @@ export class ReceiptModel extends BaseModel {
             created_at: this._data.created_at,
             updated_at: this._data.updated_at
         };
+    }
+
+    /**
+     * Generates a PDF version of this receipt
+     * @returns {Promise<string>} Path to the generated PDF file
+     */
+    async generatePDF() {
+        try {
+            const doc = new PDFDocument({
+                size: 'A4',
+                margin: 50
+            });
+
+            // Create PDF directory if it doesn't exist
+            const pdfDir = path.join(__dirname, '../../temp/pdfs');
+            await fsPromises.mkdir(pdfDir, { recursive: true });
+
+            const filePath = path.join(pdfDir, `boleta_${this.codigo_boleta}.pdf`);
+            const writeStream = fs.createWriteStream(filePath);
+
+            // Pipe the PDF to the file
+            doc.pipe(writeStream);
+
+            // Add content to the PDF
+            doc
+                .fontSize(20)
+                .text('BOLETA ELECTRÓNICA', { align: 'center' })
+                .moveDown();
+
+            // Add company info
+            doc
+                .fontSize(12)
+                .text('TAXI SERVICE', { align: 'center' })
+                .text('RUT: 76.XXX.XXX-X', { align: 'center' })
+                .text('Dirección: Av. Arturo Prat 2120, Iquique', { align: 'center' })
+                .moveDown();
+
+            // Add receipt details
+            doc
+                .fontSize(14)
+                .text(`Boleta N°: ${this.codigo_boleta}`)
+                .text(`Fecha: ${new Date(this.fecha_emision).toLocaleString()}`)
+                .moveDown()
+                .text('DETALLES DEL SERVICIO')
+                .moveDown();
+
+            // Add service details
+            doc
+                .fontSize(12)
+                .text(this.descripcion_boleta)
+                .moveDown();
+
+            // Add payment details
+            doc
+                .text('DETALLES DEL PAGO')
+                .text(`Método de Pago: ${this.metodo_pago}`)
+                .text(`Total: $${this.total.toLocaleString()}`)
+                .text(`Estado: ${this.estado_boleta}`)
+                .moveDown();
+
+            // Add footer
+            doc
+                .fontSize(10)
+                .text('Este documento es una representación impresa de una boleta electrónica', {
+                    align: 'center',
+                    color: 'gray'
+                });
+
+            // Finalize the PDF
+            doc.end();
+
+            // Wait for the file to be written
+            await new Promise((resolve, reject) => {
+                writeStream.on('finish', resolve);
+                writeStream.on('error', reject);
+            });
+
+            return filePath;
+        } catch (error) {
+            console.error('Error generating PDF:', error);
+            throw new Error(`Error generating receipt PDF: ${error.message}`);
+        }
+    }
+
+    /**
+     * Cleans up old PDF files
+     * @static
+     * @private
+     */
+    static async _cleanupOldPDFs() {
+        try {
+            const pdfDir = path.join(__dirname, '../../temp/pdfs');
+            const files = await fsPromises.readdir(pdfDir);
+            const now = Date.now();
+            const oneHourAgo = now - (60 * 60 * 1000);
+
+            for (const file of files) {
+                const filePath = path.join(pdfDir, file);
+                const stats = await fsPromises.stat(filePath);
+                if (stats.ctimeMs < oneHourAgo) {
+                    await fsPromises.unlink(filePath);
+                }
+            }
+        } catch (error) {
+            console.error('Error cleaning up PDFs:', error);
+        }
     }
 }
 

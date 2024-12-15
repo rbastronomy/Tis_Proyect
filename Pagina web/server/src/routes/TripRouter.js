@@ -126,19 +126,19 @@ export class TripRouter extends BaseRouter {
         });
 
         // Get trip details
-        this.addRoute('GET', '/:tripId/details', {
+        this.addRoute('GET', '/details/:codigoReserva', {
             schema: {
                 params: {
                     type: 'object',
-                    required: ['tripId'],
+                    required: ['codigoReserva'],
                     properties: {
-                        tripId: { type: 'integer' }
+                        codigoReserva: { type: 'integer' }
                     }
                 }
             },
             handler: this.withAuth(
                 this.controller.getTripDetails.bind(this.controller),
-                ['ver_viajes'],
+                ['ver_reservas'],
                 ['CONDUCTOR', 'CLIENTE', 'ADMINISTRADOR']
             )
         });

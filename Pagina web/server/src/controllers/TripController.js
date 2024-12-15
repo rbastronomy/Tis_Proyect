@@ -20,10 +20,17 @@ export class TripController extends BaseController {
             const { codigoreserva } = request.params;
             const tripData = request.body;
 
+            console.log('TripController - Creating trip:', {
+                codigoreserva,
+                tripData
+            });
+
             const trip = await this.service.createFromBooking(
                 codigoreserva,
                 tripData
             );
+
+            console.log('TripController - Trip created:', trip.toJSON());
 
             return reply.code(201).send({
                 message: 'Viaje registrado exitosamente',
@@ -31,6 +38,10 @@ export class TripController extends BaseController {
             });
         } catch (error) {
             request.log.error(error);
+            console.error('TripController - Error creating trip:', {
+                error: error.message,
+                stack: error.stack
+            });
             return this.handleError(reply, error);
         }
     }
@@ -76,22 +87,21 @@ export class TripController extends BaseController {
     }
 
     /**
-     * Gets trip details
-     * @param {FastifyRequest} request
-     * @param {FastifyReply} reply
+     * Get trip details
+     * @param {import('fastify').FastifyRequest} request
+     * @param {import('fastify').FastifyReply} reply
      */
     async getTripDetails(request, reply) {
         try {
-            const { tripId } = request.params;
-            const trip = await this.service.getTripWithDetails(tripId);
-            
+            const { codigoReserva } = request.params;
+            const trip = await this.service.getTripWithDetails(codigoReserva);
             return reply.send({
-                message: 'Viaje recuperado exitosamente',
+                message: 'Detalles del viaje recuperados exitosamente',
                 trip: trip.toJSON()
             });
         } catch (error) {
-            request.log.error(error);
-            return this.handleError(reply, error);
+            console.error('TripController - Error getting trip details:', error);
+            throw error;
         }
     }
 }

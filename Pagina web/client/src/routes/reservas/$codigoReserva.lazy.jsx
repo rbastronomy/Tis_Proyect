@@ -40,6 +40,8 @@ function ReservationDetail() {
   const { socket } = useSocketContext()
   const [driverLocation, setDriverLocation] = useState(null)
   const [routeCoordinates, setRouteCoordinates] = useState(null)
+  const [tripDetails, setTripDetails] = useState(null)
+  const [receiptDetails, setReceiptDetails] = useState(null)
 
   // Listen for driver location updates
   useEffect(() => {
@@ -229,6 +231,31 @@ function ReservationDetail() {
         } else {
           setReservation(data.reserva);
         }
+
+        // If reservation is completed, fetch trip and receipt details
+        if (data.reserva.estado_reserva === 'COMPLETADO') {
+          // Fetch trip details using the booking code
+          const tripResponse = await fetch(`/api/trips/details/${data.reserva.codigo_reserva}`, {
+            credentials: 'include'
+          });
+
+          if (tripResponse.ok) {
+            const tripData = await tripResponse.json();
+            setTripDetails(tripData.trip);
+
+            // If we have receipt info, fetch receipt details
+            if (tripData.trip.receipt?.codigo_boleta) {
+              const receiptResponse = await fetch(`/api/receipts/${tripData.trip.receipt.codigo_boleta}`, {
+                credentials: 'include'
+              });
+
+              if (receiptResponse.ok) {
+                const receiptData = await receiptResponse.json();
+                setReceiptDetails(receiptData);
+              }
+            }
+          }
+        }
       } else {
         const error = await response.json();
         console.error('Error response:', error);
@@ -295,6 +322,123 @@ function ReservationDetail() {
       }</div>
     </div>
   );
+
+  const TripDetails = () => {
+    if (!tripDetails) return null;
+
+    return (
+      <Card className="w-full max-w-3xl mx-auto mt-4">
+        <CardHeader>
+          <h2 className="text-xl font-bold">Detalles del Viaje</h2>
+        </CardHeader>
+        <CardBody>
+          <div className="grid gap-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-gray-600">
+                  <strong>Duración:</strong> {tripDetails.duracion} minutos
+                </p>
+                <p className="text-sm text-gray-600">
+                  <strong>Pasajeros:</strong> {tripDetails.pasajeros}
+                </p>
+                <p className="text-sm text-gray-600">
+                  <strong>Fecha del Viaje:</strong>{' '}
+                  {new Date(tripDetails.fecha_viaje).toLocaleString()}
+                </p>
+              </div>
+              {tripDetails.observacion_viaje && (
+                <p className="text-sm text-gray-600">
+                  <strong>Observaciones:</strong> {tripDetails.observacion_viaje}
+                </p>
+              )}
+            </div>
+          </div>
+        </CardBody>
+      </Card>
+    );
+  };
+
+  const ReceiptDetails = () => {
+    if (!receiptDetails?.receipt) return null;
+
+    const downloadReceipt = async () => {
+      try {
+        const response = await fetch(`/api/receipts/${receiptDetails.receipt.codigo_boleta}/pdf`, {
+          credentials: 'include'
+        });
+
+        if (response.ok) {
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `boleta_${receiptDetails.receipt.codigo_boleta}.pdf`;
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+        }
+      } catch (error) {
+        console.error('Error downloading receipt:', error);
+        toast.error('Error al descargar boleta');
+      }
+    };
+
+    const receipt = receiptDetails.receipt;
+
+    return (
+      <Card className="w-full max-w-3xl mx-auto mt-4">
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-bold">Detalles del Pago</h2>
+            <Button 
+              color="primary"
+              variant="flat"
+              size="sm"
+              onClick={downloadReceipt}
+            >
+              Descargar Boleta
+            </Button>
+          </div>
+        </CardHeader>
+        <CardBody>
+          <div className="grid gap-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-gray-600">
+                  <strong>Total:</strong> ${receipt.total?.toLocaleString() || 0}
+                </p>
+                <p className="text-sm text-gray-600">
+                  <strong>Método de Pago:</strong> {receipt.metodo_pago || 'No especificado'}
+                </p>
+                <p className="text-sm text-gray-600">
+                  <strong>Fecha de Emisión:</strong>{' '}
+                  {receipt.fecha_emision ? 
+                    new Date(receipt.fecha_emision).toLocaleString() : 
+                    'No especificada'
+                  }
+                </p>
+                <p className="text-sm text-gray-600">
+                  <strong>Estado:</strong>{' '}
+                  <span className={`font-medium ${
+                    receipt.estado_boleta === 'PAGADO' ? 'text-green-600' :
+                    receipt.estado_boleta === 'ANULADO' ? 'text-red-600' :
+                    'text-gray-600'
+                  }`}>
+                    {receipt.estado_boleta || 'No especificado'}
+                  </span>
+                </p>
+              </div>
+              {receipt.descripcion_boleta && (
+                <p className="text-sm text-gray-600">
+                  <strong>Descripción:</strong> {receipt.descripcion_boleta}
+                </p>
+              )}
+            </div>
+          </div>
+        </CardBody>
+      </Card>
+    );
+  };
 
   if (loading) {
     return (
@@ -595,6 +739,14 @@ function ReservationDetail() {
         </ModalContent>
       </Modal>
       {process.env.NODE_ENV === 'development' && <DebugInfo />}
+
+      {/* Show trip and receipt details only for completed reservations */}
+      {reservation?.estado_reserva === 'COMPLETADO' && (
+        <>
+          <TripDetails />
+          <ReceiptDetails />
+        </>
+      )}
     </div>
   )
 } 

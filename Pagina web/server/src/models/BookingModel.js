@@ -23,6 +23,11 @@ import { ServiceModel } from './ServiceModel.js';
  * @property {UserModel|null} cliente - Associated cliente
  * @property {ServiceModel|null} service - Associated service
  * @property {import('./HistoryModel.js').HistoryModel[]} history - Booking history records
+ * @property {Object} tarifa - Rate information
+ * @property {number} tarifa.id_tarifa - Rate ID
+ * @property {number} tarifa.precio - Rate price
+ * @property {string} tarifa.descripcion - Rate description
+ * @property {string} tarifa.tipo - Rate type
  */
 
 /**
@@ -66,8 +71,13 @@ export class BookingModel extends BaseModel {
         driver: null,
         taxi: null,
         cliente: null,
-        service: null,
-        history: [],
+        servicio: {
+            codigo_servicio: null,
+            tipo_servicio: '',
+            descripcion_servicio: '',
+            tarifas: []
+        },
+        history: []
     };
 
     /**
@@ -91,8 +101,13 @@ export class BookingModel extends BaseModel {
         if (data.cliente) {
             this.cliente = data.cliente;
         }
-        if (data.service) {
-            this.service = data.service;
+        if (data.servicio) {
+            this._data.servicio = {
+                codigo_servicio: data.servicio.codigo_servicio,
+                tipo_servicio: data.servicio.tipo_servicio,
+                descripcion_servicio: data.servicio.descripcion_servicio,
+                tarifas: data.servicio.tarifas || []
+            };
         }
     }
 
@@ -260,13 +275,23 @@ export class BookingModel extends BaseModel {
             created_at: this._data.created_at,
             updated_at: this._data.updated_at,
             patente_taxi: this._data.patente_taxi,
-            rut_conductor: this._data.rut_conductor
+            rut_conductor: this._data.rut_conductor,
+            servicio: this._data.servicio ? {
+                codigo_servicio: this._data.servicio.codigo_servicio,
+                tipo_servicio: this._data.servicio.tipo_servicio,
+                descripcion_servicio: this._data.servicio.descripcion_servicio,
+                tarifas: this._data.servicio.tarifas?.map(tarifa => ({
+                    id_tarifa: tarifa.id_tarifa,
+                    precio: tarifa.precio,
+                    descripcion_tarifa: tarifa.descripcion_tarifa,
+                    tipo_tarifa: tarifa.tipo_tarifa
+                })) || []
+            } : null
         };
 
         if (this._data.driver) json.driver = this._data.driver.toJSON();
         if (this._data.taxi) json.taxi = this._data.taxi.toJSON();
         if (this._data.cliente) json.cliente = this._data.cliente.toJSON();
-        if (this._data.service) json.service = this._data.service.toJSON();
         if (this._data.history?.length) {
             json.history = this._data.history.map(h => h.toJSON());
         }

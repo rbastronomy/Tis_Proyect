@@ -17,13 +17,33 @@ export class BookingRepository extends BaseRepository {
       dataToInsert.created_at = new Date();
       dataToInsert.updated_at = new Date();
       
+      console.log('BookingRepository - Creating booking with data:', dataToInsert);
+
+      const dbFields = {
+        rut_cliente: dataToInsert.rut_cliente,
+        id_oferta: dataToInsert.id_oferta,
+        origen_reserva: dataToInsert.origen_reserva,
+        destino_reserva: dataToInsert.destino_reserva,
+        fecha_reserva: dataToInsert.fecha_reserva,
+        fecha_realizado: dataToInsert.fecha_realizado,
+        tipo_reserva: dataToInsert.tipo_reserva,
+        observacion_reserva: dataToInsert.observacion_reserva,
+        estado_reserva: dataToInsert.estado_reserva,
+        deleted_at_reserva: dataToInsert.deleted_at_reserva,
+        rut_conductor: dataToInsert.rut_conductor,
+        patente_taxi: dataToInsert.patente_taxi,
+        created_at: dataToInsert.created_at,
+        updated_at: dataToInsert.updated_at
+      };
+
       const query = (trx || this.db)(this.tableName)
-        .insert(dataToInsert)
+        .insert(dbFields)
         .returning("*");
 
       const [created] = await query;
       return created;
     } catch (error) {
+      console.error('BookingRepository - Create error:', error);
       throw new Error(`Error creating booking: ${error.message}`);
     }
   }

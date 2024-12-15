@@ -1,6 +1,6 @@
 exports.up = function(knex) {
     return knex.schema.createTable('boleta', function(table) {
-        table.integer('codigo_boleta').primary();
+        table.increments('codigo_boleta').primary();
         table.float('total');
         table.timestamp('fecha_emision');
         table.string('metodo_pago', 256);
