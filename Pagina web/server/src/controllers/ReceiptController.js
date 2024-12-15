@@ -83,4 +83,27 @@ export default class ReceiptController extends BaseController {
         });
       }
     }
+
+    async generateReceiptPDF(request, reply) {
+      try {
+        const { codigo_boleta } = request.params;
+        const receipt = await this.service.getBoletaById(codigo_boleta);
+        if(!boleta){
+          return reply.code(404).send({
+            statusCode: 404,
+            error: 'Not Found',
+            message: 'Boleta not found'
+          });
+        }
+        const filePath = this.generateReceiptPDF(receipt);
+        return reply.code(200).sendFile(filePath)
+      } catch (error){
+        request.log.error(error);
+        return reply.code(500).send({
+          statusCode: 500,
+          error: 'Internal Server Error',
+          message: error.message
+        });
+      }
+    }
 }
