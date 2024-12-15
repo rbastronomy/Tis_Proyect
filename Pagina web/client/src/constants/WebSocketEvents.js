@@ -19,5 +19,9 @@ export const WS_EVENTS = {
   // System events
   ERROR: 'error',
   CONNECT: 'connection',
-  DISCONNECT: 'disconnect'
+  DISCONNECT: 'disconnect',
+  
+  // Booking events
+  JOIN_BOOKING_ROOM: 'booking:join',
+  LEAVE_BOOKING_ROOM: 'booking:leave'
 }; 

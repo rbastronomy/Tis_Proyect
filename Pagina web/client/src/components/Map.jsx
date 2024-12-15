@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Polyline, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import PropTypes from 'prop-types';
@@ -12,66 +12,55 @@ L.Icon.Default.mergeOptions({
 });
 
 // Componente para actualizar la posición del mapa cuando el seguimiento está activo
-function MapUpdater({ position, isTracking }) {
+function MapUpdater({ position, isTracking, children }) {
   const map = useMap();
 
   useEffect(() => {
-    if (position?.lat && position?.lon && isTracking) {
-      map.setView([position.lat, position.lon], map.getZoom(), { animate: true });
+    if (position?.lat && position?.lng && isTracking) {
+      console.log('Updating map position:', position);
+      map.setView([position.lat, position.lng], map.getZoom(), { animate: true });
     }
   }, [position, map, isTracking]);
 
-  return null;
+  // Add debug log for children props
+  console.log('MapUpdater children:', children);
+
+  return <>{children}</>;
 }
 
 MapUpdater.propTypes = {
   position: PropTypes.shape({
     lat: PropTypes.number,
-    lon: PropTypes.number,
+    lng: PropTypes.number,
   }),
   isTracking: PropTypes.bool.isRequired,
+  children: PropTypes.node
 };
 
-function Map({ position, startCoords, endCoords, routeCoordinates, isTracking }) {
-  const defaultPosition = { lat: -20.2133, lon: -70.1503 }; // Iquique default position
+function Map({ position, isTracking, children }) {
+  const defaultPosition = { lat: -20.2133, lng: -70.1503 }; // Iquique default position
   const mapPosition = position || defaultPosition;
+
+  // Add debug log for incoming props
+  console.log('Map component props:', { position, isTracking, children });
 
   return (
     <MapContainer 
-      center={[mapPosition.lat, mapPosition.lon]} 
+      center={[mapPosition.lat, mapPosition.lng]} 
       zoom={13} 
-      style={{ width: '100%', height: '100%' }} 
+      style={{ width: '100%', height: '100%' }}
     >
       <TileLayer
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         attribution="&copy; OpenStreetMap contributors"
       />
       
-      {/* Show position marker only if we have valid coordinates */}
-      {position?.lat && position?.lon && (
-        <Marker position={[position.lat, position.lon]}>
-          {/* Popup opcional que puedes agregar aquí */}
-        </Marker>
-      )}
-
-      {/* Optional start/end markers */}
-      {startCoords?.lat && startCoords?.lon && (
-        <Marker position={[startCoords.lat, startCoords.lon]} />
-      )}
-      {endCoords?.lat && endCoords?.lon && (
-        <Marker position={[endCoords.lat, endCoords.lon]} />
-      )}
-      
-      {/* Route polyline */}
-      {routeCoordinates && routeCoordinates.length > 0 && (
-        <Polyline 
-          positions={routeCoordinates.map(coord => [coord.lat, coord.lon])} 
-          color="blue" 
-        />
-      )}
-
-      {/* Map updater */}
-      <MapUpdater position={position} isTracking={isTracking} />
+      <MapUpdater position={position} isTracking={isTracking}>
+        {children}
+        {position && (
+          <Marker position={[position.lat, position.lng]} />
+        )}
+      </MapUpdater>
     </MapContainer>
   );
 }
@@ -79,25 +68,12 @@ function Map({ position, startCoords, endCoords, routeCoordinates, isTracking })
 Map.propTypes = {
   position: PropTypes.shape({
     lat: PropTypes.number,
-    lon: PropTypes.number,
+    lng: PropTypes.number,
     accuracy: PropTypes.number,
     speed: PropTypes.number
   }),
-  startCoords: PropTypes.shape({
-    lat: PropTypes.number,
-    lon: PropTypes.number,
-  }),
-  endCoords: PropTypes.shape({
-    lat: PropTypes.number,
-    lon: PropTypes.number,
-  }),
-  routeCoordinates: PropTypes.arrayOf(
-    PropTypes.shape({
-      lat: PropTypes.number,
-      lon: PropTypes.number,
-    })
-  ),
   isTracking: PropTypes.bool.isRequired,
+  children: PropTypes.node
 };
 
 Map.defaultProps = {

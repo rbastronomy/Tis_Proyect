@@ -5,26 +5,21 @@ export const useSocket = () => {
   const socketRef = useRef(null);
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(true);
-  const reconnectAttempts = useRef(0);
-  const maxReconnectAttempts = 5;
 
   const connect = useCallback(() => {
     if (!socketRef.current) {
       console.log('🔌 Initializing socket connection...');
       
       const baseUrl = window.location.origin;
-
       console.log('🔌 Connecting to WebSocket server:', baseUrl);
 
       socketRef.current = io(baseUrl, {
         withCredentials: true,
         reconnection: true,
-        reconnectionAttempts: maxReconnectAttempts,
+        reconnectionAttempts: 5,
         reconnectionDelay: 1000,
         reconnectionDelayMax: 5000,
-        randomizationFactor: 0.5,
         timeout: 20000,
-        autoConnect: true,
         transports: ['websocket'],
         path: '/socket.io',
         secure: window.location.protocol === 'https:',
@@ -40,25 +35,16 @@ export const useSocket = () => {
         });
         setIsConnected(true);
         setIsConnecting(false);
-        reconnectAttempts.current = 0;
       });
 
       socketRef.current.on('connect_error', (error) => {
         console.error('🔌 Socket connection error:', {
           error: error.message,
           id: socketRef.current?.id,
-          url: baseUrl,
-          attempt: reconnectAttempts.current + 1
+          url: baseUrl
         });
         setIsConnected(false);
-        setIsConnecting(true);
-
-        reconnectAttempts.current++;
-        if (reconnectAttempts.current >= maxReconnectAttempts) {
-          console.log('🔌 Max reconnection attempts reached');
-          setIsConnecting(false);
-          socketRef.current?.close();
-        }
+        setIsConnecting(false);
       });
 
       socketRef.current.on('disconnect', (reason) => {
@@ -68,36 +54,9 @@ export const useSocket = () => {
         });
         setIsConnected(false);
         
-        // Handle different disconnect reasons
         if (reason === 'io server disconnect') {
-          // Server forcefully disconnected, try to reconnect
           socketRef.current?.connect();
         }
-        // If the disconnection was clean, don't reconnect automatically
-        if (reason === 'io client disconnect') {
-          setIsConnecting(false);
-        }
-      });
-
-      // Handle reconnection attempts
-      socketRef.current.on('reconnect_attempt', (attempt) => {
-        console.log('🔌 Reconnection attempt:', attempt);
-        setIsConnecting(true);
-      });
-
-      socketRef.current.on('reconnect', (attempt) => {
-        console.log('🔌 Reconnected after', attempt, 'attempts');
-        setIsConnecting(false);
-        setIsConnected(true);
-      });
-
-      socketRef.current.on('reconnect_error', (error) => {
-        console.error('🔌 Reconnection error:', error);
-      });
-
-      socketRef.current.on('reconnect_failed', () => {
-        console.log('🔌 Failed to reconnect');
-        setIsConnecting(false);
       });
     }
   }, []);
@@ -105,28 +64,7 @@ export const useSocket = () => {
   useEffect(() => {
     connect();
 
-    // Handle page visibility changes
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && !isConnected) {
-        console.log('🔌 Page became visible, attempting to reconnect');
-        socketRef.current?.connect();
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    // Handle online/offline events
-    const handleOnline = () => {
-      console.log('🔌 Browser is online, attempting to reconnect');
-      socketRef.current?.connect();
-    };
-
-    window.addEventListener('online', handleOnline);
-
     return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('online', handleOnline);
-      
       if (socketRef.current) {
         console.log('Cleaning up socket connection');
         socketRef.current.disconnect();

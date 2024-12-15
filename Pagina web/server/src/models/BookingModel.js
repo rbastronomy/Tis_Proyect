@@ -37,7 +37,14 @@ import { ServiceModel } from './ServiceModel.js';
  */
 export class BookingModel extends BaseModel {
     static VALID_TIPOS = ['NORMAL', 'PROGRAMADO'];
-    static VALID_ESTADOS = ['EN_REVISION', 'PENDIENTE', 'CONFIRMADO', 'CANCELADO', 'COMPLETADO'];
+    static VALID_ESTADOS = [
+        'EN_REVISION',      // Initial state when booking is created
+        'PENDIENTE',        // After admin approves and assigns driver
+        'CONFIRMADO',       // When driver starts trip and is heading to pickup
+        'RECOGIDO',        // Changed from EN_RUTA - When passenger is picked up
+        'CANCELADO',        // If booking is cancelled
+        'COMPLETADO'        // When trip is finished
+    ];
     static VALID_RIDE_TYPES = ['CIUDAD', 'AEROPUERTO'];
 
     /**
@@ -218,6 +225,22 @@ export class BookingModel extends BaseModel {
      * @returns {boolean} True if booking can be assigned
      */
     canBeAssigned() { return this._data.estado_reserva === 'EN_REVISION'; }
+
+    /**
+     * Checks if the booking is in route (passenger picked up)
+     * @returns {boolean} True if booking is in route
+     */
+    isInRoute() { 
+        return this._data.estado_reserva === 'EN_RUTA'; 
+    }
+
+    /**
+     * Checks if the passenger has been picked up
+     * @returns {boolean} True if passenger has been picked up
+     */
+    isPassengerPickedUp() { 
+        return this._data.estado_reserva === 'RECOGIDO'; 
+    }
 
     /**
      * Converts the booking model to a JSON object

@@ -91,8 +91,9 @@ export default function ReservationGrid() {
                 <span className={`px-2 py-1 text-xs font-semibold rounded-full border ${
                   booking.estado_reserva === 'EN_REVISION' ? 'text-yellow-800 bg-yellow-100 border-yellow-200' :
                   booking.estado_reserva === 'PENDIENTE' ? 'text-blue-800 bg-blue-100 border-blue-200' :
-                  booking.estado_reserva === 'EN_CAMINO' ? 'text-purple-800 bg-purple-100 border-purple-200' :
+                  booking.estado_reserva === 'CONFIRMADO' ? 'text-purple-800 bg-purple-100 border-purple-200' :
                   booking.estado_reserva === 'COMPLETADO' ? 'text-green-800 bg-green-100 border-green-200' :
+                  booking.estado_reserva === 'CANCELADO' ? 'text-red-800 bg-red-100 border-red-200' :
                   'text-red-800 bg-red-100 border-red-200'
                 }`}>
                   {booking.estado_reserva}
