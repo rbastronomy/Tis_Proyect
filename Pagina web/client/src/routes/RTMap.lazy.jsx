@@ -6,7 +6,7 @@ import { createLazyFileRoute } from '@tanstack/react-router';
 const RTMap = () => {
     const [positions, setPositions] = useState([]);
     const { isLoaded } = useJsApiLoader({
-        googleMapsApiKey: 'AIzaSyBnDTpGimoFJe0bB-_UwE7wQeehmn2TPzU',
+        googleMapsApiKey: GOOGLE_MAPS_API_KEY,
     });
 
     useEffect(() => {
