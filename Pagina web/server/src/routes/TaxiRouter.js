@@ -76,7 +76,7 @@ export class TaxiRouter extends BaseRouter {
       handler: this.withAuth(
         this.controller.getTaxisByDriver.bind(this.controller),
         ['ver_taxis'],
-        ['ADMINISTRADOR']
+        ['ADMINISTRADOR', 'CONDUCTOR']
       )
     });
 

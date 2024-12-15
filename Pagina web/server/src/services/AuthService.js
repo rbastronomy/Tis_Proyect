@@ -63,6 +63,8 @@ export class AuthService {
    */
   async register(userData, createSession = true) {
     try {
+      console.log('Registration data received:', userData);
+      
       // Check if user exists by email or RUT
       const [existingEmail, existingRut] = await Promise.all([
         this.userService.getByEmail(userData.correo),
@@ -106,13 +108,17 @@ export class AuthService {
 
   /**
    * Authenticates a user and creates a session
-   * @param {string} email - User email
-   * @param {string} password - User password
+   * @param {string} correo - User email
+   * @param {string} contrasena - User password
    * @returns {Promise<{user: UserModel, session: Session}>}
    * @throws {AuthError} When credentials are invalid
    */
   async login(correo, contrasena) {
     try {
+      if (!correo || !contrasena) {
+        throw AuthError.InvalidCredentials('Email and password are required');
+      }
+
       // Use userService to get user data
       const user = await this.userService.getUserWithAuth(correo);
       if (!user) {
@@ -139,7 +145,6 @@ export class AuthService {
 
       // Create new session
       const session = await this.auth.createSession(user.rut.toString());
-
 
       //log successful login
       console.log('Login successful for user:', correo);

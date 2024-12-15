@@ -725,6 +725,45 @@ export class BookingService extends BaseService {
             telefono: data.telefono || ''
         };
     }
+
+    /**
+     * Gets bookings for a specific client
+     * @param {number} clientRut - Client's RUT
+     * @returns {Promise<Array>} Client's bookings
+     * @throws {Error} If retrieval fails
+     */
+    async getClientBookings(clientRut) {
+        try {
+            const bookings = await this.repository.findWithFilters({
+                rut_cliente: clientRut
+            });
+
+            return bookings.map(booking => {
+                const { rut_conductor, ...publicData } = booking;
+                return publicData;
+            });
+        } catch (error) {
+            console.error('Error getting client bookings:', error);
+            throw new Error(`Error al obtener las reservas del cliente: ${error.message}`);
+        }
+    }
+
+    /**
+     * Retrieves bookings for a specific driver.
+     * @param {number} driverId - The ID of the driver
+     * @returns {Promise<Array>} - List of bookings
+     * @throws {Error} If retrieval fails
+     */
+    async getDriverBookings(driverId) {
+        try {
+            const bookings = await this.repository.findBookingsByDriver(driverId);
+            console.log('BookingService - Driver bookings:', bookings);
+            return bookings;
+        } catch (error) {
+            console.error('Error getting driver bookings:', error);
+            throw new Error(`Error al obtener las reservas del conductor: ${error.message}`);
+        }
+    }
 }
 
 export default BookingService;

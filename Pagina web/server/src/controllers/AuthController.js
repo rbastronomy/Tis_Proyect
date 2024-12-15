@@ -93,13 +93,15 @@ export class AuthController {
   async login(request, reply) {
     try {
       const { correo, contrasena } = request.body;
-      console.log('Login attempt with email:', correo);
+      console.log('Login attempt with correo:', correo);
+      
       const { user, session } = await this.authService.login(correo, contrasena);
       
       const sessionCookie = this.authService.auth.createSessionCookie(session);
       reply.header('Set-Cookie', sessionCookie);
       
       return reply.send({ 
+        success: true,
         message: 'Login successful', 
         user: user.toJSON(),
         role: user.role,
@@ -111,12 +113,16 @@ export class AuthController {
       
       if (error instanceof AuthError) {
         return reply.status(401).send({ 
+          success: false,
           error: error.message,
           code: error.code 
         });
       }
       
-      return reply.status(500).send({ error: 'An error occurred during login' });
+      return reply.status(500).send({ 
+        success: false,
+        error: 'An error occurred during login' 
+      });
     }
   }
 

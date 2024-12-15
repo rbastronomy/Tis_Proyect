@@ -122,10 +122,10 @@ export class UserRepository extends BaseRepository {
     try {
       // Format RUT by removing verification digit
       const formattedRut = this._formatRut(userData.rut);
-      console.log('Creating user with formatted RUT:', formattedRut); // Debug log
+      console.log('Creating user with formatted RUT:', formattedRut);
       
       const dbData = {
-        rut: formattedRut, // This will be the RUT without verifier digit
+        rut: formattedRut,
         nombre: userData.nombre,
         apellido_paterno: userData.apellido_paterno,
         apellido_materno: userData.apellido_materno,

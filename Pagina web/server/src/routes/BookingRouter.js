@@ -493,5 +493,14 @@ export class BookingRouter extends BaseRouter {
         ['CLIENTE']
       )
     });
+
+    // Add this route to the router configuration
+    this.addRoute('GET', '/driver/:driverId', {
+      handler: this.withAuth(
+        this.controller.getDriverBookings.bind(this.controller),
+        ['ver_reservas'],
+        ['CONDUCTOR']
+      )
+    });
   }
 } 

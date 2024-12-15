@@ -200,7 +200,7 @@ function Registro() {
                   />
 
                   <Controller
-                    name="ntelefono"
+                    name="telefono"
                     control={control}
                     rules={{ 
                       required: "El teléfono es obligatorio",
@@ -215,8 +215,8 @@ function Registro() {
                         type="tel"
                         label="Teléfono"
                         placeholder="912345678"
-                        isInvalid={!!errors.ntelefono}
-                        errorMessage={errors.ntelefono?.message}
+                        isInvalid={!!errors.telefono}
+                        errorMessage={errors.telefono?.message}
                         variant="bordered"
                       />
                     )}

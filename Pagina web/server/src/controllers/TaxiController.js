@@ -183,10 +183,12 @@ export class TaxiController extends BaseController {
         const { rut } = request.params;
         const taxis = await this.service.getTaxisByDriver(rut);
         
-        reply.code(200).send({
-          message: 'Taxis obtenidos exitosamente',
-          taxis: taxis.map(taxi => taxi.toJSON())
-        });
+        // Ensure we're sending an array
+        const taxisArray = Array.isArray(taxis) ? taxis : [taxis].filter(Boolean);
+        
+        reply.code(200).send(
+          taxisArray.map(taxi => taxi.toJSON())
+        );
       } catch (error) {
         request.log.error(error);
         reply.code(500).send({ 

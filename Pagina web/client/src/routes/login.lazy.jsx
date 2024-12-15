@@ -28,7 +28,10 @@ function Login() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          correo: data.email,
+          contrasena: data.password
+        }),
       });
       
       console.log('Status:', response.status);
@@ -52,7 +55,7 @@ function Login() {
 
     } catch (error) {
       console.error('Login error details:', error);
-      setError('root', { message: `Error en el login: ${error.message}` });
+      setError('Error en el login: ' + error.message);
     }
   };
 

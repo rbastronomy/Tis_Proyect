@@ -87,7 +87,6 @@ class BookingController extends BaseController {
             console.log('BookingController - Getting booking:', codigoReserva);
             
             const booking = await this.service.getBookingByCode(codigoReserva);
-            
             if (!booking) {
                 return reply.code(404).send({ 
                     error: 'Reserva no encontrada' 
@@ -394,27 +393,11 @@ class BookingController extends BaseController {
             const clientRut = request.user.rut;
             console.log('Getting bookings for client:', clientRut);
 
-            // Get bookings with a filter for the client's RUT
-            const bookings = await this.service.getBookings({ 
-                userId: clientRut,
-                role: 'CLIENTE'
-            });
+            const bookings = await this.service.getClientBookings(clientRut);
 
             return reply.send({
                 message: 'Reservas recuperadas exitosamente',
-                reservas: bookings.map(booking => ({
-                    codigo_reserva: booking.codigo_reserva,
-                    origen_reserva: booking.origen_reserva,
-                    destino_reserva: booking.destino_reserva,
-                    fecha_reserva: booking.fecha_reserva,
-                    tipo_reserva: booking.tipo_reserva,
-                    observacion_reserva: booking.observacion_reserva,
-                    estado_reserva: booking.estado_reserva,
-                    tarifa: booking.tarifa ? {
-                        precio: booking.tarifa.precio,
-                        descripcion: booking.tarifa.descripcion
-                    } : null
-                }))
+                reservas: bookings
             });
         } catch (error) {
             request.log.error(error);
@@ -422,6 +405,61 @@ class BookingController extends BaseController {
                 error: 'Error al recuperar las reservas',
                 details: error.message 
             });
+        }
+    }
+
+    /**
+     * Handles errors in a standardized way
+     * @private
+     * @param {import('fastify').FastifyReply} reply - Fastify reply object
+     * @param {Error} error - Error to handle
+     */
+    handleError(reply, error) {
+        console.error('Controller Error:', error);
+        
+        if (error.message.includes('no encontrada') || error.message.includes('not found')) {
+            return reply.code(404).send({ 
+                error: 'Not Found',
+                message: error.message 
+            });
+        }
+        
+        if (error.message.includes('No autorizado') || error.message.includes('unauthorized')) {
+            return reply.code(403).send({ 
+                error: 'Forbidden',
+                message: error.message 
+            });
+        }
+        
+        return reply.code(500).send({ 
+            error: 'Internal Server Error',
+            message: error.message 
+        });
+    }
+
+    /**
+     * Retrieves bookings for a specific driver.
+     * @param {Object} request - The HTTP request object
+     * @param {Object} reply - The HTTP reply object
+     * @returns {Promise<void>}
+     */
+    async getDriverBookings(request, reply) {
+        try {
+            const driverId = request.params.driverId;
+            
+            // Validate that the requesting driver can only see their own bookings
+            if (request.user.rut !== Number(driverId)) {
+                throw new Error('No autorizado para ver estas reservas');
+            }
+
+            const bookings = await this.service.getDriverBookings(driverId);
+            
+            reply.send({
+                message: 'Reservas recuperadas exitosamente',
+                reservas: bookings
+            });
+        } catch (error) {
+            this.handleError(reply, error);
         }
     }
 }

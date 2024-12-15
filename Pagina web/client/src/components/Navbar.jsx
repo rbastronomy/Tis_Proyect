@@ -116,43 +116,45 @@ function Navbar() {
           </Dropdown>
         )}
 
-        {/* Taxi Dropdown - Already exists, remains the same */}
-        <Dropdown>
-          <DropdownTrigger>
-            <Button
-              auto
-              bordered
-              color="warning"
-              className="hover:bg-yellow-500 hover:text-black"
+        {/* Taxi/Driver Dropdown - Updated labels */}
+        {isAuthenticated && user?.role?.nombre_rol === 'CONDUCTOR' ? (
+          <Dropdown>
+            <DropdownTrigger>
+              <Button
+                auto
+                bordered
+                color="warning"
+                className="hover:bg-yellow-500 hover:text-black"
+              >
+                Panel Conductor
+              </Button>
+            </DropdownTrigger>
+            <DropdownMenu
+              aria-label="Driver Options"
+              className="bg-black border border-yellow-500"
+              itemClasses={{
+                base: "data-[hover=true]:bg-yellow-500 data-[hover=true]:text-black",
+              }}
             >
-              Taxi
-            </Button>
-          </DropdownTrigger>
-          <DropdownMenu
-            aria-label="Taxi Options"
-            className="bg-black border border-yellow-500"
-            itemClasses={{
-              base: "data-[hover=true]:bg-yellow-500 data-[hover=true]:text-black",
-            }}
-          >
-            <DropdownItem
-              key="taxi"
-              as="a"
-              href="/taxi"
-              className="text-yellow-500 hover:bg-yellow-500 hover:text-black"
-            >
-              Capturar posición
-            </DropdownItem>
-            <DropdownItem
-              key="ruta"
-              as="a"
-              href="/taxi/ruta"
-              className="text-yellow-500 hover:bg-yellow-500 hover:text-black"
-            >
-              Ver Ruta
-            </DropdownItem>
-          </DropdownMenu>
-        </Dropdown>
+              <DropdownItem
+                key="taxi"
+                as="a"
+                href="/taxi"
+                className="text-yellow-500 hover:bg-yellow-500 hover:text-black"
+              >
+                Panel de Control
+              </DropdownItem>
+              <DropdownItem
+                key="ruta"
+                as="a"
+                href="/taxi/ruta"
+                className="text-yellow-500 hover:bg-yellow-500 hover:text-black"
+              >
+                Calcular Ruta
+              </DropdownItem>
+            </DropdownMenu>
+          </Dropdown>
+        ) : null}
 
         {/* Información Dropdown */}
         <Dropdown>

@@ -140,10 +140,14 @@ export class BookingRepository extends BaseRepository {
   async findWithFilters(filters) {
     try {
       const query = this.db(this.tableName)
-        .distinct("reserva.*", "servicio.tipo_servicio", "servicio.descripcion_servicio")
+        .distinct("reserva.*")
         .leftJoin("oferta", "reserva.id_oferta", "oferta.id_oferta")
         .leftJoin("servicio", "oferta.codigo_servicio", "servicio.codigo_servicio")
         .whereNull("reserva.deleted_at_reserva");
+
+      if (filters.rut_cliente) {
+        query.where("reserva.rut_cliente", filters.rut_cliente);
+      }
 
       if (filters.estado_reserva) {
         query.where("reserva.estado_reserva", filters.estado_reserva);
@@ -153,31 +157,34 @@ export class BookingRepository extends BaseRepository {
         query.where("reserva.fecha_reserva", filters.fecha_reserva);
       }
 
-      if (filters.rut_cliente) {
-        query.where("reserva.rut_cliente", filters.rut_cliente);
-      }
-
       const bookings = await query;
 
-      // Get rates for each booking
+      // Get rates and services for each booking
       return await Promise.all(
         bookings.map(async (booking) => {
-          const rateQuery = await this.db("tarifa")
-            .select("tarifa.precio", "tarifa.descripcion_tarifa", "tarifa.tipo_tarifa")
-            .join("oferta", "tarifa.id_tarifa", "oferta.id_tarifa")
-            .where("oferta.id_oferta", booking.id_oferta)
-            .first();
+          const [serviceData, rateData] = await Promise.all([
+            this.db("servicio")
+              .select("tipo_servicio", "descripcion_servicio")
+              .join("oferta", "servicio.codigo_servicio", "oferta.codigo_servicio")
+              .where("oferta.id_oferta", booking.id_oferta)
+              .first(),
+            this.db("tarifa")
+              .select("precio", "descripcion_tarifa", "tipo_tarifa")
+              .join("oferta", "tarifa.id_tarifa", "oferta.id_tarifa")
+              .where("oferta.id_oferta", booking.id_oferta)
+              .first()
+          ]);
 
           return {
             ...booking,
-            servicio: booking.tipo_servicio ? {
-              tipo: booking.tipo_servicio,
-              descripcion: booking.descripcion_servicio
+            servicio: serviceData ? {
+              tipo: serviceData.tipo_servicio,
+              descripcion: serviceData.descripcion_servicio
             } : null,
-            tarifa: rateQuery ? {
-              precio: rateQuery.precio,
-              descripcion: rateQuery.descripcion_tarifa,
-              tipo: rateQuery.tipo_tarifa
+            tarifa: rateData ? {
+              precio: rateData.precio,
+              descripcion: rateData.descripcion_tarifa,
+              tipo: rateData.tipo_tarifa
             } : null
           };
         })
@@ -298,6 +305,48 @@ export class BookingRepository extends BaseRepository {
       console.error('BookingRepository - Error:', error);
       throw new Error(`Error finding booking by code: ${error.message}`);
   }
+  }
+
+  /**
+   * Finds bookings by driver ID.
+   * @param {number} driverId - The ID of the driver
+   * @returns {Promise<Array>} - List of bookings
+   */
+  async findBookingsByDriver(driverId) {
+    try {
+        const bookings = await this.db(this.tableName)
+            .select(
+                'reserva.*',
+                'oferta.codigo_servicio',
+                'oferta.id_tarifa',
+                'servicio.tipo_servicio',
+                'servicio.descripcion_servicio',
+                'tarifa.precio',
+                'tarifa.descripcion_tarifa',
+                'tarifa.tipo_tarifa'
+            )
+            .leftJoin('oferta', 'reserva.id_oferta', 'oferta.id_oferta')
+            .leftJoin('servicio', 'oferta.codigo_servicio', 'servicio.codigo_servicio')
+            .leftJoin('tarifa', 'oferta.id_tarifa', 'tarifa.id_tarifa')
+            .where('reserva.rut_conductor', driverId)
+            .whereNull('reserva.deleted_at_reserva')
+            .orderBy('reserva.fecha_reserva', 'desc');
+
+        return bookings.map(booking => ({
+            ...booking,
+            servicio: {
+                tipo: booking.tipo_servicio,
+                descripcion: booking.descripcion_servicio
+            },
+            tarifa: {
+                precio: booking.precio,
+                descripcion: booking.descripcion_tarifa,
+                tipo: booking.tipo_tarifa
+            }
+        }));
+    } catch (error) {
+        throw new Error(`Error finding bookings for driver: ${error.message}`);
+    }
   }
 }
 

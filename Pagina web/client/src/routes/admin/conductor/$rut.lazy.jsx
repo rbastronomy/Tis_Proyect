@@ -410,11 +410,18 @@ function ConductorDetail() {
             <Select
               label="Seleccionar Taxi"
               placeholder="Seleccione un taxi disponible"
-              value={selectedTaxiToAssign}
+              selectedKeys={selectedTaxiToAssign ? [selectedTaxiToAssign] : []}
               onChange={(e) => setSelectedTaxiToAssign(e.target.value)}
+              classNames={{
+                value: "text-default-700"
+              }}
             >
               {availableTaxis.map((taxi) => (
-                <SelectItem key={taxi.patente} value={taxi.patente}>
+                <SelectItem 
+                  key={taxi.patente} 
+                  value={taxi.patente}
+                  textValue={`${taxi.patente} - ${taxi.marca} ${taxi.modelo}`}
+                >
                   {taxi.patente} - {taxi.marca} {taxi.modelo}
                 </SelectItem>
               ))}

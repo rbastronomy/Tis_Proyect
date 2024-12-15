@@ -210,6 +210,11 @@
         id_permiso: 11,
         fecha_cambio_permiso: new Date()
       },
+      { 
+        id_roles: 3, 
+        id_permiso: 12,
+        fecha_cambio_permiso: new Date()
+      },
       // Admin role permissions
       ...Array.from({ length: 4 }, (_, i) => ({
         id_roles: 1,
