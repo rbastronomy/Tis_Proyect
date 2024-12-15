@@ -29,6 +29,8 @@ export class TripRepository extends BaseRepository {
    */
   async create(tripData, trx = null) {
     try {
+      console.log('Creating trip with data:', tripData);
+
       const query = (trx || this.db)(this.tableName)
         .insert({
           ...tripData,
@@ -38,8 +40,10 @@ export class TripRepository extends BaseRepository {
         .returning('*');
 
       const [created] = await query;
+      console.log('Created trip:', created);
       return created;
     } catch (error) {
+      console.error('Error creating trip:', error);
       throw new Error(`Error creating trip: ${error.message}`);
     }
   }
@@ -118,9 +122,11 @@ export class TripRepository extends BaseRepository {
   async findByBooking(codigo_reserva) {
     try {
       return await this.db(this.tableName)
-        .whereNull('deleted_at_viaje')
-        .where('codigo_reserva', codigo_reserva)
-        .orderBy('fecha_viaje', 'desc');
+        .select('viaje.*')
+        .join('genera', 'viaje.codigo_viaje', 'genera.codigo_viaje')
+        .where('genera.codigo_reserva', codigo_reserva)
+        .whereNull('viaje.deleted_at_viaje')
+        .orderBy('viaje.fecha_viaje', 'desc');
     } catch (error) {
       throw new Error(`Error finding trips by booking: ${error.message}`);
     }
@@ -135,7 +141,8 @@ export class TripRepository extends BaseRepository {
     try {
       return await this.db(this.tableName)
         .select('viaje.*')
-        .join('reserva', 'viaje.codigo_reserva', 'reserva.codigo_reserva')
+        .join('genera', 'viaje.codigo_viaje', 'genera.codigo_viaje')
+        .join('reserva', 'genera.codigo_reserva', 'reserva.codigo_reserva')
         .where('reserva.rut_conductor', rut_conductor)
         .whereNull('viaje.deleted_at_viaje')
         .orderBy('viaje.fecha_viaje', 'desc');
@@ -153,7 +160,8 @@ export class TripRepository extends BaseRepository {
     try {
       return await this.db(this.tableName)
         .select('viaje.*')
-        .join('reserva', 'viaje.codigo_reserva', 'reserva.codigo_reserva')
+        .join('genera', 'viaje.codigo_viaje', 'genera.codigo_viaje')
+        .join('reserva', 'genera.codigo_reserva', 'reserva.codigo_reserva')
         .where('reserva.rut_cliente', rut)
         .whereNull('viaje.deleted_at_viaje')
         .orderBy('viaje.fecha_viaje', 'desc');
@@ -163,19 +171,35 @@ export class TripRepository extends BaseRepository {
   }
 
   /**
-   * Find trip with its booking reference
-   * @param {number} codigo_viaje - Trip ID
+   * Find trip with its booking reference and receipt
+   * @param {number} codigo_reserva - Booking ID
    * @returns {Promise<Object|null>} Raw trip data or null
    */
-  async findWithBookingRef(codigo_viaje) {
+  async findWithBookingRef(codigo_reserva) {
     try {
       return await this.db(this.tableName)
-        .select('viaje.*', 'reserva.codigo_reserva')
-        .join('reserva', 'viaje.codigo_reserva', 'reserva.codigo_reserva')
-        .where('viaje.codigo_viaje', codigo_viaje)
+        .select(
+          'viaje.*',
+          'reserva.codigo_reserva',
+          'reserva.origen_reserva',
+          'reserva.destino_reserva',
+          'boleta.codigo_boleta',
+          'boleta.total',
+          'boleta.metodo_pago',
+          'boleta.fecha_emision'
+        )
+        .join('genera', 'viaje.codigo_viaje', 'genera.codigo_viaje')
+        .join('reserva', 'genera.codigo_reserva', 'reserva.codigo_reserva')
+        .leftJoin('boleta', 'genera.codigo_boleta', 'boleta.codigo_boleta')
+        .where('reserva.codigo_reserva', codigo_reserva)
         .whereNull('viaje.deleted_at_viaje')
         .first();
     } catch (error) {
+      console.error('Error in findWithBookingRef:', {
+        error,
+        codigo_reserva,
+        query: this.db(this.tableName).toString()
+      });
       throw new Error(`Error finding trip with booking ref: ${error.message}`);
     }
   }

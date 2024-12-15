@@ -59,25 +59,16 @@ export class TripModel extends BaseModel {
         }
         
         super(data, TripModel.defaultData);
-        this.validate();
 
         // Initialize related models if raw data is provided
         if (data.booking) {
-            this.booking = data.booking instanceof BookingModel ? 
-                data.booking : new BookingModel(data.booking);
-        }
-        if (data.driver) {
-            this.driver = data.driver instanceof UserModel ? 
-                data.driver : new UserModel(data.driver);
-        }
-        if (data.taxi) {
-            this.taxi = data.taxi instanceof TaxiModel ? 
-                data.taxi : new TaxiModel(data.taxi);
+            this.booking = data.booking;
         }
         if (data.receipt) {
-            this.receipt = data.receipt instanceof ReceiptModel ? 
-                data.receipt : new ReceiptModel(data.receipt);
+            this.receipt = data.receipt;
         }
+
+        this.validate();
     }
 
     /**
@@ -96,15 +87,20 @@ export class TripModel extends BaseModel {
         this.validateDate('fecha_viaje', this._data.fecha_viaje);
         this.validateEnum('estado_viaje', this._data.estado_viaje, TripModel.VALID_ESTADOS);
 
-        // Additional validation for completed trip
+        // Modified validation to check booking instead of driver/taxi directly
         if (!this._data.booking) {
             this.addError('booking', 'El viaje debe estar asociado a una reserva');
-        }
-        if (!this._data.driver) {
-            this.addError('driver', 'El viaje debe tener un conductor asignado');
-        }
-        if (!this._data.taxi) {
-            this.addError('taxi', 'El viaje debe tener un taxi asignado');
+        } else {
+            // Access booking data through _data property since it's a BookingModel instance
+            const bookingData = this._data.booking._data;
+            
+            // Validate that booking has driver and taxi info
+            if (!bookingData.rut_conductor) {
+                this.addError('driver', 'La reserva debe tener un conductor asignado');
+            }
+            if (!bookingData.patente_taxi) {
+                this.addError('taxi', 'La reserva debe tener un taxi asignado');
+            }
         }
 
         this.throwIfErrors();
@@ -152,6 +148,24 @@ export class TripModel extends BaseModel {
             throw new Error('Fecha de viaje debe ser una fecha válida');
         }
         this._data.fecha_viaje = date;
+    }
+
+    /** @param {BookingModel|Object} value */
+    set booking(value) {
+        if (value instanceof BookingModel) {
+            this._data.booking = value;
+        } else {
+            this._data.booking = new BookingModel(value);
+        }
+    }
+
+    /** @param {ReceiptModel|Object} value */
+    set receipt(value) {
+        if (value instanceof ReceiptModel) {
+            this._data.receipt = value;
+        } else {
+            this._data.receipt = new ReceiptModel(value);
+        }
     }
 
     // Getters

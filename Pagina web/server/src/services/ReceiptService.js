@@ -1,6 +1,13 @@
 import { BaseService } from "../core/BaseService.js";
 import { ReceiptRepository } from "../repository/ReceiptRepository.js";
 import { ReceiptModel } from "../models/ReceiptModel.js";
+import PDFDocument from 'pdfkit';
+import { promises as fsPromises } from 'fs';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export class ReceiptService extends BaseService {
     constructor() {
@@ -82,6 +89,20 @@ export class ReceiptService extends BaseService {
 
         if (!['EFECTIVO', 'TARJETA', 'TRANSFERENCIA'].includes(receiptData.metodo_pago)) {
             throw new Error('Método de pago no válido');
+        }
+    }
+
+    /**
+     * Generates a PDF for a receipt
+     * @param {Object} receiptData - Receipt data
+     * @returns {Promise<string>} Path to generated PDF file
+     */
+    async generatePDF(receiptData) {
+        try {
+            const receipt = new ReceiptModel(receiptData);
+            return await receipt.generatePDF();
+        } catch (error) {
+            throw new Error(`Error generating receipt PDF: ${error.message}`);
         }
     }
 }

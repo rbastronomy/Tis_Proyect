@@ -601,7 +601,7 @@ export class BookingRouter extends BaseRouter {
       )
     });
 
-    // Add the complete trip route
+    // Update the complete trip route schema
     this.addRoute('POST', '/:codigoreserva/complete-trip', {
       schema: {
         params: {

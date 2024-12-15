@@ -80,10 +80,8 @@ export class UserModel extends BaseModel {
    * @param {Partial<UserModelData>} data - Initial user data
    */
   constructor(data = {}) {
-    console.log('UserModel - Constructor received data:', data);
     super(data, UserModel.defaultData);
     this.validate();
-    console.log('UserModel - Constructor finished, data:', this._data);
   }
 
   /**

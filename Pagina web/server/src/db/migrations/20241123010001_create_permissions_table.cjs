@@ -1,6 +1,6 @@
 exports.up = function(knex) {
     return knex.schema.createTable('permiso', function(table) {
-        table.integer('id_permiso').primary();
+        table.increments('id_permiso').primary();
         table.string('nombre_permiso', 256);
         table.string('descripcion_permiso', 256);
         table.timestamp('fecha_creacion');

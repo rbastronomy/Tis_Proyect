@@ -53,16 +53,17 @@ export class BookingService extends BaseService {
             }
 
             
-            // Remove service and rate IDs from booking data since they're not part of the domain model
-            const { codigo_servicio, id_tarifa, ...bookingModelData } = bookingData;
-            console.log(bookingData)
+            // Remove fields that shouldn't go to the database
+            const { 
+                codigo_servicio, 
+                id_tarifa, 
+                servicio,  // Remove this
+                tarifas,   // Remove this
+                ...bookingModelData 
+            } = bookingData;
             
             // Create and validate booking model before saving
             const bookingModel = BookingModel.toModel(bookingModelData);
-
-            const bookingJSON = bookingModel.toJSON()
-
-            console.log(bookingJSON)
 
             return await this.repository.transaction(async (trx) => {
                 // The repository will handle mapping the model to DB structure including id_oferta
@@ -379,9 +380,10 @@ export class BookingService extends BaseService {
      * Completes a trip
      * @param {number} bookingId - Booking ID
      * @param {string} driverId - Driver's RUT
+     * @param {Object} [trx] - Optional transaction object
      * @returns {Promise<BookingModel>} Updated booking
      */
-    async completeTrip(bookingId, driverId) {
+    async completeTrip(bookingId, driverId, trx = null) {
         try {
             const booking = await this.repository.findById(bookingId);
             if (!booking) {
@@ -396,10 +398,10 @@ export class BookingService extends BaseService {
                 throw new Error('No autorizado para completar este viaje');
             }
 
-            return await this.repository.transaction(async (trx) => {
+            const doUpdate = async (transaction) => {
                 // Create history entry
                 const historyEntry = await this.historyService.createHistoryEntryWithTransaction(
-                    trx,
+                    transaction,
                     'MODIFICACION',
                     bookingId,
                     {
@@ -418,14 +420,21 @@ export class BookingService extends BaseService {
                 const updatedBooking = await this.repository.update(
                     bookingId,
                     updateData,
-                    trx
+                    transaction
                 );
 
                 return new BookingModel({
                     ...updatedBooking,
                     history: [historyEntry]
                 });
-            });
+            };
+
+            // Use provided transaction or create new one
+            if (trx) {
+                return await doUpdate(trx);
+            } else {
+                return await this.repository.transaction(doUpdate);
+            }
         } catch (error) {
             throw new Error(`Error al completar viaje: ${error.message}`);
         }
@@ -491,13 +500,6 @@ export class BookingService extends BaseService {
                 return null;
             }
 
-
-            if (rawBooking.rut_cliente === null) {
-                console.log('Booking has no client assigned:', rawBooking);
-                throw new Error('Reserva no tiene cliente asignado');
-            }
-
-
             // Get the offering to get service and rate IDs
             const offering = await this.offeringService.findById(rawBooking.id_oferta);
             console.log('BookingService - Offering data:', offering);
@@ -507,14 +509,7 @@ export class BookingService extends BaseService {
             }
 
             // Fetch all related data in parallel
-            console.log('BookingService - Fetching related data...');
-            const [
-                serviceModel, 
-                rateModel,
-                historyEntries,
-                taxiData,
-                clienteData
-            ] = await Promise.all([
+            const [serviceModel, rateModel, historyEntries, taxiData, clienteData] = await Promise.all([
                 this.serviceService.findByCodigos(offering.codigo_servicio),
                 this.rateService.findById(offering.id_tarifa),
                 this.historyService.getBookingHistory(codigoReserva),
@@ -526,26 +521,31 @@ export class BookingService extends BaseService {
                     null
             ]);
 
-            console.log('BookingService - Related data fetched:', {
-                service: serviceModel?.toJSON(),
-                rate: rateModel?.toJSON(),
-                history: historyEntries?.map(h => h.toJSON()),
-                taxi: taxiData?.toJSON(),
-                client: clienteData
-            });
+            if (!serviceModel) {
+                throw new Error('Servicio no encontrado');
+            }
+
+            if (!rateModel) {
+                throw new Error('Tarifa no encontrada');
+            }
+
+            // Attach the rate to the service
+            serviceModel.tarifas = [rateModel];
 
             // Create a domain model with all the information
             const bookingModel = new BookingModel({
                 ...rawBooking,
-                servicio: serviceModel ? {
-                    tipo: serviceModel.tipo_servicio,
-                    descripcion: serviceModel.descripcion_servicio
-                } : null,
-                tarifa: rateModel ? {
-                    precio: rateModel.precio,
-                    descripcion: rateModel.descripcion_tarifa,
-                    tipo: rateModel.tipo_tarifa
-                } : null,
+                servicio: {
+                    codigo_servicio: serviceModel.codigo_servicio,
+                    tipo_servicio: serviceModel.tipo_servicio,
+                    descripcion_servicio: serviceModel.descripcion_servicio,
+                    tarifas: [{
+                        id_tarifa: rateModel.id_tarifa,
+                        precio: rateModel.precio,
+                        descripcion_tarifa: rateModel.descripcion_tarifa,
+                        tipo_tarifa: rateModel.tipo_tarifa
+                    }]
+                },
                 history: historyEntries,
                 taxi: taxiData ? {
                     patente: taxiData.patente,
@@ -564,14 +564,23 @@ export class BookingService extends BaseService {
                         telefono: taxiData.conductor.telefono
                     } : null
                 } : null,
-                cliente: clienteData,
-                created_at: rawBooking.created_at,
-                updated_at: rawBooking.updated_at,
-                deleted_at_reserva: rawBooking.deleted_at_reserva
+                cliente: clienteData
             });
 
             const finalData = bookingModel.toJSON();
             console.log('BookingService - Final booking data:', finalData);
+
+            // Verify service and rate data is present
+            if (!finalData.servicio?.tarifas?.[0]?.precio) {
+                console.error('BookingService - Missing service/rate data:', {
+                    rawBooking,
+                    serviceModel: serviceModel?.toJSON(),
+                    rateModel: rateModel?.toJSON(),
+                    finalData
+                });
+                throw new Error('La reserva no tiene un servicio o tarifa válida');
+            }
+
             return bookingModel;
         } catch (error) {
             console.error('BookingService - Error:', error);

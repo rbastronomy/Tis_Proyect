@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useState, useEffect, lazy, Suspense, useCallback, useRef } from 'react'
+import { useState, useEffect, lazy, Suspense, useCallback, useRef, forwardRef } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { Card } from "@nextui-org/card"
 import { Button } from "@nextui-org/button"
@@ -15,11 +15,12 @@ import { Marker, Tooltip, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import { calculateDistance, findClosestPointIndex } from '../../utils/geoUtils'
 import { Modal } from '@nextui-org/modal'
-import { toast } from 'react-hot-toast'
+import { toast, Toaster } from 'react-hot-toast'
 import { FormModal } from "../../components/FormModal";
 import { Input } from "@nextui-org/input";
 import { Select, SelectItem } from "@nextui-org/select";
 import { Textarea } from "@nextui-org/input";
+import { ConfirmationModal } from "../../components/ConfirmationModal";
 
 const Map = lazy(() => import('../../components/Map'))
 
@@ -321,28 +322,46 @@ function TaxiDashboard() {
   // Update the useEffect that handles route updates
   useEffect(() => {
     if (position && activeTrip) {
-      // Force route recalculation when trip state changes
+      // Force route recalculation when trip state changes to RECOGIDO
       if (activeTrip.estado_reserva === 'RECOGIDO') {
         console.log('Trip state changed to RECOGIDO, recalculating route to destination');
-        setRouteCoordinates(null); // Clear existing route
-        setRemainingRoute(null);
-        // Force immediate route calculation to destination
-        fetchRoute(position, activeTrip);
+        
+        // Only clear route after we confirm we have destination coordinates
+        if (activeTrip.destino_lat && activeTrip.destino_lng) {
+          setRouteCoordinates(null);
+          setRemainingRoute(null);
+          
+          // Immediately fetch new route
+          fetchRoute(position, {
+            ...activeTrip,
+            estado_reserva: 'RECOGIDO'
+          });
+        } else {
+          console.warn('Missing destination coordinates:', activeTrip);
+        }
         return;
       }
 
       // Regular movement updates
       if (lastPosition) {
         const distanceMoved = calculateDistance(position, lastPosition);
-        if (distanceMoved < 10) return;
+        if (distanceMoved < 10) return; // Don't update if movement is small
       }
       
       // Make sure we have all required coordinates before fetching
       if (activeTrip.estado_reserva === 'CONFIRMADO' && 
           activeTrip.origen_lat && activeTrip.origen_lng) {
+        console.log('Fetching route to pickup:', {
+          from: position,
+          to: { lat: activeTrip.origen_lat, lng: activeTrip.origen_lng }
+        });
         fetchRoute(position, activeTrip);
       } else if (activeTrip.estado_reserva === 'RECOGIDO' && 
                  activeTrip.destino_lat && activeTrip.destino_lng) {
+        console.log('Fetching route to destination:', {
+          from: position,
+          to: { lat: activeTrip.destino_lat, lng: activeTrip.destino_lng }
+        });
         fetchRoute(position, activeTrip);
       }
     }
@@ -460,7 +479,11 @@ function TaxiDashboard() {
     }
   };
 
-  const handleTripComplete = useCallback((bookingId, updatedBooking) => {
+  // Add map ref
+  const mapRef = useRef(null);
+
+  // Update handleTripComplete
+  const handleTripComplete = useCallback((bookingId) => {
     // Update bookings list
     setAssignedBookings(prev => prev.map(booking => 
       booking.codigo_reserva === bookingId 
@@ -475,19 +498,27 @@ function TaxiDashboard() {
     setLastPosition(null);
     setShowTripModal(false);
     
-    // Reset any other related states
-    if (map.current) {
-      map.current.setView([position.lat, position.lng], 13);
+    // Reset map view if we have position and map reference
+    if (position && mapRef.current) {
+      mapRef.current.setView([position.lat, position.lng], 13);
     }
     
-    // Show success notification
-    toast.success('Viaje completado exitosamente');
+    // Show success notification with custom styling
+    toast.success('¡Viaje completado exitosamente!', {
+      icon: '🎉',
+      style: {
+        borderRadius: '10px',
+        background: '#22c55e',
+        color: '#fff',
+        padding: '16px',
+      },
+    });
   }, [position]);
 
   const handlePickup = useCallback((bookingId, updatedBooking) => {
     console.log('Handling pickup for booking:', bookingId, 'Updated booking:', updatedBooking);
     
-    // Update the booking in the list without removing it
+    // Update the booking in the list
     setAssignedBookings(prev => {
       console.log('Previous bookings:', prev);
       return prev.map(booking => {
@@ -502,53 +533,37 @@ function TaxiDashboard() {
       });
     });
     
-    // Update active trip with new status and destination coordinates
+    // Update active trip with new status
     if (activeTrip && activeTrip.codigo_reserva === bookingId) {
-      const updateTripWithDestination = async () => {
-        try {
-          const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-          const response = await fetch(
-            `https://maps.googleapis.com/maps/api/geocode/json?` +
-            `address=${encodeURIComponent(activeTrip.destino_reserva)}` +
-            `&components=country:CL|administrative_area:Tarapacá|locality:Iquique|locality:Alto Hospicio` +
-            `&key=${apiKey}`
-          );
+      // Don't clear route data until we confirm we have destination coordinates
+      if (activeTrip.destino_lat && activeTrip.destino_lng) {
+        setRouteCoordinates(null);
+        setRemainingRoute(null);
+        
+        // Update active trip state with RECOGIDO status
+        setActiveTrip(prev => ({
+          ...prev,
+          estado_reserva: 'RECOGIDO'
+        }));
 
-          if (!response.ok) throw new Error('Geocoding failed');
-          const data = await response.json();
-
-          if (data.status === 'OK' && data.results[0]) {
-            const location = data.results[0].geometry.location;
-            const updatedTrip = {
-              ...activeTrip,
-              estado_reserva: 'RECOGIDO',
-              destino_lat: location.lat,
-              destino_lng: location.lng
-            };
-
-            // Update active trip state
-            setActiveTrip(updatedTrip);
-
-            // Update route to destination
-            if (position) {
-              fetchRoute({
-                lat: position.lat,
-                lng: position.lng
-              }, updatedTrip); // Pass the updated trip with destination coordinates
+        // Force immediate route recalculation to destination
+        if (position) {
+          console.log('Calculating new route to destination:', {
+            from: position,
+            to: {
+              lat: activeTrip.destino_lat,
+              lng: activeTrip.destino_lng
             }
-          }
-        } catch (error) {
-          console.error('Error geocoding destination:', error);
-          // Still update the state even if geocoding fails
-          setActiveTrip(prev => ({
-            ...prev,
+          });
+          
+          fetchRoute(position, {
+            ...activeTrip,
             estado_reserva: 'RECOGIDO'
-          }));
+          });
         }
-      };
-
-      // Execute the async function
-      updateTripWithDestination();
+      } else {
+        console.warn('Missing destination coordinates for pickup:', activeTrip);
+      }
     }
   }, [activeTrip, position, fetchRoute]);
 
@@ -559,7 +574,9 @@ function TaxiDashboard() {
 
   const handleTripFormSubmit = async (formData) => {
     try {
-        // Validate form data first
+        setIsSubmitting(true);
+
+        // Validate form data
         const duracion = parseInt(formData.duracion);
         const pasajeros = parseInt(formData.pasajeros);
 
@@ -573,9 +590,7 @@ function TaxiDashboard() {
             throw new Error('Debe seleccionar un método de pago');
         }
 
-        setIsSubmitting(true);
-
-        // Create trip record
+        // First create the trip record
         const tripResponse = await fetch(`/api/trips/complete/${activeTrip.codigo_reserva}`, {
             method: 'POST',
             credentials: 'include',
@@ -583,8 +598,8 @@ function TaxiDashboard() {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                duracion,  // Already parsed to integer
-                pasajeros, // Already parsed to integer
+                duracion,
+                pasajeros,
                 metodo_pago: formData.metodo_pago,
                 observacion_viaje: formData.observacion_viaje || ''
             })
@@ -592,30 +607,91 @@ function TaxiDashboard() {
 
         if (!tripResponse.ok) {
             const error = await tripResponse.json();
-            throw new Error(error.message || 'Error creating trip record');
+            throw new Error(error.message || 'Error al completar el viaje');
         }
 
-        const tripData = await tripResponse.json();
+        // Then update the booking status - send empty object as body
+        const bookingResponse = await fetch(`/api/bookings/${activeTrip.codigo_reserva}/complete-trip`, {
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({}) // Send empty object to satisfy body validation
+        });
 
-        // Reset states
-        setShowTripModal(false);
-        setActiveTrip(null);
-        setRouteCoordinates(null);
-        setIsArrived(false);
+        if (!bookingResponse.ok) {
+            const error = await bookingResponse.json();
+            throw new Error(error.message || 'Error al actualizar estado de la reserva');
+        }
+
+        // Update local state
+        handleTripComplete(activeTrip.codigo_reserva);
 
         // Show success notification
         toast.success('Viaje completado exitosamente');
 
     } catch (error) {
         console.error('Error completing trip:', error);
-        toast.error(error.message || 'Error al completar el viaje');
+        // Show error notification with custom styling
+        toast.error(error.message || 'Error al completar el viaje', {
+          icon: '❌',
+          style: {
+            borderRadius: '10px',
+            background: '#ef4444',
+            color: '#fff',
+            padding: '16px',
+          },
+        });
     } finally {
         setIsSubmitting(false);
+        setShowTripModal(false);
     }
   };
 
   return (
     <div className="flex flex-col min-h-screen">
+      {/* Add Toaster with custom configuration */}
+      <Toaster
+        position="top-center"
+        reverseOrder={false}
+        gutter={8}
+        toastOptions={{
+          // Default options for all toasts
+          duration: 4000,
+          style: {
+            background: '#363636',
+            color: '#fff',
+          },
+          // Custom success toast styling
+          success: {
+            duration: 3000,
+            iconTheme: {
+              primary: '#22c55e', // green-500
+              secondary: 'white',
+            },
+            style: {
+              background: '#22c55e',
+              color: 'white',
+              padding: '16px',
+            },
+          },
+          // Custom error toast styling
+          error: {
+            duration: 4000,
+            iconTheme: {
+              primary: '#ef4444', // red-500
+              secondary: 'white',
+            },
+            style: {
+              background: '#ef4444',
+              color: 'white',
+              padding: '16px',
+            },
+          },
+        }}
+      />
+
       {/* Header */}
       <header className="border-b bg-white">
         <div className="container flex items-center justify-between h-16 px-4">
@@ -641,6 +717,7 @@ function TaxiDashboard() {
             {console.log('Active Trip:', activeTrip)}
             {console.log('Route Coordinates:', routeCoordinates)}
             <Map 
+              ref={mapRef}
               isTracking={isOnline} 
               position={position} 
               error={geoError}
@@ -973,6 +1050,12 @@ function TripCard({ booking, onStartTrip, onPickup, onTripComplete, onArrival, c
   const [isPickedUp, setIsPickedUp] = useState(false);
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
+  // Add state for confirmation modals
+  const [showStartConfirm, setShowStartConfirm] = useState(false);
+  const [showPickupConfirm, setShowPickupConfirm] = useState(false);
+  const [showArrivalConfirm, setShowArrivalConfirm] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
+
   useEffect(() => {
     const geocodeAddresses = async () => {
       if ((!booking.origen_reserva && !booking.destino_reserva) || 
@@ -1027,18 +1110,31 @@ function TripCard({ booking, onStartTrip, onPickup, onTripComplete, onArrival, c
     geocodeAddresses();
   }, [booking.origen_reserva, booking.destino_reserva, apiKey, pickupCoords, destinationCoords]);
 
-  const handleStartTrip = () => {
+  // Update handlers to show confirmation first
+  const handleStartTripClick = () => {
     if (pickupCoords && destinationCoords) {
-      onStartTrip(booking.codigo_reserva, {
-        ...booking,
-        ...pickupCoords,
-        ...destinationCoords
-      });
+      setShowStartConfirm(true);
     }
   };
 
-  const handlePickup = async () => {
+  const confirmStartTrip = () => {
+    setIsConfirming(true);
+    onStartTrip(booking.codigo_reserva, {
+      ...booking,
+      ...pickupCoords,
+      ...destinationCoords
+    });
+    setShowStartConfirm(false);
+    setIsConfirming(false);
+  };
+
+  const handlePickupClick = () => {
+    setShowPickupConfirm(true);
+  };
+
+  const confirmPickup = async () => {
     try {
+      setIsConfirming(true);
       const response = await fetch(`/api/bookings/${booking.codigo_reserva}/pickup`, {
         method: 'POST',
         credentials: 'include'
@@ -1051,18 +1147,25 @@ function TripCard({ booking, onStartTrip, onPickup, onTripComplete, onArrival, c
       const data = await response.json();
       setIsPickedUp(true);
 
-      // Update the booking state in the parent component
       if (onPickup) {
         onPickup(booking.codigo_reserva, data.booking);
       }
     } catch (error) {
       console.error('Error marking pickup:', error);
+      toast.error('Error al confirmar recogida');
+    } finally {
+      setShowPickupConfirm(false);
+      setIsConfirming(false);
     }
   };
 
-  const handleArrival = () => {
-    // Just trigger the modal
+  const handleArrivalClick = () => {
+    setShowArrivalConfirm(true);
+  };
+
+  const confirmArrival = () => {
     onArrival();
+    setShowArrivalConfirm(false);
   };
 
   const bookingTime = new Date(booking.fecha_reserva);
@@ -1088,110 +1191,146 @@ function TripCard({ booking, onStartTrip, onPickup, onTripComplete, onArrival, c
   }, [booking.estado_reserva, isInProgress, isPickupComplete, isCompleted]);
 
   return (
-    <Card className={`h-full w-full ${className}`}>
-      <div className="p-4 flex flex-col justify-between h-full">
-        <div className="space-y-2">
-          <div className="flex items-start gap-1">
-            <MapPin className="h-4 w-4 mt-1 text-green-500 flex-shrink-0" />
-            <div>
-              <div className="text-sm font-medium">Recoger en:</div>
-              <div className="text-sm text-muted-foreground">{booking.origen_reserva}</div>
+    <>
+      <Card className={`h-full w-full ${className}`}>
+        <div className="p-4 flex flex-col justify-between h-full">
+          <div className="space-y-2">
+            <div className="flex items-start gap-1">
+              <MapPin className="h-4 w-4 mt-1 text-green-500 flex-shrink-0" />
+              <div>
+                <div className="text-sm font-medium">Recoger en:</div>
+                <div className="text-sm text-muted-foreground">{booking.origen_reserva}</div>
+              </div>
             </div>
-          </div>
-          <div className="flex items-start gap-1">
-            <MapPin className="h-4 w-4 mt-1 text-red-500 flex-shrink-0" />
-            <div>
-              <div className="text-sm font-medium">Destino:</div>
-              <div className="text-sm text-muted-foreground">{booking.destino_reserva}</div>
+            <div className="flex items-start gap-1">
+              <MapPin className="h-4 w-4 mt-1 text-red-500 flex-shrink-0" />
+              <div>
+                <div className="text-sm font-medium">Destino:</div>
+                <div className="text-sm text-muted-foreground">{booking.destino_reserva}</div>
+              </div>
             </div>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <div className="flex items-center gap-1">
-              <Clock className="h-4 w-4" />
-              {formattedTime}
-            </div>
-            {booking.cliente && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <div className="flex items-center gap-1">
-                <User className="h-4 w-4" />
-                {booking.cliente.nombre} {booking.cliente.apellido}
+                <Clock className="h-4 w-4" />
+                {formattedTime}
+              </div>
+              {booking.cliente && (
+                <div className="flex items-center gap-1">
+                  <User className="h-4 w-4" />
+                  {booking.cliente.nombre} {booking.cliente.apellido}
+                </div>
+              )}
+            </div>
+            {isInProgress && !isPickupComplete && !isCompleted && (
+              <div className="mt-2 flex items-center gap-2">
+                <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse" />
+                <span className="text-sm font-medium text-green-600">En progreso</span>
+              </div>
+            )}
+            
+            {isPickupComplete && !isCompleted && (
+              <div className="mt-2 flex items-center gap-2">
+                <div className="h-2 w-2 bg-blue-500 rounded-full" />
+                <span className="text-sm font-medium text-blue-600">Cliente Recogido</span>
               </div>
             )}
           </div>
-          {isInProgress && !isPickupComplete && !isCompleted && (
-            <div className="mt-2 flex items-center gap-2">
-              <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse" />
-              <span className="text-sm font-medium text-green-600">En progreso</span>
-            </div>
-          )}
-          
-          {isPickupComplete && !isCompleted && (
-            <div className="mt-2 flex items-center gap-2">
-              <div className="h-2 w-2 bg-blue-500 rounded-full" />
-              <span className="text-sm font-medium text-blue-600">Cliente Recogido</span>
-            </div>
-          )}
+
+          {/* Status indicators */}
+          <div className="mt-2">
+            {isInProgress && !isPickupComplete && !isCompleted && (
+              <div className="flex items-center gap-2">
+                <div className="h-2 w-2 bg-warning rounded-full animate-pulse" />
+                <span className="text-sm font-medium text-warning">En camino a recoger pasajero</span>
+              </div>
+            )}
+            
+            {isPickupComplete && !isCompleted && (
+              <div className="flex items-center gap-2">
+                <div className="h-2 w-2 bg-primary rounded-full animate-pulse" />
+                <span className="text-sm font-medium text-primary">En viaje con cliente a bordo</span>
+              </div>
+            )}
+
+            {isCompleted && (
+              <div className="flex items-center gap-2">
+                <div className="h-2 w-2 bg-success rounded-full" />
+                <span className="text-sm font-medium text-success">Viaje Completado</span>
+              </div>
+            )}
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex flex-col gap-2 mt-2">
+            {!isInProgress && !isPickupComplete && !isCompleted && (
+              <Button 
+                color="primary"
+                className="w-full font-bold text-white"
+                onClick={handleStartTripClick}
+                disabled={isGeocoding || !pickupCoords || !destinationCoords}
+                isLoading={isGeocoding}
+              >
+                {isGeocoding ? 'Obteniendo ubicaciones...' : 'Iniciar Viaje'}
+              </Button>
+            )}
+
+            {isInProgress && !isPickupComplete && (
+              <Button 
+                color="success"
+                className="w-full font-bold text-white"
+                onClick={handlePickupClick}
+              >
+                Confirmar Recogida de Pasajero
+              </Button>
+            )}
+
+            {isPickupComplete && !isCompleted && (
+              <Button 
+                color="danger"
+                className="w-full font-bold text-white"
+                onClick={handleArrivalClick}
+              >
+                Marcar Llegada a Destino Final
+              </Button>
+            )}
+          </div>
         </div>
+      </Card>
 
-        {/* Status indicators */}
-        <div className="mt-2">
-          {isInProgress && !isPickupComplete && !isCompleted && (
-            <div className="flex items-center gap-2">
-              <div className="h-2 w-2 bg-warning rounded-full animate-pulse" />
-              <span className="text-sm font-medium text-warning">En camino a recoger pasajero</span>
-            </div>
-          )}
-          
-          {isPickupComplete && !isCompleted && (
-            <div className="flex items-center gap-2">
-              <div className="h-2 w-2 bg-primary rounded-full animate-pulse" />
-              <span className="text-sm font-medium text-primary">En viaje con cliente a bordo</span>
-            </div>
-          )}
+      {/* Confirmation Modals */}
+      <ConfirmationModal
+        isOpen={showStartConfirm}
+        onClose={() => setShowStartConfirm(false)}
+        onConfirm={confirmStartTrip}
+        title="Iniciar Viaje"
+        message="¿Está seguro que desea iniciar este viaje? Se dirigirá a la ubicación de recogida del pasajero."
+        confirmLabel="Iniciar Viaje"
+        confirmColor="primary"
+        isLoading={isConfirming}
+      />
 
-          {isCompleted && (
-            <div className="flex items-center gap-2">
-              <div className="h-2 w-2 bg-success rounded-full" />
-              <span className="text-sm font-medium text-success">Viaje Completado</span>
-            </div>
-          )}
-        </div>
+      <ConfirmationModal
+        isOpen={showPickupConfirm}
+        onClose={() => setShowPickupConfirm(false)}
+        onConfirm={confirmPickup}
+        title="Confirmar Recogida"
+        message="¿Confirma que ha recogido al pasajero? Esto iniciará la ruta hacia el destino."
+        confirmLabel="Confirmar Recogida"
+        confirmColor="success"
+        isLoading={isConfirming}
+      />
 
-        {/* Action Buttons */}
-        <div className="flex flex-col gap-2 mt-2">
-          {!isInProgress && !isPickupComplete && !isCompleted && (
-            <Button 
-              color="primary"
-              className="w-full font-bold text-white"
-              onClick={handleStartTrip}
-              disabled={isGeocoding || !pickupCoords || !destinationCoords}
-              isLoading={isGeocoding}
-            >
-              {isGeocoding ? 'Obteniendo ubicaciones...' : 'Iniciar Viaje'}
-            </Button>
-          )}
-
-          {isInProgress && !isPickupComplete && (
-            <Button 
-              color="success"
-              className="w-full font-bold text-white"
-              onClick={handlePickup}
-            >
-              Confirmar Recogida de Pasajero
-            </Button>
-          )}
-
-          {isPickupComplete && !isCompleted && (
-            <Button 
-              color="danger"
-              className="w-full font-bold text-white"
-              onClick={handleArrival}
-            >
-              Marcar Llegada a Destino Final
-            </Button>
-          )}
-        </div>
-      </div>
-    </Card>
+      <ConfirmationModal
+        isOpen={showArrivalConfirm}
+        onClose={() => setShowArrivalConfirm(false)}
+        onConfirm={confirmArrival}
+        title="Marcar Llegada"
+        message="¿Confirma que ha llegado al destino final? Esto completará el viaje."
+        confirmLabel="Marcar Llegada"
+        confirmColor="danger"
+        isLoading={isConfirming}
+      />
+    </>
   );
 }
 
