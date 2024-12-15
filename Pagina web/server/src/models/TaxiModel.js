@@ -102,8 +102,12 @@ export class TaxiModel extends BaseModel {
     validate.string('color', this._data.color);
     validate.number('ano', this._data.ano, { min: 1900, max: new Date().getFullYear() + 1 });
     validate.enum('estado_taxi', this._data.estado_taxi, TaxiModel.VALID_ESTADOS);
-    validate.date('vencimiento_revision_tecnica', this._data.vencimiento_revision_tecnica);
-    validate.date('vencimiento_permiso_circulacion', this._data.vencimiento_permiso_circulacion);
+    if (this._data.vencimiento_revision_tecnica) {
+        validate.date('vencimiento_revision_tecnica', this._data.vencimiento_revision_tecnica);
+    }
+    if (this._data.vencimiento_permiso_circulacion) {
+        validate.date('vencimiento_permiso_circulacion', this._data.vencimiento_permiso_circulacion);
+    }
 
     this.throwIfErrors();
   }
