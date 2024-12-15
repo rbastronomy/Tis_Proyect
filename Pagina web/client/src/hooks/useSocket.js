@@ -12,13 +12,11 @@ export const useSocket = () => {
     if (!socketRef.current) {
       console.log('🔌 Initializing socket connection...');
       
-      const protocol = 'ws:';
-      const port = '3000';
-      const host = import.meta.env.VITE_WS_URL || `${protocol}//${window.location.hostname}:${port}`;
+      const baseUrl = window.location.origin;
 
-      console.log('🔌 Connecting to WebSocket server:', host);
+      console.log('🔌 Connecting to WebSocket server:', baseUrl);
 
-      socketRef.current = io(host, {
+      socketRef.current = io(baseUrl, {
         withCredentials: true,
         reconnection: true,
         reconnectionAttempts: maxReconnectAttempts,
@@ -29,7 +27,7 @@ export const useSocket = () => {
         autoConnect: true,
         transports: ['websocket'],
         path: '/socket.io',
-        secure: false,
+        secure: window.location.protocol === 'https:',
         rejectUnauthorized: false
       });
 
@@ -38,7 +36,7 @@ export const useSocket = () => {
           id: socketRef.current.id,
           connected: socketRef.current.connected,
           transport: socketRef.current.io.engine.transport.name,
-          url: host
+          url: baseUrl
         });
         setIsConnected(true);
         setIsConnecting(false);
