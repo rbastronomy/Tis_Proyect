@@ -5,6 +5,8 @@
  * @returns {number} Distance in meters
  */
 export function calculateDistance(point1, point2) {
+  if (!point1 || !point2) return 0;
+  
   const R = 6371e3; // Earth's radius in meters
   const φ1 = point1.lat * Math.PI/180;
   const φ2 = point2.lat * Math.PI/180;
@@ -16,23 +18,25 @@ export function calculateDistance(point1, point2) {
           Math.sin(Δλ/2) * Math.sin(Δλ/2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 
-  return R * c;
+  return R * c; // Distance in meters
 }
 
 /**
  * Finds the closest point in a route to a given position
- * @param {Object} position - Current position with lat and lng
- * @param {Array} route - Array of route points
+ * @param {Object} point - Current position with lat and lng
+ * @param {Array} points - Array of route points
  * @returns {number} Index of the closest point
  */
-export function findClosestPointIndex(position, route) {
-  let minDistance = Infinity;
+export function findClosestPointIndex(point, points) {
+  if (!points?.length) return -1;
+  
+  let minDist = Infinity;
   let closestIndex = 0;
 
-  route.forEach((point, index) => {
-    const distance = calculateDistance(position, point);
-    if (distance < minDistance) {
-      minDistance = distance;
+  points.forEach((routePoint, index) => {
+    const dist = calculateDistance(point, routePoint);
+    if (dist < minDist) {
+      minDist = dist;
       closestIndex = index;
     }
   });

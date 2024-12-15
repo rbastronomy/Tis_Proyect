@@ -70,6 +70,8 @@ function TaxiDashboard() {
   })
   const [isArrived, setIsArrived] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isTracking, setIsTracking] = useState(false)
+  const [mapPosition, setMapPosition] = useState(null)
 
   // 3. Custom hooks
   const { 
@@ -120,28 +122,15 @@ function TaxiDashboard() {
 
       try {
         const origin = `${currentPosition.lat},${currentPosition.lng}`;
-        // Determine destination based on trip state
         let destination;
         
         if (currentTrip.estado_reserva === 'CONFIRMADO') {
-          // If trip is just started, route to pickup location
           destination = `${currentTrip.origen_lat},${currentTrip.origen_lng}`;
         } else if (currentTrip.estado_reserva === 'RECOGIDO') {
-          // If passenger is picked up, route to final destination
           destination = `${currentTrip.destino_lat},${currentTrip.destino_lng}`;
         } else {
-          return; // Don't fetch route for other states
+          return;
         }
-
-        console.log('Fetching route:', {
-          origin,
-          destination,
-          tripState: currentTrip.estado_reserva,
-          tripDetails: {
-            origen: [currentTrip.origen_lat, currentTrip.origen_lng],
-            destino: [currentTrip.destino_lat, currentTrip.destino_lng]
-          }
-        });
 
         const response = await fetch(
           `/api/maps/directions?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}`,
@@ -160,7 +149,10 @@ function TaxiDashboard() {
 
         const data = await response.json();
         if (data.status === 'OK' && data.routes?.length > 0) {
-          setRouteCoordinates(data.routes[0].decodedCoordinates);
+          // Set both route coordinates and remaining route
+          const newRoute = data.routes[0].decodedCoordinates;
+          setRouteCoordinates(newRoute);
+          setRemainingRoute(newRoute); // Initialize remaining route with full route
           lastFetchRef.current = now;
         }
       } catch (error) {
@@ -171,7 +163,7 @@ function TaxiDashboard() {
         }
       }
     }, 1000),
-    [] // Empty dependencies since we're using parameters
+    []
   );
 
   // Then the useEffect that uses fetchRoute
@@ -367,14 +359,13 @@ function TaxiDashboard() {
     }
   }, [position, activeTrip, fetchRoute, lastPosition]);
 
-  // Also update the route tracking effect
+  // Update the route tracking effect
   useEffect(() => {
     if (!position || !routeCoordinates || !activeTrip) return;
 
-    // Initialize remaining route if not set or if trip state changed
-    if (!remainingRoute || 
-        (activeTrip.estado_reserva === 'RECOGIDO' && remainingRoute.length > 0)) {
-      console.log('Initializing/Resetting route tracking');
+    // Initialize remaining route if not set
+    if (!remainingRoute) {
+      console.log('Initializing route tracking');
       setRemainingRoute(routeCoordinates);
       setLastPosition(position);
       return;
@@ -382,33 +373,48 @@ function TaxiDashboard() {
 
     // Only update if we've moved more than 10 meters
     const distanceMoved = calculateDistance(position, lastPosition);
-    if (distanceMoved < 10) return;
+    if (distanceMoved < 10) {
+      console.log('Movement too small, skipping update');
+      return;
+    }
 
-    // Find closest point in remaining route
+    // Find closest point on the route to current position
     const closestIndex = findClosestPointIndex(position, remainingRoute);
-    
-    // Remove passed points and keep a buffer of previous points
-    const bufferSize = 3; // Keep 3 previous points for smooth rendering
-    const newRemainingRoute = remainingRoute.slice(
-      Math.max(0, closestIndex - bufferSize)
-    );
+    console.log('Found closest point:', { index: closestIndex, totalPoints: remainingRoute.length });
 
-    setRemainingRoute(newRemainingRoute);
+    // Only update route if we've found a valid point and it's not at the start
+    if (closestIndex > 0) {
+      // Keep some previous points for smooth rendering
+      const bufferSize = 3;
+      const startIndex = Math.max(0, closestIndex - bufferSize);
+      
+      // Create new route from closest point onwards
+      const newRemainingRoute = remainingRoute.slice(startIndex);
+
+      // Only update if the route has actually changed
+      if (newRemainingRoute.length < remainingRoute.length) {
+        console.log('Updating route:', {
+          oldLength: remainingRoute.length,
+          newLength: newRemainingRoute.length,
+          removedPoints: remainingRoute.length - newRemainingRoute.length
+        });
+        setRemainingRoute(newRemainingRoute);
+      }
+    }
+
+    // Update last position
     setLastPosition(position);
 
-    // Check arrival based on trip state
-    if (activeTrip.estado_reserva === 'CONFIRMADO' && 
-        calculateDistance(position, {
-          lat: activeTrip.origen_lat,
-          lng: activeTrip.origen_lng
-        }) < 50) {
-      console.log('Arrived at pickup location');
-    } else if (activeTrip.estado_reserva === 'RECOGIDO' && 
-               calculateDistance(position, {
-                 lat: activeTrip.destino_lat,
-                 lng: activeTrip.destino_lng
-               }) < 50) {
+    // Check for arrival
+    const destinationPoint = activeTrip.estado_reserva === 'CONFIRMADO' 
+      ? { lat: activeTrip.origen_lat, lng: activeTrip.origen_lng }
+      : { lat: activeTrip.destino_lat, lng: activeTrip.destino_lng };
+
+    const distanceToDestination = calculateDistance(position, destinationPoint);
+    
+    if (distanceToDestination < 50) {
       console.log('Arrived at destination');
+      setIsArrived(true);
     }
   }, [position, routeCoordinates, activeTrip, lastPosition, remainingRoute]);
 
@@ -424,25 +430,32 @@ function TaxiDashboard() {
         const permission = await navigator.permissions.query({ name: 'geolocation' });
         if (permission.state === 'granted') {
           setIsOnline(true);
+          setIsTracking(true);
         } else if (permission.state === 'prompt') {
           navigator.geolocation.getCurrentPosition(
-            () => setIsOnline(true),
+            () => {
+              setIsOnline(true);
+              setIsTracking(true);
+            },
             (error) => {
               console.error('Geolocation error:', error);
               setIsOnline(false);
+              setIsTracking(false);
             }
           );
         } else {
           console.error('Geolocation permission denied');
           setIsOnline(false);
+          setIsTracking(false);
         }
       } catch (error) {
         console.error('Error checking permissions:', error);
         setIsOnline(false);
+        setIsTracking(false);
       }
     } else {
       setIsOnline(false);
-      // Emit offline event when driver goes offline
+      setIsTracking(false);
       socket?.emit(WS_EVENTS.DRIVER_OFFLINE);
     }
   };
@@ -714,85 +727,76 @@ function TaxiDashboard() {
         {/* Map Section */}
         <div className="w-full md:flex-1 h-[calc(100vh-20rem)] md:h-[calc(100vh-4rem)] relative z-0">
           <Suspense fallback={<div className="h-full flex items-center justify-center">Cargando mapa...</div>}>
-            {console.log('Active Trip:', activeTrip)}
-            {console.log('Route Coordinates:', routeCoordinates)}
-            <Map 
-              ref={mapRef}
-              isTracking={isOnline} 
-              position={position} 
-              error={geoError}
-            >
-              {/* Only render route if there's an active trip */}
-              {activeTrip && remainingRoute && activeTrip.estado_reserva !== 'COMPLETADO' && (
-                <Polyline 
-                  positions={remainingRoute.map(coord => [coord.lat, coord.lng])}
-                  color="blue"
-                  weight={3}
-                  opacity={0.7}
-                />
-              )}
-              
-              {/* Only render markers if trip is not completed */}
-              {activeTrip && activeTrip.estado_reserva !== 'COMPLETADO' && (
-                <>
-                  {activeTrip.estado_reserva === 'CONFIRMADO' && activeTrip.origen_lat && activeTrip.origen_lng && (
-                    <Marker 
-                      position={[activeTrip.origen_lat, activeTrip.origen_lng]}
-                      icon={L.divIcon({
-                        className: 'custom-div-icon',
-                        html: `<div class="w-6 h-6 bg-green-500 rounded-full border-2 border-white shadow-lg flex items-center justify-center">
-                          <div class="w-2 h-2 bg-white rounded-full"></div>
-                        </div>`,
-                        iconSize: [24, 24],
-                        iconAnchor: [12, 12]
-                      })}
-                    >
-                      <Tooltip permanent offset={[0, -20]}>
-                        Punto de recogida
-                      </Tooltip>
-                    </Marker>
-                  )}
-                  
-                  {activeTrip.estado_reserva === 'RECOGIDO' && activeTrip.destino_lat && activeTrip.destino_lng && (
-                    <Marker 
-                      position={[activeTrip.destino_lat, activeTrip.destino_lng]}
-                      icon={L.divIcon({
-                        className: 'custom-div-icon',
-                        html: `<div class="w-6 h-6 bg-red-500 rounded-full border-2 border-white shadow-lg flex items-center justify-center">
-                          <div class="w-2 h-2 bg-white rounded-full"></div>
-                        </div>`,
-                        iconSize: [24, 24],
-                        iconAnchor: [12, 12]
-                      })}
-                    >
-                      <Tooltip permanent offset={[0, -20]}>
-                        Destino Final
-                      </Tooltip>
-                    </Marker>
-                  )}
-                </>
-              )}
+            {position && (
+              <Map 
+                ref={mapRef}
+                position={position} 
+                isTracking={isOnline}
+              >
+                {/* Driver marker */}
+                {position && (
+                  <TaxiMarker 
+                    data={{
+                      lat: position.lat,
+                      lng: position.lng,
+                      patente: assignedTaxi?.patente || '',
+                      estado: isOnline ? 'EN SERVICIO' : 'OFFLINE'
+                    }}
+                  />
+                )}
 
-              {/* Driver marker is always shown if position is available */}
-              {position && (
-                <TaxiMarker 
-                  data={{
-                    lat: position.lat,
-                    lng: position.lng,
-                    patente: assignedTaxi?.patente || '',
-                    estado: isOnline ? 'EN SERVICIO' : 'OFFLINE'
-                  }}
-                />
-              )}
-
-              {/* Only fit bounds if there's an active trip that's not completed */}
-              {position && activeTrip && activeTrip.estado_reserva !== 'COMPLETADO' && (
-                <FitBounds 
-                  position={position}
-                  activeTrip={activeTrip}
-                />
-              )}
-            </Map>
+                {/* Route polyline */}
+                {activeTrip && remainingRoute && activeTrip.estado_reserva !== 'COMPLETADO' && (
+                  <Polyline 
+                    positions={remainingRoute.map(coord => [coord.lat, coord.lng])}
+                    color="blue"
+                    weight={3}
+                    opacity={0.7}
+                  />
+                )}
+                
+                {/* Pickup/Destination markers */}
+                {activeTrip && activeTrip.estado_reserva !== 'COMPLETADO' && (
+                  <>
+                    {activeTrip.estado_reserva === 'CONFIRMADO' && activeTrip.origen_lat && activeTrip.origen_lng && (
+                      <Marker 
+                        position={[activeTrip.origen_lat, activeTrip.origen_lng]}
+                        icon={L.divIcon({
+                          className: 'custom-div-icon',
+                          html: `<div class="w-6 h-6 bg-green-500 rounded-full border-2 border-white shadow-lg flex items-center justify-center">
+                            <div class="w-2 h-2 bg-white rounded-full"></div>
+                          </div>`,
+                          iconSize: [24, 24],
+                          iconAnchor: [12, 12]
+                        })}
+                      >
+                        <Tooltip permanent offset={[0, -20]}>
+                          Punto de recogida
+                        </Tooltip>
+                      </Marker>
+                    )}
+                    
+                    {activeTrip.estado_reserva === 'RECOGIDO' && activeTrip.destino_lat && activeTrip.destino_lng && (
+                      <Marker 
+                        position={[activeTrip.destino_lat, activeTrip.destino_lng]}
+                        icon={L.divIcon({
+                          className: 'custom-div-icon',
+                          html: `<div class="w-6 h-6 bg-red-500 rounded-full border-2 border-white shadow-lg flex items-center justify-center">
+                            <div class="w-2 h-2 bg-white rounded-full"></div>
+                          </div>`,
+                          iconSize: [24, 24],
+                          iconAnchor: [12, 12]
+                        })}
+                      >
+                        <Tooltip permanent offset={[0, -20]}>
+                          Destino Final
+                        </Tooltip>
+                      </Marker>
+                    )}
+                  </>
+                )}
+              </Map>
+            )}
           </Suspense>
         </div>
 
