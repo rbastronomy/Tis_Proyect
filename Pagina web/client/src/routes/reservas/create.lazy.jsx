@@ -221,6 +221,10 @@ TimeSelector.propTypes = {
   bookingType: PropTypes.string.isRequired
 };
 
+const isAirportAddress = (address) => {
+  return address === AIRPORT_ADDRESS.label;
+};
+
 function CreateBooking() {
   const { isAuthenticated, user } = useAuth()
   const navigate = useNavigate()
@@ -229,6 +233,7 @@ function CreateBooking() {
   const [services, setServices] = useState([])
   const [loadingServices, setLoadingServices] = useState(true)
   const [rideType, setRideType] = useState(null) // 'CITY' or 'AIRPORT'
+  const [tripDirection, setTripDirection] = useState(null); // 'IDA' or 'VUELTA'
 
   const { control, handleSubmit, watch, setValue, formState: { errors, isValid } } = useForm({
     defaultValues: {
@@ -380,6 +385,11 @@ function CreateBooking() {
                 onSelectionChange={(keys) => {
                   const selected = Array.from(keys)[0];
                   setRideType(selected);
+                  setTripDirection(null); // Reset direction when ride type changes
+                  
+                  // Reset addresses
+                  setValue('origen_reserva', '');
+                  setValue('destino_reserva', '');
                 }}
                 className="w-full"
               >
@@ -391,6 +401,37 @@ function CreateBooking() {
                 </SelectItem>
               </Select>
             </div>
+
+            {/* Add direction selection only for airport rides */}
+            {rideType === 'AIRPORT' && (
+              <Select
+                label="Dirección del viaje"
+                selectedKeys={tripDirection ? new Set([tripDirection]) : new Set()}
+                onSelectionChange={(keys) => {
+                  const selected = Array.from(keys)[0];
+                  setTripDirection(selected);
+                  
+                  // Reset addresses
+                  setValue('origen_reserva', '');
+                  setValue('destino_reserva', '');
+                  
+                  // Pre-fill airport address based on direction
+                  if (selected === 'IDA') {
+                    setValue('destino_reserva', AIRPORT_ADDRESS.label);
+                  } else if (selected === 'VUELTA') {
+                    setValue('origen_reserva', AIRPORT_ADDRESS.label);
+                  }
+                }}
+                className="w-full"
+              >
+                <SelectItem key="IDA" value="IDA">
+                  Hacia el aeropuerto
+                </SelectItem>
+                <SelectItem key="VUELTA" value="VUELTA">
+                  Desde el aeropuerto
+                </SelectItem>
+              </Select>
+            )}
 
             {/* Service Selection */}
             {rideType && (
@@ -469,11 +510,28 @@ function CreateBooking() {
                     const selectedTime = watch('fecha_reserva');
                     const isNight = selectedTime ? isNightTime(selectedTime) : false;
                     
-                    // Filter tariffs based on time
+                    // Filter tariffs based on time and direction for airport rides
                     const filteredTariffs = availableTariffs.filter(tariff => {
                       if (!selectedTime) return true;
-                      const isNightTariff = tariff.tipo_tarifa.includes('NOCTURNO');
-                      return isNight ? isNightTariff : !isNightTariff;
+
+                      const isNightTariff = tariff.tipo_tarifa.includes('NOCHE');
+                      const timeMatch = isNight ? isNightTariff : !isNightTariff;
+
+                      // For airport rides, check direction
+                      if (rideType === 'AIRPORT' && tripDirection) {
+                        return timeMatch && (
+                          tripDirection === 'IDA' 
+                            ? tariff.tipo_tarifa.includes('IDA')
+                            : tariff.tipo_tarifa.includes('VUELTA')
+                        );
+                      }
+
+                      // For city rides
+                      if (rideType === 'CITY') {
+                        return timeMatch && tariff.tipo_tarifa.includes('CIUDAD');
+                      }
+
+                      return false;
                     });
 
                     return (
@@ -498,7 +556,7 @@ function CreateBooking() {
                               key={tariff.id_tarifa.toString()} 
                               value={tariff.id_tarifa.toString()}
                             >
-                              {tariff.descripcion_tarifa}
+                              {`${tariff.descripcion_tarifa} - $${tariff.precio?.toLocaleString() || 'N/A'}`}
                             </SelectItem>
                           ))}
                         </Select>
@@ -528,18 +586,34 @@ function CreateBooking() {
                         Dirección de Origen
                       </label>
                       <div className="relative">
-                        <MapPin className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                        <AddressAutocomplete
-                          defaultValue={field.value}
-                          onSelect={(coords) => {
-                            console.log('Origin address selected:', coords);
-                            field.onChange(coords.label);
-                            field.onBlur();
-                            console.log('Origin field after selection:', field.value);
-                          }}
-                          error={error?.message}
-                          isInvalid={!!error}
-                        />
+                        {tripDirection === 'VUELTA' ? (
+                          // Read-only airport input for "vuelta"
+                          <div className="relative">
+                            <Plane className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                            <Input
+                              value={AIRPORT_ADDRESS.label}
+                              isReadOnly
+                              classNames={{
+                                input: "bg-transparent pl-10",
+                                inputWrapper: "bg-default-100"
+                              }}
+                            />
+                          </div>
+                        ) : (
+                          // Normal address input for other cases
+                          <>
+                            <MapPin className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                            <AddressAutocomplete
+                              defaultValue={field.value}
+                              onSelect={(coords) => {
+                                field.onChange(coords.label);
+                                field.onBlur();
+                              }}
+                              error={error?.message}
+                              isInvalid={!!error}
+                            />
+                          </>
+                        )}
                       </div>
                       {error && (
                         <p className="text-danger text-xs">{error.message}</p>
@@ -558,36 +632,36 @@ function CreateBooking() {
                       <label className="text-sm font-medium">
                         Dirección de Destino
                       </label>
-                      {rideType === 'AIRPORT' ? (
-                        // Read-only airport address display
-                        <div className="relative">
-                          <Plane />
-                          <Input
-                            value={AIRPORT_ADDRESS.label}
-                            isReadOnly
-                            classNames={{
-                              input: "bg-transparent pl-10",
-                              inputWrapper: "bg-default-100"
-                            }}
-                          />
-                        </div>
-                      ) : (
-                        // Normal address autocomplete for city rides
-                        <div className="relative">
-                          <MapPin className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                          <AddressAutocomplete
-                            defaultValue={field.value}
-                            onSelect={(coords) => {
-                              console.log('Destination address selected:', coords);
-                              field.onChange(coords.label);
-                              field.onBlur();
-                              console.log('Destination field after selection:', field.value);
-                            }}
-                            error={error?.message}
-                            isInvalid={!!error}
-                          />
-                        </div>
-                      )}
+                      <div className="relative">
+                        {tripDirection === 'IDA' ? (
+                          // Read-only airport input for "ida"
+                          <div className="relative">
+                            <Plane className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                            <Input
+                              value={AIRPORT_ADDRESS.label}
+                              isReadOnly
+                              classNames={{
+                                input: "bg-transparent pl-10",
+                                inputWrapper: "bg-default-100"
+                              }}
+                            />
+                          </div>
+                        ) : (
+                          // Normal address input for other cases
+                          <>
+                            <MapPin className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                            <AddressAutocomplete
+                              defaultValue={field.value}
+                              onSelect={(coords) => {
+                                field.onChange(coords.label);
+                                field.onBlur();
+                              }}
+                              error={error?.message}
+                              isInvalid={!!error}
+                            />
+                          </>
+                        )}
+                      </div>
                       {error && (
                         <p className="text-danger text-xs">{error.message}</p>
                       )}

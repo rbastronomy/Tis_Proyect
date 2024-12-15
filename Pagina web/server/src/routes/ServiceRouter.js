@@ -40,7 +40,7 @@ export class ServiceRouter extends BaseRouter {
                       id_tarifa: { type: 'integer' },
                       tipo_tarifa: { type: 'string' },
                       descripcion_tarifa: { type: 'string' },
-                      precio_tarifa: { type: 'number' },
+                      precio: { type: 'number' },
                       estado_tarifa: { type: 'string' }
                     }
                   }

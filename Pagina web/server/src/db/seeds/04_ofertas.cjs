@@ -1,56 +1,79 @@
 exports.seed = async function(knex) {
-  // Limpiar la tabla oferta
+  // Clean the table
   await knex('oferta').del();
 
-  // Crear las ofertas basadas en las tarifas y servicios existentes
+  // Create offers based on services and tariffs
   const ofertas = [
-    // Servicio NORMAL (codigo_servicio: 1)
+    // NORMAL SERVICE (codigo_servicio: 1)
+    // Airport Day Tariffs
     {
-      id_tarifa: 1,  // Viaje al aeropuerto - Ida
-      codigo_servicio: 1,   // Servicio NORMAL
+      id_tarifa: 1,  // To Airport - Day
+      codigo_servicio: 1,
       created_at: new Date(),
       updated_at: new Date()
     },
     {
-      id_tarifa: 2,  // Viaje al aeropuerto - Ida y Vuelta
-      codigo_servicio: 1,   // Servicio NORMAL
+      id_tarifa: 2,  // From Airport - Day
+      codigo_servicio: 1,
+      created_at: new Date(),
+      updated_at: new Date()
+    },
+    // Airport Night Tariffs
+    {
+      id_tarifa: 3,  // To Airport - Night
+      codigo_servicio: 1,
       created_at: new Date(),
       updated_at: new Date()
     },
     {
-      id_tarifa: 3,  // Viaje al aeropuerto - Nocturno Ida
-      codigo_servicio: 1,   // Servicio NORMAL
+      id_tarifa: 4,  // From Airport - Night
+      codigo_servicio: 1,
+      created_at: new Date(),
+      updated_at: new Date()
+    },
+    // City Tariffs
+    {
+      id_tarifa: 5,  // City - Day
+      codigo_servicio: 1,
       created_at: new Date(),
       updated_at: new Date()
     },
     {
-      id_tarifa: 4,  // Viaje al aeropuerto - Nocturno Ida y Vuelta
-      codigo_servicio: 1,   // Servicio NORMAL
-      created_at: new Date(),
-      updated_at: new Date()
-    },
-    {
-      id_tarifa: 7,  // Traslado dentro de Iquique
-      codigo_servicio: 1,   // Servicio NORMAL
+      id_tarifa: 6,  // City - Night
+      codigo_servicio: 1,
       created_at: new Date(),
       updated_at: new Date()
     },
 
-    // Servicio PROGRAMADO (codigo_servicio: 2)
+    // PROGRAMMED SERVICE (codigo_servicio: 2)
+    // Airport Day Tariffs
     {
-      id_tarifa: 5,  // Viaje al aeropuerto - Programado Anticipado - Ida
-      codigo_servicio: 2,   // Servicio PROGRAMADO
+      id_tarifa: 7,  // To Airport - Day (Programmed)
+      codigo_servicio: 2,
       created_at: new Date(),
       updated_at: new Date()
     },
     {
-      id_tarifa: 6,  // Viaje al aeropuerto - Programado Anticipado - Ida y Vuelta
-      codigo_servicio: 2,   // Servicio PROGRAMADO
+      id_tarifa: 8,  // From Airport - Day (Programmed)
+      codigo_servicio: 2,
+      created_at: new Date(),
+      updated_at: new Date()
+    },
+    // Airport Night Tariffs
+    {
+      id_tarifa: 9,  // To Airport - Night (Programmed)
+      codigo_servicio: 2,
+      created_at: new Date(),
+      updated_at: new Date()
+    },
+    {
+      id_tarifa: 10,  // From Airport - Night (Programmed)
+      codigo_servicio: 2,
       created_at: new Date(),
       updated_at: new Date()
     }
   ];
 
-  // Insertar las ofertas
+  // Insert the offers
   await knex('oferta').insert(ofertas);
 }; 

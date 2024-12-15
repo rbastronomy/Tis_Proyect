@@ -92,14 +92,15 @@ export class RateRepository extends BaseRepository {
         .join('servicio_tarifa', 'tarifa.id_tarifa', 'servicio_tarifa.id_tarifa')
         .where('tarifa.estado_tarifa', 'ACTIVO')
         .whereNull('tarifa.fecha_eliminacion_tarifa');
-
+      
+      console.log(`Ride type:`, rideType);
       if (rideType === 'CITY') {
-        query.where('tarifa.tipo_tarifa', 'TRASLADO_CIUDAD');
+        query.whereIn('tarifa.tipo_tarifa', ['CIUDAD_DIA', 'CIUDAD_NOCHE']);
       } else {
-        query.whereNot('tarifa.tipo_tarifa', 'TRASLADO_CIUDAD');
+        query.whereNotIn('tarifa.tipo_tarifa', ['CIUDAD_DIA', 'CIUDAD_NOCHE']);
       }
-
       const results = await query;
+      console.log(`Fetched tariffs for rideType "${rideType}":`, results);
       return results.map(result => RateModel.toModel(result));
     } catch (error) {
       throw new Error(`Error finding rates by ride type: ${error.message}`);
@@ -124,12 +125,13 @@ export class RateRepository extends BaseRepository {
         .whereNull('tarifa.fecha_eliminacion_tarifa');
 
       if (rideType === 'CITY') {
-        query.where('tarifa.tipo_tarifa', 'TRASLADO_CIUDAD');
+        query.whereIn('tarifa.tipo_tarifa', ['CIUDAD_DIA', 'CIUDAD_NOCHE']);
       } else {
-        query.whereNot('tarifa.tipo_tarifa', 'TRASLADO_CIUDAD');
+        query.whereNotIn('tarifa.tipo_tarifa', ['CIUDAD_DIA', 'CIUDAD_NOCHE']);
       }
-
+      console.log(`Query before filtering:`, query.toSQL().toNative());
       const results = await query;
+      console.log(`Fetched tariffs for rideType "${rideType}":`, results);
       return results.map(result => RateModel.toModel(result));
     } catch (error) {
       throw new Error(`Error finding rates by service and type: ${error.message}`);

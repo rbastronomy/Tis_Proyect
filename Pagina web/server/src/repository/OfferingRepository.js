@@ -83,12 +83,14 @@ export class OfferingRepository extends BaseRepository {
             .whereNull('tarifa.delete_at_tarifa');
 
         if (rideType === 'CITY') {
-            query.where('tarifa.tipo_tarifa', 'TRASLADO_CIUDAD');
+            query.whereIn('tarifa.tipo_tarifa', ['CIUDAD_DIA', 'CIUDAD_NOCHE']);
         } else if (rideType === 'AIRPORT') {
-            query.whereNot('tarifa.tipo_tarifa', 'TRASLADO_CIUDAD');
+            query.whereNotIn('tarifa.tipo_tarifa', ['CIUDAD_DIA', 'CIUDAD_NOCHE']);
         }
 
+        console.log('Query:', query.toSQL().toNative());
         const results = await query;
+        console.log('Results:', results);
         return results;
     }
 
@@ -115,12 +117,14 @@ export class OfferingRepository extends BaseRepository {
             .whereNull('tarifa.delete_at_tarifa');
 
         if (rideType === 'CITY') {
-            query.where('tarifa.tipo_tarifa', 'TRASLADO_CIUDAD');
+            query.whereIn('tarifa.tipo_tarifa', ['CIUDAD_DIA', 'CIUDAD_NOCHE']);
         } else if (rideType === 'AIRPORT') {
-            query.whereNot('tarifa.tipo_tarifa', 'TRASLADO_CIUDAD');
+            query.whereNotIn('tarifa.tipo_tarifa', ['CIUDAD_DIA', 'CIUDAD_NOCHE']);
         }
 
+        console.log('Query:', query.toSQL().toNative());
         const results = await query;
+        console.log('Results:', results);
 
         return results.map(result => this._toModel({
             ...result,

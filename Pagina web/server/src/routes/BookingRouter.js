@@ -84,12 +84,17 @@ export class BookingRouter extends BaseRouter {
                     properties: {
                       codigo_servicio: { type: 'integer' },
                       tipo_servicio: { type: 'string' },
-                      tarifa: {
-                        type: 'object',
-                        properties: {
-                          id_tarifa: { type: 'integer' },
-                          tipo_tarifa: { type: 'string' },
-                          precio_tarifa: { type: 'number' }
+                      descripcion_servicio: { type: 'string' },
+                      tarifas: {
+                        type: 'array',
+                        items: {
+                          type: 'object',
+                          properties: {
+                            id_tarifa: { type: 'integer' },
+                            descripcion_tarifa: { type: 'string' },
+                            precio: { type: 'number' },
+                            tipo_tarifa: { type: 'string' }
+                          }
                         }
                       }
                     }
@@ -383,8 +388,21 @@ export class BookingRouter extends BaseRouter {
                   servicio: {
                     type: 'object',
                     properties: {
-                      tipo: { type: 'string' },
-                      descripcion: { type: 'string' }
+                      codigo_servicio: { type: 'integer' },
+                      tipo_servicio: { type: 'string' },
+                      descripcion_servicio: { type: 'string' },
+                      tarifas: {
+                        type: 'array',
+                        items: {
+                          type: 'object',
+                          properties: {
+                            id_tarifa: { type: 'integer' },
+                            descripcion_tarifa: { type: 'string' },
+                            precio: { type: 'number' },
+                            tipo_tarifa: { type: 'string' }
+                          }
+                        }
+                      }
                     }
                   },
                   tarifa: {
@@ -458,8 +476,21 @@ export class BookingRouter extends BaseRouter {
                   servicio: {
                     type: 'object',
                     properties: {
-                      tipo: { type: 'string' },
-                      descripcion: { type: 'string' }
+                      codigo_servicio: { type: 'integer' },
+                      tipo_servicio: { type: 'string' },
+                      descripcion_servicio: { type: 'string' },
+                      tarifas: {
+                        type: 'array',
+                        items: {
+                          type: 'object',
+                          properties: {
+                            id_tarifa: { type: 'integer' },
+                            descripcion_tarifa: { type: 'string' },
+                            precio: { type: 'number' },
+                            tipo_tarifa: { type: 'string' }
+                          }
+                        }
+                      }
                     }
                   },
                   tarifa: {

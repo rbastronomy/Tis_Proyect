@@ -740,15 +740,17 @@ export class BookingService extends BaseService {
             // Create a domain model with filtered information
             const bookingModel = new BookingModel({
                 ...rawBooking,
-                servicio: serviceModel ? {
-                    tipo: serviceModel.tipo_servicio,
-                    descripcion: serviceModel.descripcion_servicio
-                } : null,
-                tarifa: rateModel ? {
-                    precio: rateModel.precio,
-                    descripcion: rateModel.descripcion_tarifa,
-                    tipo: rateModel.tipo_tarifa
-                } : null,
+                servicio: {
+                    codigo_servicio: serviceModel.codigo_servicio,
+                    tipo_servicio: serviceModel.tipo_servicio,
+                    descripcion_servicio: serviceModel.descripcion_servicio,
+                    tarifas: [{
+                        id_tarifa: rateModel.id_tarifa,
+                        precio: rateModel.precio,
+                        descripcion_tarifa: rateModel.descripcion_tarifa,
+                        tipo_tarifa: rateModel.tipo_tarifa
+                    }]
+                },
                 history: filteredHistory,
                 taxi: filteredTaxiData,
                 cliente: this._mapClientData(clientData),

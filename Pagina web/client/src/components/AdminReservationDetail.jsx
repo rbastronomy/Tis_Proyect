@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../hooks/useAuth'
-import { MapPin, Calendar, DollarSign, History, User, Phone, Mail, Car, CreditCard } from 'lucide-react'
+import { MapPin, Calendar, DollarSign, History, User, Phone, Mail, Car, CreditCard, Package } from 'lucide-react'
+import { formatPrice, formatDateTime } from '../utils/format'
 import {
   Button,
   Card,
@@ -226,6 +227,26 @@ export default function AdminReservationDetail() {
           <div className="grid gap-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
+                {reservation.servicio && (
+                  <p className="flex items-center text-sm text-gray-600">
+                    <Package className="w-4 h-4 mr-2 text-gray-400" />
+                    <span>
+                      <strong className="text-gray-700">Servicio:</strong>{' '}
+                      {reservation.servicio.descripcion_servicio} ({reservation.servicio.tipo_servicio})
+                    </span>
+                  </p>
+                )}
+                
+                {reservation.servicio?.tarifas?.[0] && (
+                  <p className="flex items-center text-sm text-gray-600">
+                    <DollarSign className="w-4 h-4 mr-2 text-gray-400" />
+                    <span>
+                      <strong className="text-gray-700">Tarifa:</strong>{' '}
+                      {formatPrice(reservation.servicio.tarifas[0].precio)} - {reservation.servicio.tarifas[0].descripcion_tarifa}
+                    </span>
+                  </p>
+                )}
+
                 <p className="flex items-center text-sm text-gray-600">
                   <MapPin className="w-4 h-4 mr-2 text-gray-400" />
                   <span>
@@ -244,19 +265,9 @@ export default function AdminReservationDetail() {
                   <Calendar className="w-4 h-4 mr-2 text-gray-400" />
                   <span>
                     <strong className="text-gray-700">Fecha:</strong>{' '}
-                    {new Date(reservation.fecha_reserva).toLocaleString()}
+                    {formatDateTime(reservation.fecha_reserva)}
                   </span>
                 </p>
-                {reservation.tarifa && (
-                  <p className="flex items-center text-sm text-gray-600">
-                    <DollarSign className="w-4 h-4 mr-2 text-gray-400" />
-                    <span>
-                      <strong className="text-gray-700">Tarifa:</strong>$
-                      {reservation.tarifa.precio.toLocaleString()} -{' '}
-                      {reservation.tarifa.descripcion}
-                    </span>
-                  </p>
-                )}
               </div>
             </div>
 

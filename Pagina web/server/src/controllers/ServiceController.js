@@ -14,11 +14,9 @@ export class ServiceController extends BaseController {
      */
     async getServicesByRideType(request, reply) {
         const { rideType } = request.params;
-        
         try {
             // Only get ACTIVE services for the specified ride type
-            const services = await this.service.findByRideType(rideType);
-            console.log(services);            
+            const services = await this.service.findByRideType(rideType);         
             return reply.send(services);
         } catch (error) {
             request.log.error(error);

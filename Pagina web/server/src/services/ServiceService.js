@@ -27,9 +27,10 @@ export class ServiceService extends BaseService {
             
             // Get offerings for the ride type
             const offeringsDB = await this.offeringService.findByRideType(rideType);
-            
+            console.log(`Offerings for rideType "${rideType}":`, offeringsDB);
             // Create a Set of service IDs that have offerings for this ride type
             const serviceIds = new Set(offeringsDB.map(offering => offering.codigo_servicio));
+
             
             // Create a Set of unique tariff IDs from offerings
             const tariffIds = [...new Set(offeringsDB.map(offering => offering.id_tarifa))];
@@ -43,7 +44,7 @@ export class ServiceService extends BaseService {
             const tariffsMap = new Map(
                 tariffs.map(tariff => [tariff.id_tarifa, tariff])
             );
-            
+            console.log(`Tariffs map:`, tariffsMap);
             // Filter services and attach their tariffs
             return serviceModels
                 .filter(service => serviceIds.has(service.codigo_servicio))
