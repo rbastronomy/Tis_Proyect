@@ -1,67 +1,93 @@
-import { report } from 'process';
+import { ReportModel } from '../models/ReportModel.js';
 import { ReportRepository } from '../repository/ReportRepository.js';
 
-
-export class ReportServices {
-    constructor(){
+/**
+ * Servicio para manejar la generación de reportes
+ */
+export class ReportService {
+    /**
+     * @param {ReportRepository} repository - Repositorio de reportes
+     */
+    constructor() {
         this.reportRepository = new ReportRepository();
     }
-    
-    async generarReporteViajesMensuales(year,month){
-        try{
-            const reportViajes = await this.reportRepository.getViajesMensuales(year,month);
-            return{
-                success:true,
-                message:'Reporte de viajes mensuales',
-                data:reportViajes
-            };
-        } catch(error){
-            console.error('Error en generarReporteViajesMensuales',error);
-            return{
-                success:false,
-                message:'Error al generar reporte de viajes mensuales',
-                error:error.message
-            };
+
+    /**
+     * Verifica si un usuario tiene permisos para generar reportes
+     * @private
+     * @param {UserModel} user - Usuario actual
+     * @throws {Error} Si el usuario no tiene permisos
+     */
+    _verifyPermissions(user) {
+        if (!user || !user.role || user.role.nombre_rol !== 'ADMINISTRADOR') {
+            throw new Error('No tienes permisos para generar reportes');
         }
     }
 
-    async generarReporteIngresosPorViajes(){
-        try{
-            const reportIngresos = await this.reportRepository.getIngresosPorViajes();
-            const totalIngresos = reportIngresos.reduce((sum,item)=>sum+item.ingreso.total_ingresos,0);
-            return{
-                success:true,
-                message:'Reporte de ingresos por viajes',
-                data:reportIngresos,
-                totalIngresos
-            };
-        } catch(error){
-            console.error('Error en generarReporteIngresosPorViajes',error);
-            return{
-                success:false,
-                message:'Error al generar reporte de ingresos por viajes',
-                error:error.message
+    /**
+     * Procesa los filtros de fecha para el reporte
+     * @private
+     * @param {Object} filters - Filtros del reporte
+     * @returns {Object} Filtros procesados
+     */
+    _processDateFilters(filters) {
+        if (filters.fecha_between) {
+            const [startDate, endDate] = filters.fecha_between;
+            return {
+                startDate: new Date(startDate),
+                endDate: new Date(endDate)
             };
         }
+        return {};
     }
 
-    async generarReportesValoracionViajes(){
-        try{
-            const reportValoracion = await this.reportRepository.getValoracionViajes();
-            return{
-                success:true,
-                message:'Reporte de valoración de viajes',
-                data:reportValoracion
-            };
-        } catch(error){
-            console.error('Error en generarReportesValoracionViajes',error);
-            return{
-                success:false,
-                message:'Error al generar reporte de valoración de viajes',
-                error:error.message
-            };
+    /**
+     * Genera un reporte basado en los parámetros proporcionados
+     * @param {Object} params - Parámetros del reporte
+     * @param {string} params.type - Tipo de reporte (BOOKINGS_BY_TAXI, BOOKINGS_BY_CLIENT, etc)
+     * @param {Object} params.filters - Filtros adicionales (fechas, etc)
+     * @param {UserModel} params.user - Usuario que solicita el reporte
+     * @returns {Promise<ReportModel>} Modelo del reporte generado
+     * @throws {Error} Si el tipo de reporte no es soportado o hay un error en la generación
+     */
+    async generateReport({ type, filters = {}, user }) {
+        // Verificar permisos
+        this._verifyPermissions(user);
+
+        // Procesar filtros
+        const processedFilters = this._processDateFilters(filters);
+
+        // Obtener datos según el tipo de reporte
+        let reportData;
+        try {
+            switch (type) {
+                case ReportModel.REPORT_TYPES.BOOKINGS_BY_TAXI:
+                    reportData = await this.reportRepository.getBookingsByTaxi(processedFilters);
+                    break;
+                case ReportModel.REPORT_TYPES.BOOKINGS_BY_CLIENT:
+                    reportData = await this.reportRepository.getBookingsByClient(processedFilters);
+                    break;
+                case ReportModel.REPORT_TYPES.TRIPS_BY_TAXI:
+                    reportData = await this.reportRepository.getTripsByTaxi(processedFilters);
+                    break;
+                case ReportModel.REPORT_TYPES.INCOME_BY_TAXI:
+                    reportData = await this.reportRepository.getIncomeByTaxi(processedFilters);
+                    break;
+                default:
+                    throw new Error(`Tipo de reporte no soportado: ${type}`);
+            }
+
+            // Crear y retornar el modelo de reporte
+            return new ReportModel({
+                type,
+                data: reportData,
+                generatedAt: new Date(),
+                generatedBy: user.id,
+                filters: processedFilters
+            });
+
+        } catch (error) {
+            throw new Error(`Error al generar reporte: ${error.message}`);
         }
     }
-
-
 }

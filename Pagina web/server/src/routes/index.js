@@ -10,6 +10,7 @@ import { TaxiRouter } from './TaxiRouter.js';
 import { RatingRouter } from './RatingRouter.js';
 import { ReceiptRouter } from './ReceiptRouter.js';
 import { TripRouter } from './TripRouter.js';
+import { ReportRouter } from './ReportRouter.js';
 
 export function setupRoutes(fastify) {
   const routers = [
@@ -24,7 +25,8 @@ export function setupRoutes(fastify) {
     new TaxiRouter(fastify),
     new RatingRouter(fastify),
     new ReceiptRouter(fastify),
-    new TripRouter(fastify)
+    new TripRouter(fastify),
+    new ReportRouter(fastify)
   ];
 
   routers.forEach(router => router.registerRoutes());

@@ -1,46 +1,179 @@
-const knex = require('../db/knex');
+import { BaseRepository } from '../core/BaseRepository.js';
 
-export class ReportRepository {
-
-    async getViajesMensuales() {
-        return knex('viaje')
-            .select(
-                knex.raw('MONTH(deleted_at_viaje) as mes'),
-                knex.raw('COUNT(*) as cantidad'),
-                knex.raw('SUM(pasajeros) as total_pasajeros'),
-                knex.raw('AVG(duracion) as duracion_promedio')
-            )
-            .whereRaw('YEAR(deleted_at_viaje) = ? AND MONTH (deleted_at_viaje)=?',{year,month} )
-            .firts();
+/**
+ * Repositorio para generar reportes basados en datos de múltiples tablas
+ * @extends {BaseRepository}
+ */
+export class ReportRepository extends BaseRepository {
+    /**
+     * Inicializa el repositorio de reportes
+     */
+    constructor() {
+        // No necesitamos una tabla específica ya que trabajamos con múltiples tablas
+        super(null);
     }
 
-    async getIngresosPorViajes(){
-        return knex('genera')
-            .join('viaje','genera.codigo_viaje','viaje.codigo_viaje')
-            .join('boleta','genera.codigo_boleta','boleta.codigo_boleta')
-            .select(
-                'viaje.origen_viaje',
-                'viaje.destino_viaje',
-            knex.raw('SUM(boleta.total) as total_ingresos'),
-            knex.raw('COUNT(viaje.codigo_viaje) as cantidad_viajes')
-            )
-            .groupBy('viaje.origen_viaje','viaje.destino_viaje')
-            .orderBy('total_ingresos','desc')
+    /**
+     * Obtiene estadísticas de reservas agrupadas por taxi
+     * @param {Object} filters - Filtros para el reporte
+     * @param {Date} [filters.startDate] - Fecha inicial
+     * @param {Date} [filters.endDate] - Fecha final
+     * @returns {Promise<Array>} Datos del reporte
+     * @throws {DatabaseError} Si hay un error en la consulta
+     */
+    async getBookingsByTaxi(filters) {
+        try {
+            const dateFilter = this._createDateFilter(filters, 'r.fecha_reserva');
+            
+            const query = `
+                SELECT 
+                    t.patente,
+                    t.marca,
+                    t.modelo,
+                    t.ano,
+                    COUNT(r.codigo_reserva) as total_reservas,
+                    COUNT(CASE WHEN r.estado_reserva = 'COMPLETADA' THEN 1 END) as reservas_completadas,
+                    COUNT(CASE WHEN r.estado_reserva = 'CANCELADA' THEN 1 END) as reservas_canceladas,
+                    COUNT(CASE WHEN r.estado_reserva = 'PENDIENTE' THEN 1 END) as reservas_pendientes
+                FROM taxi t
+                LEFT JOIN reserva r ON t.patente = r.patente_taxi
+                WHERE t.deleted_at_taxi IS NULL
+                ${dateFilter}
+                GROUP BY t.patente, t.marca, t.modelo, t.ano
+                ORDER BY total_reservas DESC
+            `;
+
+            return await this.query(query);
+        } catch (error) {
+            throw new DatabaseError('Error al obtener reporte de reservas por taxi', error);
+        }
     }
 
-    async getValoracionViajes(){
-        return knex('valoracion')
-            .join('valora', 'valoracion.codigo_valoracion', 'valora.codigo_valoracion')
-            .join('viaje', 'valora.codigo_viaje', 'viaje.codigo_viaje')
-            .select(
-                'viaje.origen_viaje',
-                'viaje.destino_viaje',
-                knex.raw('AVG(valoracion.puntaje) as puntaje_promedio'),
-                knex.raw('COUNT(valoracion.id_valoracion) as total_valoraciones')
-            )
-            .groupBy('viaje.origen_viaje', 'viaje.destino_viaje')
-            .orderBy('puntaje_promedio', 'desc');
+    /**
+     * Obtiene estadísticas de reservas agrupadas por cliente
+     * @param {Object} filters - Filtros para el reporte
+     * @param {Date} [filters.startDate] - Fecha inicial
+     * @param {Date} [filters.endDate] - Fecha final
+     * @returns {Promise<Array>} Datos del reporte
+     * @throws {DatabaseError} Si hay un error en la consulta
+     */
+    async getBookingsByClient(filters) {
+        try {
+            const dateFilter = this._createDateFilter(filters, 'r.fecha_reserva');
+
+            const query = `
+                SELECT 
+                    p.rut,
+                    p.nombre,
+                    p.apellido_paterno,
+                    p.apellido_materno,
+                    p.correo,
+                    COUNT(r.codigo_reserva) as total_reservas,
+                    COUNT(CASE WHEN r.estado_reserva = 'COMPLETADA' THEN 1 END) as reservas_completadas,
+                    COUNT(CASE WHEN r.estado_reserva = 'CANCELADA' THEN 1 END) as reservas_canceladas,
+                    COUNT(CASE WHEN r.estado_reserva = 'PENDIENTE' THEN 1 END) as reservas_pendientes
+                FROM persona p
+                LEFT JOIN reserva r ON p.rut = r.rut_cliente
+                WHERE p.deleted_at_persona IS NULL 
+                AND p.id_roles = 2 -- Solo clientes
+                ${dateFilter}
+                GROUP BY p.rut, p.nombre, p.apellido_paterno, p.apellido_materno, p.correo
+                ORDER BY total_reservas DESC
+            `;
+
+            return await this.query(query);
+        } catch (error) {
+            throw new DatabaseError('Error al obtener reporte de reservas por cliente', error);
+        }
+    }
+
+    /**
+     * Obtiene estadísticas de viajes realizados por cada taxi
+     * @param {Object} filters - Filtros para el reporte
+     * @param {Date} [filters.startDate] - Fecha inicial
+     * @param {Date} [filters.endDate] - Fecha final
+     * @returns {Promise<Array>} Datos del reporte
+     * @throws {DatabaseError} Si hay un error en la consulta
+     */
+    async getTripsByTaxi(filters) {
+        try {
+            const dateFilter = this._createDateFilter(filters, 'v.fecha_viaje');
+
+            const query = `
+                SELECT 
+                    t.patente,
+                    t.marca,
+                    t.modelo,
+                    t.ano,
+                    COUNT(v.codigo_viaje) as total_viajes,
+                    ROUND(AVG(v.calificacion)::numeric, 2) as calificacion_promedio,
+                    ROUND(SUM(v.distancia_km)::numeric, 2) as total_kilometros,
+                    ROUND(AVG(v.duracion)::numeric, 2) as duracion_promedio_minutos
+                FROM taxi t
+                LEFT JOIN reserva r ON t.patente = r.patente_taxi
+                LEFT JOIN viaje v ON r.codigo_reserva = v.codigo_reserva
+                WHERE t.deleted_at_taxi IS NULL
+                ${dateFilter}
+                GROUP BY t.patente, t.marca, t.modelo, t.ano
+                ORDER BY total_viajes DESC
+            `;
+
+            return await this.query(query);
+        } catch (error) {
+            throw new DatabaseError('Error al obtener reporte de viajes por taxi', error);
+        }
+    }
+
+    /**
+     * Obtiene estadísticas de ingresos generados por cada taxi
+     * @param {Object} filters - Filtros para el reporte
+     * @param {Date} [filters.startDate] - Fecha inicial
+     * @param {Date} [filters.endDate] - Fecha final
+     * @returns {Promise<Array>} Datos del reporte
+     * @throws {DatabaseError} Si hay un error en la consulta
+     */
+    async getIncomeByTaxi(filters) {
+        try {
+            const dateFilter = this._createDateFilter(filters, 'v.fecha_viaje');
+
+            const query = `
+                SELECT 
+                    t.patente,
+                    t.marca,
+                    t.modelo,
+                    COUNT(v.codigo_viaje) as total_viajes,
+                    ROUND(SUM(b.total)::numeric, 2) as ingreso_total,
+                    ROUND(AVG(b.total)::numeric, 2) as ingreso_promedio_por_viaje,
+                    COUNT(DISTINCT r.rut_conductor) as total_conductores
+                FROM taxi t
+                LEFT JOIN reserva r ON t.patente = r.patente_taxi
+                LEFT JOIN viaje v ON r.codigo_reserva = v.codigo_reserva
+                LEFT JOIN boleta b ON v.codigo_viaje = b.codigo_viaje
+                WHERE t.deleted_at_taxi IS NULL
+                ${dateFilter}
+                GROUP BY t.patente, t.marca, t.modelo
+                ORDER BY ingreso_total DESC NULLS LAST
+            `;
+
+            return await this.query(query);
+        } catch (error) {
+            throw new DatabaseError('Error al obtener reporte de ingresos por taxi', error);
+        }
+    }
+
+    /**
+     * Crea la cláusula WHERE para filtrar por fecha
+     * @private
+     * @param {Object} filters - Filtros con fechas
+     * @param {Date} [filters.startDate] - Fecha inicial
+     * @param {Date} [filters.endDate] - Fecha final
+     * @param {string} dateField - Campo de fecha en la consulta
+     * @returns {string} Cláusula WHERE para el filtro de fechas
+     */
+    _createDateFilter(filters, dateField) {
+        if (filters.startDate && filters.endDate) {
+            return `AND ${dateField} BETWEEN '${filters.startDate.toISOString()}' AND '${filters.endDate.toISOString()}'`;
+        }
+        return '';
     }
 }
-
-module.exports = ReportRepository();

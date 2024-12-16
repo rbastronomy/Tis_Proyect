@@ -222,7 +222,7 @@ function Navbar() {
                 base: "data-[hover=true]:bg-yellow-500 data-[hover=true]:text-black",
               }}
             >
-              {user?.role?.nombre_rol === 'ADMINISTRADOR' && (
+              {user?.role?.nombre_rol === 'ADMINISTRADOR' && 
                 <DropdownItem
                   key="admin"
                   as="a"
@@ -231,7 +231,17 @@ function Navbar() {
                 >
                   Panel Admin
                 </DropdownItem>
-              )}
+              }
+              {user?.role?.nombre_rol === 'ADMINISTRADOR' && 
+                <DropdownItem
+                  key="reports"
+                  as="a"
+                  href="/admin/report"
+                  className="text-yellow-500 hover:bg-yellow-500 hover:text-black"
+                >
+                  Reportes
+                </DropdownItem>
+              }
               <DropdownItem
                 key="viajes"
                 as="a"

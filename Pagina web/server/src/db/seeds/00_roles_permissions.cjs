@@ -155,6 +155,13 @@
         nombre_permiso: 'eliminar_taxi',
         descripcion_permiso: 'Eliminar taxis del sistema',
         fecha_creacion: new Date()
+      },
+      {
+        id_permiso: 'generate_reports',
+        nombre_permiso: 'Generar Reportes',
+        descripcion_permiso: 'Permite generar reportes del sistema',
+        created_at: new Date(),
+        updated_at: new Date()
       }
     ]);
 
@@ -220,7 +227,14 @@
         id_roles: 1,
         id_permiso: i + 12,
         fecha_cambio_permiso: new Date()
-      }))
+      })),
+      {
+        id_roles: 1,
+        id_permiso: 'generate_reports',
+        fecha_cambio_permiso: new Date(),
+        created_at: new Date(),
+        updated_at: new Date()
+      }
     ];
 
     await knex('posee').insert(rolePermissions);

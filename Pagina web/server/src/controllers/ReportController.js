@@ -1,62 +1,23 @@
-import { ReportRepository } from "../repository/ReportRepository.js";
+import { ReportService } from "../services/ReportService.js";
 
 export class ReportController {
     constructor(){
-        this.reportRepository = new ReportRepository();
+        this.reportService = new ReportService();
     }
 
-    async getViajesMensuales(request,reply){
+    async generateReport(request,reply){
         try{
-            const {year,month} = request.params;
-            const reportViajes = await this.reportRepository.getViajesMensuales(year,month);
+            const report = await this.reportService.generateReport(request.body);
             reply.status(200).json({
                 success:true,
-                message:'Reporte de viajes mensuales',
-                data:reportViajes
+                message:'Reporte generado exitosamente',
+                data:report
             });
         } catch(error){
-            console.error('Error en getViajesMensuales',error);
+            console.error('Error en generateReport',error);
             reply.status(500).json({
                 success:false,
-                message:'Error al obtener reporte de viajes mensuales',
-                error:error.message
-            });
-        }
-    }
-
-    async getIngresosPorViajes(request,reply){
-        try{
-            const reportIngresos = await this.reportRepository.getIngresosPorViajes();
-            const totalIngresos = reportIngresos.reduce((sum,item)=>sum+item.total_ingresos,0);
-            reply.status(200).json({
-                success:true,
-                message:'Reporte de ingresos por viajes',
-                data:reportIngresos,
-                totalIngresos
-            });
-        } catch(error){
-            console.error('Error en getIngresosPorViajes',error);
-            reply.status(500).json({
-                success:false,
-                message:'Error al obtener reporte de ingresos por viajes',
-                error:error.message
-            });
-        }
-    }
-
-    async getValoracionViajes(request,reply){
-        try{
-            const reportValoracion = await this.reportRepository.getValoracionViajes();
-            reply.status(200).json({
-                success:true,
-                message:'Reporte de valoración de viajes',
-                data:reportValoracion
-            });
-        } catch(error){
-            console.error('Error en getValoracionViajes',error);
-            reply.status(500).json({
-                success:false,
-                message:'Error al obtener reporte de valoración de viajes',
+                message:'Error al generar reporte',
                 error:error.message
             });
         }
