@@ -274,18 +274,7 @@ function ReservationDetail() {
         const data = await response.json();
         console.log('Received reservation data:', data);
 
-        // Preserve existing coordinates if they exist
-        if (reservation?.origen_lat && reservation?.origen_lng) {
-          setReservation({
-            ...data.reserva,
-            origen_lat: reservation.origen_lat,
-            origen_lng: reservation.origen_lng
-          });
-        } else {
-          setReservation(data.reserva);
-        }
-
-        // If reservation is completed, fetch trip and receipt details
+        // If reservation is completed, fetch trip and conductor details
         if (data.reserva.estado_reserva === 'COMPLETADO') {
           // Fetch trip details using the booking code
           const tripResponse = await fetch(`/api/trips/details/${data.reserva.codigo_reserva}`, {
@@ -294,6 +283,25 @@ function ReservationDetail() {
 
           if (tripResponse.ok) {
             const tripData = await tripResponse.json();
+            console.log('Trip data received:', tripData);
+
+            // Extract conductor data from trip response
+            const conductor = tripData.trip.conductor || {
+              rut: tripData.trip.rut_conductor,
+              ...tripData.conductor
+            };
+
+            // Merge trip and conductor data with reservation data
+            data.reserva = {
+              ...data.reserva,
+              conductor,
+              trip: tripData.trip,
+              taxi: {
+                ...data.reserva.taxi,
+                conductor
+              }
+            };
+
             setTripDetails(tripData.trip);
 
             // If we have receipt info, fetch receipt details
@@ -309,6 +317,18 @@ function ReservationDetail() {
             }
           }
         }
+
+        // Preserve existing coordinates if they exist
+        if (reservation?.origen_lat && reservation?.origen_lng) {
+          setReservation({
+            ...data.reserva,
+            origen_lat: reservation.origen_lat,
+            origen_lng: reservation.origen_lng
+          });
+        } else {
+          setReservation(data.reserva);
+        }
+
       } else {
         const error = await response.json();
         console.error('Error response:', error);
@@ -485,6 +505,7 @@ function ReservationDetail() {
     const [comment, setComment] = useState('')
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [hoverRating, setHoverRating] = useState(0)
+    const [validationError, setValidationError] = useState('')
 
     const ratingEmojis = ['😢', '😕', '😊', '😃', '🤩']
     const ratingTexts = [
@@ -495,25 +516,87 @@ function ReservationDetail() {
       'Excelente'
     ]
 
+    // Reset form when modal opens
+    useEffect(() => {
+      if (isOpen) {
+        setRating(0)
+        setComment('')
+        setValidationError('')
+      }
+    }, [isOpen])
+
+    const validateForm = () => {
+      if (!rating) {
+        setValidationError('Por favor selecciona una calificación')
+        return false
+      }
+      // Optional: validate comment length if required
+      if (comment && comment.length > 500) {
+        setValidationError('El comentario no puede exceder los 500 caracteres')
+        return false
+      }
+      setValidationError('')
+      return true
+    }
+
     const handleSubmit = async () => {
       try {
+        if (!validateForm()) {
+          return
+        }
+
         setIsSubmitting(true)
         
-        const response = await fetch(`/api/ratings/trip/${reservation.codigo_reserva}`, {
+        // Debug log to check available data
+        console.log('Submitting rating with data:', {
+          reservation_data: {
+            codigo_reserva: reservation?.codigo_reserva,
+            conductor: reservation?.conductor,
+            conductor_rut: reservation?.conductor?.rut,
+            taxi: reservation?.taxi,
+            trip: reservation?.trip
+          },
+          user_data: {
+            rut: user?.rut
+          }
+        });
+
+        // Check if we have all required data
+        if (!reservation?.codigo_reserva) {
+          throw new Error('Código de reserva no disponible')
+        }
+        if (!user?.rut) {
+          throw new Error('RUT de usuario no disponible')
+        }
+        
+        // Get conductor RUT from any available source
+        const conductorRut = reservation?.conductor?.rut || 
+                            tripDetails?.booking?.taxi?.conductor?.rut
+                            
+        if (!conductorRut) {
+          throw new Error('RUT del conductor no disponible')
+        }
+        
+        const response = await fetch(`/api/ratings/trip/${tripDetails.codigo_viaje}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
+            comentario_valoracion: comment.trim(),
             calificacion: rating,
-            comentario: comment,
-            conductor_rut: reservation.conductor?.rut
+            codigo_viaje: tripDetails.codigo_viaje,
+            rut_usuario: user.rut,
+            conductor_rut: conductorRut,
+            fecha_valoracion: new Date().toISOString(),
+            estado_valoracion: 'ACTIVO'
           }),
           credentials: 'include'
         })
 
         if (!response.ok) {
-          throw new Error('Error al enviar calificación')
+          const errorData = await response.json()
+          throw new Error(errorData.message || 'Error al enviar calificación')
         }
 
         // Trigger confetti animation on successful rating
@@ -523,10 +606,12 @@ function ReservationDetail() {
           origin: { y: 0.6 }
         })
 
+        toast.success('¡Gracias por tu calificación!')
         onSubmit()
       } catch (error) {
         console.error('Error submitting rating:', error)
-        toast.error('Error al enviar la calificación')
+        toast.error(error.message || 'Error al enviar la calificación')
+        setValidationError(error.message || 'Error al enviar la calificación')
       } finally {
         setIsSubmitting(false)
       }
@@ -578,6 +663,12 @@ function ReservationDetail() {
               </p>
             </div>
 
+            {validationError && (
+              <div className="mb-4 px-4 py-2 bg-danger-50 text-danger rounded-lg text-sm">
+                {validationError}
+              </div>
+            )}
+
             <div className="flex justify-center gap-2 mb-14">
               {[1, 2, 3, 4, 5].map((star) => (
                 <motion.button
@@ -587,7 +678,10 @@ function ReservationDetail() {
                   className="relative"
                   onHoverStart={() => setHoverRating(star)}
                   onHoverEnd={() => setHoverRating(0)}
-                  onClick={() => setRating(star)}
+                  onClick={() => {
+                    setRating(star)
+                    setValidationError('')
+                  }}
                 >
                   <StarIcon
                     className={`w-12 h-12 transition-colors ${
@@ -617,9 +711,14 @@ function ReservationDetail() {
                 label="Comentarios (opcional)"
                 placeholder="Cuéntanos más sobre tu experiencia..."
                 value={comment}
-                onChange={(e) => setComment(e.target.value)}
+                onChange={(e) => {
+                  setComment(e.target.value)
+                  setValidationError('')
+                }}
                 className="mb-6"
                 minRows={3}
+                maxLength={500}
+                description={`${comment.length}/500 caracteres`}
               />
             </div>
 
@@ -634,7 +733,7 @@ function ReservationDetail() {
                 color="primary"
                 onPress={handleSubmit}
                 isLoading={isSubmitting}
-                isDisabled={!rating}
+                isDisabled={!rating || isSubmitting}
               >
                 Enviar Calificación
               </Button>
@@ -654,6 +753,88 @@ function ReservationDetail() {
       return () => clearTimeout(timeoutId)
     }
   }, [reservation?.estado_reserva, hasRated])
+
+  const RatingDetails = () => {
+    const [ratings, setRatings] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+      const fetchRatings = async () => {
+        try {
+          if (!tripDetails?.codigo_viaje) return;
+
+          const response = await fetch(`/api/ratings/trip/${tripDetails.codigo_viaje}`, {
+            credentials: 'include'
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            setRatings(data);
+          }
+        } catch (error) {
+          console.error('Error fetching ratings:', error);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      fetchRatings();
+    }, [tripDetails?.codigo_viaje]);
+
+    if (loading) return null;
+    if (!ratings?.length) return null;
+
+    return (
+      <Card className="w-full max-w-3xl mx-auto mt-4">
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-bold">Calificación del Viaje</h2>
+          </div>
+        </CardHeader>
+        <CardBody>
+          <div className="grid gap-4">
+            {ratings.map((rating, index) => (
+              <div key={rating.id_valoracion || index} className="border-b last:border-0 pb-4 last:pb-0">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="flex items-center">
+                    {[...Array(5)].map((_, i) => (
+                      <StarIcon
+                        key={i}
+                        className={`w-5 h-5 ${
+                          i < rating.calificacion
+                            ? 'fill-yellow-400 stroke-yellow-400'
+                            : 'stroke-gray-300'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <span className="text-sm text-gray-600">
+                    {new Date(rating.fecha_valoracion).toLocaleDateString()}
+                  </span>
+                </div>
+                {rating.comentario_valoracion && (
+                  <p className="text-sm text-gray-600 mt-2">
+                    {rating.comentario_valoracion}
+                  </p>
+                )}
+                <div className="flex items-center gap-2 mt-2">
+                  <Chip
+                    size="sm"
+                    color={rating.calificacion >= 4 ? 'success' : 
+                           rating.calificacion >= 3 ? 'warning' : 'danger'}
+                    variant="flat"
+                  >
+                    {rating.calificacion >= 4 ? 'Excelente' : 
+                     rating.calificacion >= 3 ? 'Regular' : 'Insatisfactorio'}
+                  </Chip>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardBody>
+      </Card>
+    );
+  };
 
   if (loading) {
     return (
@@ -1005,11 +1186,12 @@ function ReservationDetail() {
         </ModalContent>
       </Modal>
 
-      {/* Show trip and receipt details only for completed reservations */}
+      {/* Show trip, receipt and rating details only for completed reservations */}
       {reservation?.estado_reserva === 'COMPLETADO' && (
         <>
           <TripDetails />
           <ReceiptDetails />
+          <RatingDetails />
         </>
       )}
 
