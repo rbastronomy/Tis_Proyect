@@ -20,6 +20,9 @@ import {
   ScrollShadow,
 } from '@nextui-org/react'
 import { useNavigate, useParams } from '@tanstack/react-router'
+import { useSocketContext } from '../context/SocketContext'
+import { WS_EVENTS } from '../constants/WebSocketEvents'
+import { TripTrackingMap } from './TripTrackingMap'
 
 export default function AdminReservationDetail() {
   const { codigoReservaAdmin } = useParams({ 
@@ -33,6 +36,9 @@ export default function AdminReservationDetail() {
   const { isOpen, onOpen, onOpenChange } = useDisclosure()
   const [isApprovalFlow, setIsApprovalFlow] = useState(false)
   const [driverInfo, setDriverInfo] = useState(null)
+  const [driverLocation, setDriverLocation] = useState(null)
+  const [routeCoordinates, setRouteCoordinates] = useState(null)
+  const { socket } = useSocketContext()
 
   useEffect(() => {
     if (!isAuthenticated || user?.role?.nombre_rol !== 'ADMINISTRADOR') {
@@ -41,6 +47,150 @@ export default function AdminReservationDetail() {
     }
     fetchReservation()
   }, [isAuthenticated, codigoReservaAdmin, user])
+
+  useEffect(() => {
+    if (!socket || !reservation?.taxi?.patente || 
+        !['CONFIRMADO', 'RECOGIDO'].includes(reservation.estado_reserva)) {
+      return;
+    }
+
+    console.log('Setting up taxi location listener:', reservation.taxi.patente);
+
+    const handleTaxiLocation = (data) => {
+      if (data.patente === reservation.taxi.patente) {
+        console.log('Received location update for taxi:', data);
+        setDriverLocation({
+          lat: data.lat,
+          lng: data.lng,
+          accuracy: data.accuracy,
+          heading: data.heading
+        });
+      }
+    };
+
+    const handleTaxiOffline = ({ patente }) => {
+      if (patente === reservation.taxi.patente) {
+        console.log('Taxi went offline:', patente);
+        setDriverLocation(null);
+      }
+    };
+
+    socket.emit(WS_EVENTS.JOIN_ADMIN_ROOM);
+    socket.on(WS_EVENTS.TAXI_LOCATION_UPDATE, handleTaxiLocation);
+    socket.on(WS_EVENTS.TAXI_OFFLINE, handleTaxiOffline);
+
+    return () => {
+      socket.off(WS_EVENTS.TAXI_LOCATION_UPDATE, handleTaxiLocation);
+      socket.off(WS_EVENTS.TAXI_OFFLINE, handleTaxiOffline);
+      socket.emit(WS_EVENTS.LEAVE_ADMIN_ROOM);
+    };
+  }, [socket, reservation?.taxi?.patente, reservation?.estado_reserva]);
+
+  useEffect(() => {
+    if (!driverLocation || 
+       (!reservation?.origen_lat && !reservation?.destino_lat) || 
+       (!reservation?.origen_lng && !reservation?.destino_lng)) return;
+
+    const fetchRoute = async () => {
+      try {
+        const origin = `${driverLocation.lat},${driverLocation.lng}`;
+        let destination;
+
+        if (reservation.estado_reserva === 'CONFIRMADO') {
+          destination = `${reservation.origen_lat},${reservation.origen_lng}`;
+        } else if (reservation.estado_reserva === 'RECOGIDO') {
+          destination = `${reservation.destino_lat},${reservation.destino_lng}`;
+        } else {
+          return;
+        }
+
+        const response = await fetch(
+          `/api/maps/directions?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}`,
+          {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+            }
+          }
+        );
+
+        if (!response.ok) throw new Error('Error fetching route');
+
+        const data = await response.json();
+        if (data.status === 'OK' && data.routes?.length > 0) {
+          setRouteCoordinates(data.routes[0].decodedCoordinates);
+        }
+      } catch (error) {
+        console.error('Error fetching route:', error);
+      }
+    };
+
+    const timeoutId = setTimeout(fetchRoute, 2000);
+    return () => clearTimeout(timeoutId);
+  }, [driverLocation, reservation]);
+
+  useEffect(() => {
+    const geocodeAddresses = async () => {
+      if (
+        (!reservation?.origen_lat && reservation?.origen_reserva) ||
+        (!reservation?.destino_lat && reservation?.destino_reserva)
+      ) {
+        try {
+          const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+          const geocodePromises = [];
+
+          if (!reservation.origen_lat && reservation.origen_reserva) {
+            geocodePromises.push(
+              fetch(
+                `https://maps.googleapis.com/maps/api/geocode/json?` +
+                `address=${encodeURIComponent(reservation.origen_reserva)}` +
+                `&components=country:CL|administrative_area:Tarapacá|locality:Iquique|locality:Alto Hospicio` +
+                `&key=${apiKey}`
+              ).then(res => res.json())
+            );
+          }
+
+          if (!reservation.destino_lat && reservation.destino_reserva) {
+            geocodePromises.push(
+              fetch(
+                `https://maps.googleapis.com/maps/api/geocode/json?` +
+                `address=${encodeURIComponent(reservation.destino_reserva)}` +
+                `&components=country:CL|administrative_area:Tarapacá|locality:Iquique|locality:Alto Hospicio` +
+                `&key=${apiKey}`
+              ).then(res => res.json())
+            );
+          }
+
+          const results = await Promise.all(geocodePromises);
+          const updates = {};
+
+          results.forEach((data, index) => {
+            if (data.status === 'OK' && data.results[0]) {
+              const location = data.results[0].geometry.location;
+              if (index === 0 && !reservation.origen_lat) {
+                updates.origen_lat = location.lat;
+                updates.origen_lng = location.lng;
+              } else if (index === 1 && !reservation.destino_lat) {
+                updates.destino_lat = location.lat;
+                updates.destino_lng = location.lng;
+              }
+            }
+          });
+
+          if (Object.keys(updates).length > 0) {
+            setReservation(prev => ({
+              ...prev,
+              ...updates
+            }));
+          }
+        } catch (error) {
+          console.error('Error geocoding addresses:', error);
+        }
+      }
+    };
+
+    geocodeAddresses();
+  }, [reservation?.origen_reserva, reservation?.destino_reserva]);
 
   const fetchReservation = async () => {
     try {
@@ -271,14 +421,6 @@ export default function AdminReservationDetail() {
               </div>
             </div>
 
-            {/* Map placeholder */}
-            <div className="mt-4">
-              <h3 className="text-lg font-semibold mb-2">Ubicación</h3>
-              <div className="bg-gray-200 h-64 flex items-center justify-center rounded-lg">
-                <p className="text-gray-500">Mapa no disponible</p>
-              </div>
-            </div>
-
             {/* Action buttons */}
             {user?.role?.nombre_rol === 'ADMINISTRADOR' && (
               <div className="flex justify-end space-x-2 mt-4">
@@ -473,6 +615,12 @@ export default function AdminReservationDetail() {
           </ScrollShadow>
         </CardBody>
       </Card>
+
+      <TripTrackingMap 
+        reservation={reservation}
+        driverLocation={driverLocation}
+        routeCoordinates={routeCoordinates}
+      />
 
       <Modal 
         isOpen={isOpen} 

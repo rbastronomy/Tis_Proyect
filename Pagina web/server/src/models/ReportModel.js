@@ -1,9 +1,8 @@
 import { BaseModel } from '../core/BaseModel.js';
 import PDFDocument from 'pdfkit';
-import fs from 'fs';
-import { promises as fsPromises } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { Buffer } from 'buffer';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 

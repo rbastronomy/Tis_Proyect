@@ -1,9 +1,6 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useSocketContext } from '../context/SocketContext';
 import { useGeolocation } from './useGeolocation';
-
-const KALMAN_FILTER_R = 0.1; // Measurement noise
-const KALMAN_FILTER_Q = 0.1; // Process noise
 
 export function useDriverLocation({ 
   isOnline, 
@@ -15,14 +12,10 @@ export function useDriverLocation({
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [smoothedPosition, setSmoothedPosition] = useState(null);
   const positionBuffer = useRef([]);
-  const kalmanState = useRef({ x: 0, P: 1 });
-  const BUFFER_SIZE = 5; // Increased buffer size for better smoothing
+  const BUFFER_SIZE = 3;
   const authTimeoutRef = useRef(null);
   const authAttemptedRef = useRef(false);
-  const lastEmitTime = useRef(0);
-  const EMIT_INTERVAL = 2000; // Minimum interval between emissions
 
-  // Enhanced geolocation configuration
   const { position, error: geoError, loading } = useGeolocation({ 
     skip: !isOnline || !isAuthenticated,
     enableHighAccuracy: true,
@@ -30,31 +23,17 @@ export function useDriverLocation({
     maximumAge: 0,
     retryOnError: true,
     maxRetries: 5,
-    minUpdateInterval: 1000,
-    accuracyLevels: {
-      high: 20,
-      medium: 50,
-      low: 100
-    },
-    minDistance: 2,
-    maxAge: 10000
+    minUpdateInterval: 2000,
+    validateAccuracy: (accuracy) => {
+      if (accuracy > 50) {
+        console.warn(`Low accuracy: ${accuracy.toFixed(0)}m - Retrying...`);
+        return false;
+      }
+      return true;
+    }
   });
 
-  // New: Kalman filter implementation
-  const applyKalmanFilter = useCallback((measurement, state) => {
-    // Prediction
-    const xPred = state.x;
-    const pPred = state.P + KALMAN_FILTER_Q;
-
-    // Update
-    const K = pPred / (pPred + KALMAN_FILTER_R);
-    const x = xPred + K * (measurement - xPred);
-    const P = (1 - K) * pPred;
-
-    return { x, P };
-  }, []);
-
-  // Enhanced position smoothing
+  // Position smoothing
   useEffect(() => {
     if (!position) return;
 
@@ -68,11 +47,12 @@ export function useDriverLocation({
     // Add new position to buffer
     positionBuffer.current.push(position);
     
+    // Keep buffer size limited
     if (positionBuffer.current.length > BUFFER_SIZE) {
       positionBuffer.current.shift();
     }
 
-    // Apply Kalman filter and position smoothing
+    // Calculate smoothed position
     if (positionBuffer.current.length >= 2) {
       const validPositions = positionBuffer.current.filter(pos => 
         pos && pos.lat && pos.lng && 
@@ -80,47 +60,20 @@ export function useDriverLocation({
       );
 
       if (validPositions.length >= 2) {
-        // Apply Kalman filter to latitude and longitude
-        const latState = applyKalmanFilter(position.lat, { 
-          x: kalmanState.current.x, 
-          P: kalmanState.current.P 
-        });
-        const lngState = applyKalmanFilter(position.lng, { 
-          x: kalmanState.current.x, 
-          P: kalmanState.current.P 
-        });
-
-        // Calculate weighted average for smoothing
-        const weights = validPositions.map((_, i) => 
-          Math.exp(-0.5 * (validPositions.length - 1 - i))
-        );
-        const weightSum = weights.reduce((a, b) => a + b, 0);
-
         const smoothed = {
-          lat: validPositions.reduce((sum, pos, i) => 
-            sum + (pos.lat * weights[i]), 0) / weightSum,
-          lng: validPositions.reduce((sum, pos, i) => 
-            sum + (pos.lng * weights[i]), 0) / weightSum,
+          lat: validPositions.reduce((sum, pos) => sum + pos.lat, 0) / validPositions.length,
+          lng: validPositions.reduce((sum, pos) => sum + pos.lng, 0) / validPositions.length,
           accuracy: position.accuracy,
-          accuracyLevel: position.accuracyLevel,
           speed: position.speed,
           heading: position.heading,
-          timestamp: position.timestamp,
-          altitude: position.altitude,
-          altitudeAccuracy: position.altitudeAccuracy
+          timestamp: position.timestamp
         };
-
-        // Apply Kalman filtered values
-        smoothed.lat = latState.x;
-        smoothed.lng = lngState.x;
-
-        kalmanState.current = { x: latState.x, P: latState.P };
         setSmoothedPosition(smoothed);
       }
     } else {
       setSmoothedPosition(position);
     }
-  }, [position, applyKalmanFilter]);
+  }, [position]);
 
   // Reset auth state when connection is lost or going offline
   useEffect(() => {
@@ -166,7 +119,7 @@ export function useDriverLocation({
         });
         setIsAuthenticated(false);
         authAttemptedRef.current = false;
-        onError?.('Authentication timed out');
+        onError?.(new Error('Authentication timed out'));
       }, 10000);
     };
 
@@ -193,7 +146,7 @@ export function useDriverLocation({
       }
       setIsAuthenticated(false);
       authAttemptedRef.current = false;
-      onError?.(typeof error === 'string' ? error : error.message || 'Authentication failed');
+      onError?.(error);
     };
 
     socket.on('taxi:auth:success', handleAuthSuccess);
@@ -232,12 +185,9 @@ export function useDriverLocation({
     };
   }, [socket, isAuthenticated]);
 
-  // Enhanced location emission
+  // Update the location emission logic
   useEffect(() => {
     if (!isAuthenticated || !smoothedPosition || !isOnline || !socket) return;
-
-    const now = Date.now();
-    if (now - lastEmitTime.current < EMIT_INTERVAL) return;
 
     try {
       const locationData = {
@@ -245,20 +195,16 @@ export function useDriverLocation({
         lat: smoothedPosition.lat,
         lng: smoothedPosition.lng,
         accuracy: smoothedPosition.accuracy,
-        accuracyLevel: smoothedPosition.accuracyLevel,
         speed: smoothedPosition.speed,
         heading: smoothedPosition.heading,
-        altitude: smoothedPosition.altitude,
-        altitudeAccuracy: smoothedPosition.altitudeAccuracy,
-        timestamp: now,
+        timestamp: Date.now(),
         estado: 'DISPONIBLE'
       };
 
       socket.volatile.emit('taxi:location', locationData);
-      lastEmitTime.current = now;
     } catch (error) {
       console.error('Error sending location update:', error);
-      onError?.(error.message || 'Failed to send location update');
+      onError?.(error);
     }
   }, [smoothedPosition, socket, isOnline, isAuthenticated, patente, onError]);
 

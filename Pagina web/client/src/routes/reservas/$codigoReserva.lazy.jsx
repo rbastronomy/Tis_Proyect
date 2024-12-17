@@ -1,7 +1,7 @@
 import { createLazyFileRoute } from '@tanstack/react-router'
 import { useState, useEffect, lazy, Suspense } from 'react'
 import { useAuth } from '../../hooks/useAuth'
-import { MapPin, Calendar, DollarSign, History, Car } from 'lucide-react'
+import { MapPin, Calendar, DollarSign, History, Car, StarIcon } from 'lucide-react'
 import { 
   Button, 
   Card, 
@@ -14,7 +14,8 @@ import {
   ModalHeader,
   ModalBody,
   ModalFooter,
-  useDisclosure
+  useDisclosure,
+  Textarea,
 } from "@nextui-org/react"
 import { useNavigate } from '@tanstack/react-router'
 import { useSocketContext } from '../../context/SocketContext'
@@ -22,6 +23,9 @@ import { WS_EVENTS } from '../../constants/WebSocketEvents'
 import { Marker, Polyline, Tooltip } from 'react-leaflet'
 import L from 'leaflet'
 import TaxiMarker from '../../components/TaxiMarker'
+import { motion, AnimatePresence } from 'framer-motion'
+import confetti from 'canvas-confetti'
+import { toast } from 'react-hot-toast'
 
 const Map = lazy(() => import('../../components/Map'))
 
@@ -42,6 +46,8 @@ function ReservationDetail() {
   const [routeCoordinates, setRouteCoordinates] = useState(null)
   const [tripDetails, setTripDetails] = useState(null)
   const [receiptDetails, setReceiptDetails] = useState(null)
+  const [showRatingModal, setShowRatingModal] = useState(false)
+  const [hasRated, setHasRated] = useState(false)
 
   // Listen for driver location updates
   useEffect(() => {
@@ -113,12 +119,23 @@ function ReservationDetail() {
 
   // Fetch route when driver location updates with debounce
   useEffect(() => {
-    if (!driverLocation || !reservation?.origen_lat || !reservation?.origen_lng) return;
+    if (!driverLocation || 
+       (!reservation?.origen_lat && !reservation?.destino_lat) || 
+       (!reservation?.origen_lng && !reservation?.destino_lng)) return;
 
     const fetchRoute = async () => {
       try {
         const origin = `${driverLocation.lat},${driverLocation.lng}`;
-        const destination = `${reservation.origen_lat},${reservation.origen_lng}`;
+        let destination;
+
+        // Choose destination based on reservation state
+        if (reservation.estado_reserva === 'CONFIRMADO') {
+          destination = `${reservation.origen_lat},${reservation.origen_lng}`;
+        } else if (reservation.estado_reserva === 'RECOGIDO') {
+          destination = `${reservation.destino_lat},${reservation.destino_lng}`;
+        } else {
+          return; // Don't fetch route for other states
+        }
 
         const response = await fetch(
           `/api/maps/directions?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}`,
@@ -145,6 +162,42 @@ function ReservationDetail() {
     const timeoutId = setTimeout(fetchRoute, 2000);
     return () => clearTimeout(timeoutId);
   }, [driverLocation, reservation]);
+
+  // Add geocoding for destination coordinates when needed
+  useEffect(() => {
+    const geocodeDestination = async () => {
+      // Skip if we already have coordinates or no destination address
+      if ((reservation?.destino_lat && reservation?.destino_lng) || !reservation?.destino_reserva) {
+        return;
+      }
+
+      try {
+        const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+        const response = await fetch(
+          `https://maps.googleapis.com/maps/api/geocode/json?` +
+          `address=${encodeURIComponent(reservation.destino_reserva)}` +
+          `&components=country:CL|administrative_area:Tarapacá|locality:Iquique|locality:Alto Hospicio` +
+          `&key=${apiKey}`
+        );
+
+        if (!response.ok) throw new Error('Geocoding failed');
+
+        const data = await response.json();
+        if (data.status === 'OK' && data.results[0]) {
+          const location = data.results[0].geometry.location;
+          setReservation(prev => ({
+            ...prev,
+            destino_lat: location.lat,
+            destino_lng: location.lng
+          }));
+        }
+      } catch (error) {
+        console.error('Error geocoding destination address:', error);
+      }
+    };
+
+    geocodeDestination();
+  }, [reservation?.destino_reserva, reservation?.destino_lat, reservation?.destino_lng]);
 
   // Add geocoding when reservation is loaded
   useEffect(() => {
@@ -310,19 +363,6 @@ function ReservationDetail() {
     return new Date(dateString).toLocaleString()
   }
 
-  // Debug component for development
-  const DebugInfo = () => (
-    <div className="fixed bottom-4 right-4 bg-black/80 text-white p-4 rounded-lg text-xs">
-      <div>Socket Connected: {socket?.connected ? 'Yes' : 'No'}</div>
-      <div>Socket ID: {socket?.id}</div>
-      <div>Taxi: {reservation?.taxi?.patente}</div>
-      <div>Driver Location: {driverLocation ? 
-        `${driverLocation.lat.toFixed(4)}, ${driverLocation.lng.toFixed(4)}` : 
-        'Not available'
-      }</div>
-    </div>
-  );
-
   const TripDetails = () => {
     if (!tripDetails) return null;
 
@@ -440,6 +480,181 @@ function ReservationDetail() {
     );
   };
 
+  const RatingModal = ({ isOpen, onClose, onSubmit, reservation }) => {
+    const [rating, setRating] = useState(0)
+    const [comment, setComment] = useState('')
+    const [isSubmitting, setIsSubmitting] = useState(false)
+    const [hoverRating, setHoverRating] = useState(0)
+
+    const ratingEmojis = ['😢', '😕', '😊', '😃', '🤩']
+    const ratingTexts = [
+      'Muy insatisfecho',
+      'Insatisfecho',
+      'Normal',
+      'Satisfecho',
+      'Excelente'
+    ]
+
+    const handleSubmit = async () => {
+      try {
+        setIsSubmitting(true)
+        
+        const response = await fetch(`/api/ratings/trip/${reservation.codigo_reserva}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            calificacion: rating,
+            comentario: comment,
+            conductor_rut: reservation.conductor?.rut
+          }),
+          credentials: 'include'
+        })
+
+        if (!response.ok) {
+          throw new Error('Error al enviar calificación')
+        }
+
+        // Trigger confetti animation on successful rating
+        confetti({
+          particleCount: 100,
+          spread: 70,
+          origin: { y: 0.6 }
+        })
+
+        onSubmit()
+      } catch (error) {
+        console.error('Error submitting rating:', error)
+        toast.error('Error al enviar la calificación')
+      } finally {
+        setIsSubmitting(false)
+      }
+    }
+
+    return (
+      <Modal 
+        isOpen={isOpen} 
+        onClose={onClose}
+        size="2xl"
+        backdrop="blur"
+        motionProps={{
+          variants: {
+            enter: {
+              y: 0,
+              opacity: 1,
+              transition: {
+                duration: 0.3,
+                ease: "easeOut"
+              }
+            },
+            exit: {
+              y: -20,
+              opacity: 0,
+              transition: {
+                duration: 0.2,
+                ease: "easeIn"
+              }
+            }
+          }
+        }}
+      >
+        <ModalContent>
+          <div className="p-6">
+            <div className="text-center mb-6">
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: "spring", stiffness: 260, damping: 20 }}
+                className="w-16 h-16 bg-gradient-to-r from-primary to-secondary rounded-full flex items-center justify-center mx-auto mb-4"
+              >
+                <span className="text-3xl">
+                  {rating ? ratingEmojis[rating - 1] : '🌟'}
+                </span>
+              </motion.div>
+              <h2 className="text-2xl font-bold mb-2">¿Cómo fue tu viaje?</h2>
+              <p className="text-gray-600">
+                Tu opinión nos ayuda a mejorar el servicio
+              </p>
+            </div>
+
+            <div className="flex justify-center gap-2 mb-14">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <motion.button
+                  key={star}
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  className="relative"
+                  onHoverStart={() => setHoverRating(star)}
+                  onHoverEnd={() => setHoverRating(0)}
+                  onClick={() => setRating(star)}
+                >
+                  <StarIcon
+                    className={`w-12 h-12 transition-colors ${
+                      star <= (hoverRating || rating)
+                        ? 'fill-yellow-400 stroke-yellow-400'
+                        : 'stroke-gray-400'
+                    }`}
+                  />
+                  <AnimatePresence>
+                    {star === (hoverRating || rating) && (
+                      <motion.span
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 text-sm font-medium z-10 bg-white px-2 py-1 rounded-md shadow-sm whitespace-nowrap"
+                      >
+                        {ratingTexts[star - 1]}
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
+                </motion.button>
+              ))}
+            </div>
+
+            <div className="relative z-0">
+              <Textarea
+                label="Comentarios (opcional)"
+                placeholder="Cuéntanos más sobre tu experiencia..."
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                className="mb-6"
+                minRows={3}
+              />
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="light"
+                onPress={onClose}
+              >
+                Cancelar
+              </Button>
+              <Button
+                color="primary"
+                onPress={handleSubmit}
+                isLoading={isSubmitting}
+                isDisabled={!rating}
+              >
+                Enviar Calificación
+              </Button>
+            </div>
+          </div>
+        </ModalContent>
+      </Modal>
+    )
+  }
+
+  useEffect(() => {
+    if (reservation?.estado_reserva === 'COMPLETADO' && !hasRated) {
+      // Show rating modal after a short delay
+      const timeoutId = setTimeout(() => {
+        setShowRatingModal(true)
+      }, 1000)
+      return () => clearTimeout(timeoutId)
+    }
+  }, [reservation?.estado_reserva, hasRated])
+
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-8 bg-gray-100 min-h-screen">
@@ -500,19 +715,27 @@ function ReservationDetail() {
   return (
     <div className="container mx-auto px-4 py-8 bg-gray-100 min-h-screen">
       {/* Map Section */}
-      {reservation?.estado_reserva === 'CONFIRMADO' && (
+      {(reservation?.estado_reserva === 'CONFIRMADO' || reservation?.estado_reserva === 'RECOGIDO') && (
         <Card className="w-full max-w-3xl mx-auto mb-8">
           <CardHeader>
-            <h2 className="text-xl font-bold">Seguimiento del Conductor</h2>
+            <h2 className="text-xl font-bold">
+              {reservation.estado_reserva === 'CONFIRMADO' 
+                ? 'Conductor en camino' 
+                : 'Seguimiento del viaje'}
+            </h2>
           </CardHeader>
           <CardBody>
             <div className="h-[400px] relative">
               <Suspense fallback={<div>Cargando mapa...</div>}>
-                {reservation && reservation.origen_lat && reservation.origen_lng ? (
+                {reservation && ((reservation.origen_lat && reservation.origen_lng) || (reservation.destino_lat && reservation.destino_lng)) ? (
                   <Map 
                     position={driverLocation || { 
-                      lat: reservation.origen_lat, 
-                      lng: reservation.origen_lng 
+                      lat: reservation.estado_reserva === 'CONFIRMADO' 
+                        ? reservation.origen_lat 
+                        : reservation.destino_lat, 
+                      lng: reservation.estado_reserva === 'CONFIRMADO'
+                        ? reservation.origen_lng
+                        : reservation.destino_lng 
                     }}
                     isTracking={!!driverLocation}
                   >
@@ -526,17 +749,45 @@ function ReservationDetail() {
                         }}
                       />
                     )}
-                    <Marker 
-                      position={[reservation.origen_lat, reservation.origen_lng]}
-                      icon={L.divIcon({
-                        className: 'bg-green-500 rounded-full w-4 h-4 -ml-2 -mt-2',
-                        iconSize: [16, 16]
-                      })}
-                    >
-                      <Tooltip permanent>
-                        Punto de recogida
-                      </Tooltip>
-                    </Marker>
+                    
+                    {/* Show pickup marker during CONFIRMADO state */}
+                    {reservation.estado_reserva === 'CONFIRMADO' && reservation.origen_lat && reservation.origen_lng && (
+                      <Marker 
+                        position={[reservation.origen_lat, reservation.origen_lng]}
+                        icon={L.divIcon({
+                          className: 'custom-div-icon',
+                          html: `<div class="w-6 h-6 bg-green-500 rounded-full border-2 border-white shadow-lg flex items-center justify-center">
+                            <div class="w-2 h-2 bg-white rounded-full"></div>
+                          </div>`,
+                          iconSize: [24, 24],
+                          iconAnchor: [12, 12]
+                        })}
+                      >
+                        <Tooltip permanent>
+                          Punto de recogida
+                        </Tooltip>
+                      </Marker>
+                    )}
+
+                    {/* Show destination marker during RECOGIDO state */}
+                    {reservation.estado_reserva === 'RECOGIDO' && reservation.destino_lat && reservation.destino_lng && (
+                      <Marker 
+                        position={[reservation.destino_lat, reservation.destino_lng]}
+                        icon={L.divIcon({
+                          className: 'custom-div-icon',
+                          html: `<div class="w-6 h-6 bg-red-500 rounded-full border-2 border-white shadow-lg flex items-center justify-center">
+                            <div class="w-2 h-2 bg-white rounded-full"></div>
+                          </div>`,
+                          iconSize: [24, 24],
+                          iconAnchor: [12, 12]
+                        })}
+                      >
+                        <Tooltip permanent>
+                          Destino Final
+                        </Tooltip>
+                      </Marker>
+                    )}
+
                     {routeCoordinates && (
                       <Polyline 
                         positions={routeCoordinates.map(coord => [coord.lat, coord.lng])}
@@ -554,8 +805,23 @@ function ReservationDetail() {
               </Suspense>
             </div>
             {driverLocation && (
-              <div className="mt-2 text-sm text-gray-600">
-                Ubicación del conductor: {driverLocation.lat.toFixed(4)}, {driverLocation.lng.toFixed(4)}
+              <div className="mt-4 space-y-2">
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">Estado:</span>{' '}
+                  {reservation.estado_reserva === 'CONFIRMADO' 
+                    ? 'Conductor en camino a recogerle'
+                    : 'En viaje hacia su destino'
+                  }
+                </div>
+                {reservation.taxi && (
+                  <div className="text-sm text-gray-600">
+                    <span className="font-medium">Vehículo:</span>{' '}
+                    {reservation.taxi.marca} {reservation.taxi.modelo} - {reservation.taxi.color} - {reservation.taxi.patente}
+                  </div>
+                )}
+                <div className="text-xs text-gray-500">
+                  Última actualización: {new Date().toLocaleTimeString()}
+                </div>
               </div>
             )}
           </CardBody>
@@ -738,7 +1004,6 @@ function ReservationDetail() {
           )}
         </ModalContent>
       </Modal>
-      {process.env.NODE_ENV === 'development' && <DebugInfo />}
 
       {/* Show trip and receipt details only for completed reservations */}
       {reservation?.estado_reserva === 'COMPLETADO' && (
@@ -747,6 +1012,17 @@ function ReservationDetail() {
           <ReceiptDetails />
         </>
       )}
+
+      <RatingModal
+        isOpen={showRatingModal}
+        onClose={() => setShowRatingModal(false)}
+        onSubmit={() => {
+          setShowRatingModal(false)
+          setHasRated(true)
+          toast.success('¡Gracias por tu calificación!')
+        }}
+        reservation={reservation}
+      />
     </div>
   )
 } 
