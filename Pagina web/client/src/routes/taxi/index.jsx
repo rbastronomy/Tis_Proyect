@@ -727,14 +727,11 @@ function TaxiDashboard() {
         {/* Map Section */}
         <div className="w-full md:flex-1 h-[calc(100vh-20rem)] md:h-[calc(100vh-4rem)] relative z-0">
           <Suspense fallback={<div className="h-full flex items-center justify-center">Cargando mapa...</div>}>
-            {position && (
-              <Map 
-                ref={mapRef}
-                position={position} 
-                isTracking={isOnline}
-              >
-                {/* Driver marker */}
-                {position && (
+            <Map ref={mapRef}>
+              {/* Only render markers and routes when position is available and driver is online */}
+              {position && isOnline && (
+                <>
+                  {/* Driver marker */}
                   <TaxiMarker 
                     data={{
                       lat: position.lat,
@@ -743,60 +740,60 @@ function TaxiDashboard() {
                       estado: isOnline ? 'EN SERVICIO' : 'OFFLINE'
                     }}
                   />
-                )}
 
-                {/* Route polyline */}
-                {activeTrip && remainingRoute && activeTrip.estado_reserva !== 'COMPLETADO' && (
-                  <Polyline 
-                    positions={remainingRoute.map(coord => [coord.lat, coord.lng])}
-                    color="blue"
-                    weight={3}
-                    opacity={0.7}
-                  />
-                )}
-                
-                {/* Pickup/Destination markers */}
-                {activeTrip && activeTrip.estado_reserva !== 'COMPLETADO' && (
-                  <>
-                    {activeTrip.estado_reserva === 'CONFIRMADO' && activeTrip.origen_lat && activeTrip.origen_lng && (
-                      <Marker 
-                        position={[activeTrip.origen_lat, activeTrip.origen_lng]}
-                        icon={L.divIcon({
-                          className: 'custom-div-icon',
-                          html: `<div class="w-6 h-6 bg-green-500 rounded-full border-2 border-white shadow-lg flex items-center justify-center">
-                            <div class="w-2 h-2 bg-white rounded-full"></div>
-                          </div>`,
-                          iconSize: [24, 24],
-                          iconAnchor: [12, 12]
-                        })}
-                      >
-                        <Tooltip permanent offset={[0, -20]}>
-                          Punto de recogida
-                        </Tooltip>
-                      </Marker>
-                    )}
-                    
-                    {activeTrip.estado_reserva === 'RECOGIDO' && activeTrip.destino_lat && activeTrip.destino_lng && (
-                      <Marker 
-                        position={[activeTrip.destino_lat, activeTrip.destino_lng]}
-                        icon={L.divIcon({
-                          className: 'custom-div-icon',
-                          html: `<div class="w-6 h-6 bg-red-500 rounded-full border-2 border-white shadow-lg flex items-center justify-center">
-                            <div class="w-2 h-2 bg-white rounded-full"></div>
-                          </div>`,
-                          iconSize: [24, 24],
-                          iconAnchor: [12, 12]
-                        })}
-                      >
-                        <Tooltip permanent offset={[0, -20]}>
-                          Destino Final
-                        </Tooltip>
-                      </Marker>
-                    )}
-                  </>
-                )}
-              </Map>
-            )}
+                  {/* Route polyline */}
+                  {activeTrip && remainingRoute && activeTrip.estado_reserva !== 'COMPLETADO' && (
+                    <Polyline 
+                      positions={remainingRoute.map(coord => [coord.lat, coord.lng])}
+                      color="blue"
+                      weight={3}
+                      opacity={0.7}
+                    />
+                  )}
+                  
+                  {/* Pickup/Destination markers */}
+                  {activeTrip && activeTrip.estado_reserva !== 'COMPLETADO' && (
+                    <>
+                      {activeTrip.estado_reserva === 'CONFIRMADO' && activeTrip.origen_lat && activeTrip.origen_lng && (
+                        <Marker 
+                          position={[activeTrip.origen_lat, activeTrip.origen_lng]}
+                          icon={L.divIcon({
+                            className: 'custom-div-icon',
+                            html: `<div class="w-6 h-6 bg-green-500 rounded-full border-2 border-white shadow-lg flex items-center justify-center">
+                              <div class="w-2 h-2 bg-white rounded-full"></div>
+                            </div>`,
+                            iconSize: [24, 24],
+                            iconAnchor: [12, 12]
+                          })}
+                        >
+                          <Tooltip permanent offset={[0, -20]}>
+                            Punto de recogida
+                          </Tooltip>
+                        </Marker>
+                      )}
+                      
+                      {activeTrip.estado_reserva === 'RECOGIDO' && activeTrip.destino_lat && activeTrip.destino_lng && (
+                        <Marker 
+                          position={[activeTrip.destino_lat, activeTrip.destino_lng]}
+                          icon={L.divIcon({
+                            className: 'custom-div-icon',
+                            html: `<div class="w-6 h-6 bg-red-500 rounded-full border-2 border-white shadow-lg flex items-center justify-center">
+                              <div class="w-2 h-2 bg-white rounded-full"></div>
+                            </div>`,
+                            iconSize: [24, 24],
+                            iconAnchor: [12, 12]
+                          })}
+                        >
+                          <Tooltip permanent offset={[0, -20]}>
+                            Destino Final
+                          </Tooltip>
+                        </Marker>
+                      )}
+                    </>
+                  )}
+                </>
+              )}
+            </Map>
           </Suspense>
         </div>
 

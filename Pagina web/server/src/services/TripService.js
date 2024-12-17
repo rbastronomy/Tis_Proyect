@@ -38,7 +38,6 @@ export class TripService extends BaseService {
 
             // Get booking with full details
             const booking = await this.bookingService.getBookingByCode(bookingId);
-            console.log('TripService - Found booking with details:', booking);
 
             if (!booking) {
                 throw new Error('Reserva no encontrada');
@@ -49,7 +48,6 @@ export class TripService extends BaseService {
 
             // Get the rate from the service
             const rate = booking._data.servicio?.tarifas?.[0];
-            console.log('TripService - Rate data:', rate);
 
             if (!rate || typeof rate.precio !== 'number' || rate.precio <= 0) {
                 console.error('TripService - Invalid rate:', {

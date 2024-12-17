@@ -7,8 +7,15 @@ export function useGeolocation({
   maximumAge = 0,
   retryOnError = true,
   maxRetries = 3,
-  validateAccuracy = null,
-  minUpdateInterval = 1000
+  minUpdateInterval = 1000,
+  minAccuracy = 50,
+  minDistance = 2,
+  maxAge = 10000,
+  accuracyLevels = {
+    high: 20,
+    medium: 50,
+    low: 100
+  }
 }) {
   const [position, setPosition] = useState(null);
   const [error, setError] = useState(null);
@@ -16,14 +23,57 @@ export function useGeolocation({
   const [retryCount, setRetryCount] = useState(0);
   const lastUpdateTime = useRef(0);
   const lastPosition = useRef(null);
+  const watchId = useRef(null);
+
+  const calculateDistance = useCallback((pos1, pos2) => {
+    const R = 6371e3;
+    const φ1 = (pos1.lat * Math.PI) / 180;
+    const φ2 = (pos2.lat * Math.PI) / 180;
+    const Δφ = ((pos2.lat - pos1.lat) * Math.PI) / 180;
+    const Δλ = ((pos2.lng - pos1.lng) * Math.PI) / 180;
+
+    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+              Math.cos(φ1) * Math.cos(φ2) *
+              Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  }, []);
+
+  const isValidPosition = useCallback((pos) => {
+    if (!pos.coords || !pos.coords.latitude || !pos.coords.longitude || 
+        isNaN(pos.coords.latitude) || isNaN(pos.coords.longitude)) {
+      console.warn('Invalid coordinates received:', pos);
+      return false;
+    }
+
+    if (Date.now() - pos.timestamp > maxAge) {
+      console.warn('Position too old:', Date.now() - pos.timestamp);
+      return false;
+    }
+
+    const accuracy = pos.coords.accuracy;
+    if (accuracy > accuracyLevels.low) {
+      console.warn(`Very poor accuracy: ${accuracy.toFixed(0)}m - Rejecting position`);
+      return false;
+    } else if (accuracy > accuracyLevels.medium) {
+      console.info(`Low accuracy: ${accuracy.toFixed(0)}m - Using position with caution`);
+    } else if (accuracy > accuracyLevels.high) {
+      console.info(`Medium accuracy: ${accuracy.toFixed(0)}m`);
+    }
+
+    return true;
+  }, [maxAge, accuracyLevels]);
 
   const handleSuccess = useCallback((pos) => {
     const now = Date.now();
     
-    // Validate and transform coordinates immediately
-    if (!pos.coords || !pos.coords.latitude || !pos.coords.longitude || 
-        isNaN(pos.coords.latitude) || isNaN(pos.coords.longitude)) {
-      console.warn('Invalid coordinates received:', pos);
+    if (!isValidPosition(pos)) {
+      if (retryCount < maxRetries) {
+        setRetryCount(prev => prev + 1);
+        return;
+      }
+      setError(`Unable to get position with accuracy better than ${accuracyLevels.low}m`);
       return;
     }
 
@@ -31,49 +81,56 @@ export function useGeolocation({
       lat: pos.coords.latitude,
       lng: pos.coords.longitude,
       accuracy: pos.coords.accuracy,
-      speed: pos.coords.speed,
-      heading: pos.coords.heading,
-      timestamp: pos.timestamp
+      speed: pos.coords.speed || null,
+      heading: pos.coords.heading || null,
+      altitude: pos.coords.altitude || null,
+      altitudeAccuracy: pos.coords.altitudeAccuracy || null,
+      timestamp: pos.timestamp,
+      accuracyLevel: pos.coords.accuracy <= accuracyLevels.high ? 'high' :
+                    pos.coords.accuracy <= accuracyLevels.medium ? 'medium' : 'low'
     };
 
-    // Skip positions with very poor accuracy (> 100 meters)
-    if (newPosition.accuracy > 100) {
-      console.warn(`Poor accuracy (${newPosition.accuracy.toFixed(0)}m) - Skipping update`);
-      if (retryCount < maxRetries) {
-        setRetryCount(prev => prev + 1);
-        return;
-      }
+    if (now - lastUpdateTime.current < minUpdateInterval) {
+      return;
     }
 
-    // Skip if position hasn't changed significantly (< 2 meters)
     if (lastPosition.current) {
-      const distance = Math.sqrt(
-        Math.pow(lastPosition.current.lat - newPosition.lat, 2) +
-        Math.pow(lastPosition.current.lng - newPosition.lng, 2)
-      ) * 111319.9; // Convert to meters
-
-      if (distance < 2) {
+      const distance = calculateDistance(lastPosition.current, newPosition);
+      if (distance < minDistance) {
         return;
       }
     }
 
-    // Update position if it passed all validations
     lastPosition.current = newPosition;
     lastUpdateTime.current = now;
     setPosition(newPosition);
     setError(null);
     setLoading(false);
     setRetryCount(0);
-  }, [maxRetries, retryCount]);
+  }, [maxRetries, retryCount, minUpdateInterval, minDistance, calculateDistance, isValidPosition, accuracyLevels]);
 
   const handleError = useCallback((err) => {
-    // Only update error if it's different
+    console.error('Geolocation error:', err);
     if (error?.message !== err.message) {
-      setError(err.message);
+      setError(err.message || 'Unknown geolocation error');
       setPosition(null);
       setLoading(false);
+
+      if (retryOnError && retryCount < maxRetries) {
+        setRetryCount(prev => prev + 1);
+        setTimeout(() => {
+          if (watchId.current) {
+            navigator.geolocation.clearWatch(watchId.current);
+          }
+          watchId.current = navigator.geolocation.watchPosition(
+            handleSuccess,
+            handleError,
+            { enableHighAccuracy, timeout, maximumAge }
+          );
+        }, 1000);
+      }
     }
-  }, [error]);
+  }, [error, retryOnError, maxRetries, retryCount, enableHighAccuracy, timeout, maximumAge]);
 
   useEffect(() => {
     if (skip) {
@@ -81,42 +138,46 @@ export function useGeolocation({
       return;
     }
 
+    if (!navigator.geolocation) {
+      setError('Geolocation is not supported');
+      setLoading(false);
+      return;
+    }
+
     const options = {
-      enableHighAccuracy: true, // Always use high accuracy
-      timeout: 30000,
-      maximumAge: 0 // Don't use cached positions
+      enableHighAccuracy,
+      timeout,
+      maximumAge
     };
 
-    let watchId;
     try {
-      // Request position with high accuracy first
       navigator.geolocation.getCurrentPosition(
         handleSuccess,
         handleError,
         options
       );
 
-      // Then start watching position
-      watchId = navigator.geolocation.watchPosition(
+      watchId.current = navigator.geolocation.watchPosition(
         handleSuccess,
         handleError,
         options
       );
     } catch (err) {
-      setError(err.message);
+      setError(err.message || 'Failed to initialize geolocation');
       setLoading(false);
     }
 
     return () => {
-      if (watchId) {
-        navigator.geolocation.clearWatch(watchId);
+      if (watchId.current) {
+        navigator.geolocation.clearWatch(watchId.current);
       }
     };
-  }, [skip, handleSuccess, handleError]);
+  }, [skip, handleSuccess, handleError, enableHighAccuracy, timeout, maximumAge]);
 
   return {
     position,
     error,
-    loading
+    loading,
+    retryCount
   };
 }

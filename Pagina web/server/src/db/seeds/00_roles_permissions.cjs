@@ -157,11 +157,10 @@
         fecha_creacion: new Date()
       },
       {
-        id_permiso: 'generate_reports',
+        id_permiso: 16,
         nombre_permiso: 'Generar Reportes',
         descripcion_permiso: 'Permite generar reportes del sistema',
-        created_at: new Date(),
-        updated_at: new Date()
+        fecha_creacion: new Date()
       }
     ]);
 
@@ -230,10 +229,9 @@
       })),
       {
         id_roles: 1,
-        id_permiso: 'generate_reports',
+        id_permiso: 16,
         fecha_cambio_permiso: new Date(),
-        created_at: new Date(),
-        updated_at: new Date()
+
       }
     ];
 

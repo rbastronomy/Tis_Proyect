@@ -9,6 +9,7 @@ import { OfferingService } from "./OfferingService.js";
 import { UserService } from "./UserService.js";
 import { ReceiptService } from "./ReceiptService.js";
 import { HistoryModel } from "../models/HistoryModel.js";
+import { TripModel } from "../models/TripModel.js";
 
 export class BookingService extends BaseService {
     constructor() {
@@ -377,68 +378,44 @@ export class BookingService extends BaseService {
     }
 
     /**
-     * Completes a trip
-     * @param {number} bookingId - Booking ID
-     * @param {string} driverId - Driver's RUT
-     * @param {Object} [trx] - Optional transaction object
-     * @returns {Promise<BookingModel>} Updated booking
-     */
-    async completeTrip(bookingId, driverId, trx = null) {
-        try {
-            const booking = await this.repository.findById(bookingId);
-            if (!booking) {
-                throw new Error('Reserva no encontrada');
-            }
-
-            if (booking.estado_reserva !== 'RECOGIDO') {
-                throw new Error('La reserva no está en estado RECOGIDO');
-            }
-
-            if (booking.rut_conductor !== driverId) {
-                throw new Error('No autorizado para completar este viaje');
-            }
-
-            const doUpdate = async (transaction) => {
-                // Create history entry
-                const historyEntry = await this.historyService.createHistoryEntryWithTransaction(
-                    transaction,
-                    'MODIFICACION',
-                    bookingId,
-                    {
-                        estado_historial: 'RESERVA_COMPLETADA',
-                        observacion_historial: 'Viaje completado por el conductor'
-                    }
-                );
-
-                // Update booking status
-                const updateData = {
-                    estado_reserva: 'COMPLETADO',
-                    fecha_realizado: new Date(),
-                    updated_at: new Date()
-                };
-
-                const updatedBooking = await this.repository.update(
-                    bookingId,
-                    updateData,
-                    transaction
-                );
-
-                return new BookingModel({
-                    ...updatedBooking,
-                    history: [historyEntry]
-                });
-            };
-
-            // Use provided transaction or create new one
-            if (trx) {
-                return await doUpdate(trx);
-            } else {
-                return await this.repository.transaction(doUpdate);
-            }
-        } catch (error) {
-            throw new Error(`Error al completar viaje: ${error.message}`);
-        }
+   * Completes a trip for a given booking
+   * @param {number} bookingId - The booking ID
+   * @param {string} driverId - The driver's RUT
+   * @returns {Promise<BookingModel>} The updated booking
+   * @throws {Error} If booking not found or validation fails
+   */
+  async completeTrip(bookingId, driverId) {
+    // 1. Get current booking data
+    const bookingData = await this.repository.findById(bookingId);
+    if (!bookingData) {
+        throw new Error('Reserva no encontrada');
     }
+
+    // 2. Create and validate booking model
+    const booking = new BookingModel(bookingData);
+
+    // 4. Validate booking state
+    if (!booking.isPassengerPickedUp()) {
+        throw new Error('La reserva debe estar en estado RECOGIDO para completar el viaje');
+    }
+
+    // 5. Update booking data
+    const updateData = {
+        estado_reserva: 'COMPLETADO',
+        fecha_realizado: new Date(),
+        updated_at: new Date()
+    };
+
+    // 6. Update in database
+    const updatedBookingData = await this.repository.update(bookingId, updateData);
+
+
+    // 8. Return new booking model with updated data
+    return new BookingModel({
+        ...bookingData,
+        ...updatedBookingData
+    });
+}
 
     /**
      * Gets bookings with filters
@@ -568,7 +545,6 @@ export class BookingService extends BaseService {
             });
 
             const finalData = bookingModel.toJSON();
-            console.log('BookingService - Final booking data:', finalData);
 
             // Verify service and rate data is present
             if (!finalData.servicio?.tarifas?.[0]?.precio) {
