@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: models/SessionModel.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: models/SessionModel.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>import { BaseModel } from "../core/BaseModel.js";
+import { UserModel } from './UserModel.js';
+
+/**
+ * Represents the internal data structure of SessionModel
+ * @typedef {Object} SessionModelData
+ * @property {string} id - Session unique identifier
+ * @property {string} user_id - Associated user ID
+ * @property {Date} expires_at - Session expiration timestamp
+ * @property {Date|null} created_at - Creation timestamp
+ * @property {Date|null} updated_at - Last update timestamp
+ * @property {UserModel|null} user - Associated user
+ */
+
+/**
+ * Class representing a Session in the system
+ * @extends {BaseModel&lt;SessionModelData>}
+ */
+export class SessionModel extends BaseModel {
+    /**
+     * Default values for a new session instance
+     * @type {SessionModelData}
+     */
+    static defaultData = {
+        id: null,
+        user_id: null,
+        expires_at: null,
+        created_at: null,
+        updated_at: null,
+        user: null
+    };
+
+    /**
+     * Creates a new SessionModel instance
+     * @param {Partial&lt;SessionModelData>} data - Initial session data
+     * @throws {Error} If validation fails
+     */
+    constructor(data = {}) {
+        super(data, SessionModel.defaultData);
+        this.validate();
+        
+        // Initialize related user model if raw data is provided
+        if (data.user) {
+            this.user = data.user;
+        }
+    }
+
+    /**
+     * Validates the session data
+     * @private
+     * @throws {Error} If validation fails
+     */
+    validate() {
+        this.clearErrors();
+
+        if (!this._data.id) {
+            this.addError('id', 'Session ID is required');
+        }
+
+        if (!this._data.user_id) {
+            this.addError('user_id', 'User ID is required');
+        }
+
+        if (!this._data.expires_at) {
+            this.addError('expires_at', 'Expiration date is required');
+        }
+
+        this.validateDate('expires_at', this._data.expires_at);
+
+        this.throwIfErrors();
+    }
+
+    // Setters with validation
+    /** @param {string} value */
+    set id(value) {
+        if (typeof value !== 'string' || value.trim().length === 0) {
+            throw new Error('Session ID must be a valid string');
+        }
+        this._data.id = value.trim();
+    }
+
+    /** @param {string} value */
+    set user_id(value) {
+        if (typeof value !== 'string' || value.trim().length === 0) {
+            throw new Error('User ID must be a valid string');
+        }
+        this._data.user_id = value.trim();
+    }
+
+    /** @param {Date|string} value */
+    set expires_at(value) {
+        const date = value instanceof Date ? value : new Date(value);
+        if (isNaN(date.getTime())) {
+            throw new Error('Expiration date must be a valid date');
+        }
+        this._data.expires_at = date;
+    }
+
+    /** @param {UserModel|Object} value */
+    set user(value) {
+        this._data.user = value instanceof UserModel ? value : new UserModel(value);
+    }
+
+    // Getters
+    /** @returns {string} Session ID */
+    get id() { return this._data.id; }
+    /** @returns {string} User ID */
+    get user_id() { return this._data.user_id; }
+    /** @returns {Date} Expiration date */
+    get expires_at() { return this._data.expires_at; }
+    /** @returns {UserModel} Associated user */
+    get user() { return this._data.user; }
+
+    /**
+     * Checks if the session is expired
+     * @returns {boolean} True if session is expired
+     */
+    isExpired() {
+        return Date.now() >= this.expires_at.getTime();
+    }
+
+    /**
+     * Checks if the session needs to be extended
+     * @returns {boolean} True if session needs extension
+     */
+    needsExtension() {
+        const fifteenDaysInMs = 15 * 24 * 60 * 60 * 1000;
+        return Date.now() >= this.expires_at.getTime() - fifteenDaysInMs;
+    }
+
+    /**
+     * Converts the session model to a JSON object
+     * @returns {Object} Session data as JSON
+     */
+    toJSON() {
+        const json = {
+            id: this._data.id,
+            user_id: this._data.user_id,
+            expires_at: this._data.expires_at,
+            created_at: this._data.created_at,
+            updated_at: this._data.updated_at,
+        };
+
+        if (this._data.user) {
+            json.user = this._data.user.toJSON();
+        }
+
+        return json;
+    }
+} </code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="AuthProvider.html">AuthProvider</a></li><li><a href="AuthRouter.html">AuthRouter</a></li><li><a href="AuthRouter_AuthRouter.html">AuthRouter</a></li><li><a href="AuthRouter_BaseRouter.html">BaseRouter</a></li><li><a href="BaseModel.html">BaseModel</a></li><li><a href="BaseRepository_BaseRepository.html">BaseRepository</a></li><li><a href="BaseRouter.html">BaseRouter</a></li><li><a href="BaseRouter_BaseRouter.html">BaseRouter</a></li><li><a href="BaseService.html">BaseService</a></li><li><a href="BaseService_BaseService.html">BaseService</a></li><li><a href="BookingModel.html">BookingModel</a></li><li><a href="BookingRouter.html">BookingRouter</a></li><li><a href="BookingRouter_BaseRouter.html">BaseRouter</a></li><li><a href="BookingRouter_BookingRouter.html">BookingRouter</a></li><li><a href="ExampleRouter.html">ExampleRouter</a></li><li><a href="ExampleRouter_BaseRouter.html">BaseRouter</a></li><li><a href="ExampleRouter_ExampleRouter.html">ExampleRouter</a></li><li><a href="HistoryModel.html">HistoryModel</a></li><li><a href="HistoryRepository.html">HistoryRepository</a></li><li><a href="HistoryRepository_BaseRepository.html">BaseRepository</a></li><li><a href="HistoryService.html">HistoryService</a></li><li><a href="HistoryService_BaseService.html">BaseService</a></li><li><a href="MapRouter.html">MapRouter</a></li><li><a href="MapRouter_BaseRouter.html">BaseRouter</a></li><li><a href="MapRouter_MapRouter.html">MapRouter</a></li><li><a href="PermissionModel.html">PermissionModel</a></li><li><a href="PermissionRouter.html">PermissionRouter</a></li><li><a href="PermissionRouter_BaseRouter.html">BaseRouter</a></li><li><a href="PermissionRouter_PermissionRouter.html">PermissionRouter</a></li><li><a href="RatingRouter.html">RatingRouter</a></li><li><a href="RatingRouter_BaseRouter.html">BaseRouter</a></li><li><a href="ReceiptModel_ReceiptModel.html">ReceiptModel</a></li><li><a href="ReportController.html">ReportController</a></li><li><a href="ReportModel.html">ReportModel</a></li><li><a href="ReportRepository.html">ReportRepository</a></li><li><a href="ReportRepository_BaseRepository.html">BaseRepository</a></li><li><a href="ReportRouter.html">ReportRouter</a></li><li><a href="ReportRouter_BaseRouter.html">BaseRouter</a></li><li><a href="ReportService.html">ReportService</a></li><li><a href="RoleModel.html">RoleModel</a></li><li><a href="RoleRouter.html">RoleRouter</a></li><li><a href="RoleRouter_BaseRouter.html">BaseRouter</a></li><li><a href="RoleRouter_RoleRouter.html">RoleRouter</a></li><li><a href="ServiceModel.html">ServiceModel</a></li><li><a href="SessionModel.html">SessionModel</a></li><li><a href="TaxiController.html">TaxiController</a></li><li><a href="TaxiController_TaxiController.html">TaxiController</a></li><li><a href="TaxiModel.html">TaxiModel</a></li><li><a href="TaxiRepository.html">TaxiRepository</a></li><li><a href="TaxiRepository_BaseRepository.html">BaseRepository</a></li><li><a href="TaxiRepository_TaxiRepository.html">TaxiRepository</a></li><li><a href="TaxiRouter.html">TaxiRouter</a></li><li><a href="TaxiRouter_BaseRouter.html">BaseRouter</a></li><li><a href="TaxiRouter_TaxiRouter.html">TaxiRouter</a></li><li><a href="TripModel_TripModel.html">TripModel</a></li><li><a href="TripRouter.html">TripRouter</a></li><li><a href="TripRouter_BaseRouter.html">BaseRouter</a></li><li><a href="TripRouter_TripRouter.html">TripRouter</a></li><li><a href="UserModel.html">UserModel</a></li><li><a href="UserRouter.html">UserRouter</a></li><li><a href="UserRouter_BaseRouter.html">BaseRouter</a></li><li><a href="UserRouter_UserRouter.html">UserRouter</a></li></ul><h3>Global</h3><ul><li><a href="global.html#WS_EVENTS">WS_EVENTS</a></li><li><a href="global.html#clearCookie">clearCookie</a></li><li><a href="global.html#createSession">createSession</a></li><li><a href="global.html#createSessionCookie">createSessionCookie</a></li><li><a href="global.html#generateSessionId">generateSessionId</a></li><li><a href="global.html#getSessionCookieName">getSessionCookieName</a></li><li><a href="global.html#invalidateSession">invalidateSession</a></li><li><a href="global.html#invalidateUserSessions">invalidateUserSessions</a></li><li><a href="global.html#readSessionCookie">readSessionCookie</a></li><li><a href="global.html#serializeOptions">serializeOptions</a></li><li><a href="global.html#setCookie">setCookie</a></li><li><a href="global.html#validateSession">validateSession</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.4</a> on Tue Dec 17 2024 23:00:08 GMT-0300 (hora de verano de Chile)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

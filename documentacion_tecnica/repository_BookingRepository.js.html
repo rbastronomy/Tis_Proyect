@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: repository/BookingRepository.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: repository/BookingRepository.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>import { BaseRepository } from "../core/BaseRepository.js";
+
+export class BookingRepository extends BaseRepository {
+  constructor() {
+    super("reserva", null, "codigo_reserva");
+  }
+
+  /**
+   * Create new booking
+   * @param {Object} bookingData - Booking data
+   * @param {Object} [trx] - Optional transaction object
+   * @returns {Promise&lt;Object>} Created booking raw data
+   */
+  async create(bookingData, trx = null) {
+    try {
+      const { codigo_reserva, history, ...dataToInsert } = bookingData;
+      dataToInsert.created_at = new Date();
+      dataToInsert.updated_at = new Date();
+      
+      console.log('BookingRepository - Creating booking with data:', dataToInsert);
+
+      const dbFields = {
+        rut_cliente: dataToInsert.rut_cliente,
+        id_oferta: dataToInsert.id_oferta,
+        origen_reserva: dataToInsert.origen_reserva,
+        destino_reserva: dataToInsert.destino_reserva,
+        fecha_reserva: dataToInsert.fecha_reserva,
+        fecha_realizado: dataToInsert.fecha_realizado,
+        tipo_reserva: dataToInsert.tipo_reserva,
+        observacion_reserva: dataToInsert.observacion_reserva,
+        estado_reserva: dataToInsert.estado_reserva,
+        deleted_at_reserva: dataToInsert.deleted_at_reserva,
+        rut_conductor: dataToInsert.rut_conductor,
+        patente_taxi: dataToInsert.patente_taxi,
+        created_at: dataToInsert.created_at,
+        updated_at: dataToInsert.updated_at
+      };
+
+      const query = (trx || this.db)(this.tableName)
+        .insert(dbFields)
+        .returning("*");
+
+      const [created] = await query;
+      return created;
+    } catch (error) {
+      console.error('BookingRepository - Create error:', error);
+      throw new Error(`Error creating booking: ${error.message}`);
+    }
+  }
+
+  /**
+   * Update booking
+   * @param {number} codigo_reserva - Booking ID
+   * @param {Object} updateData - Updated booking data
+   * @param {Object} [trx] - Optional transaction object
+   * @returns {Promise&lt;Object|null>} Updated booking raw data or null
+   */
+  async update(codigo_reserva, updateData, trx = null) {
+    try {
+      const query = (trx || this.db)(this.tableName)
+        .where("codigo_reserva", codigo_reserva)
+        .update(updateData)
+        .returning("*");
+
+      const [updated] = await query;
+      return updated || null;
+    } catch (error) {
+      throw new Error(`Error updating booking: ${error.message}`);
+    }
+  }
+
+  /**
+   * Soft delete booking
+   * @param {number} codigo_reserva - Booking ID
+   * @returns {Promise&lt;Object|null>} Deleted booking raw data or null
+   */
+  async softDelete(codigo_reserva) {
+    try {
+      const [deleted] = await this.db(this.tableName)
+        .where("codigo_reserva", codigo_reserva)
+        .update({
+          estado_reserva: "ELIMINADO",
+          deleted_at_reserva: new Date(),
+        })
+        .returning("*");
+      return deleted || null;
+    } catch (error) {
+      throw new Error(`Error soft deleting booking: ${error.message}`);
+    }
+  }
+
+  /**
+   * Find booking by ID
+   * @param {number|string} codigo_reserva - Booking ID
+   * @returns {Promise&lt;Object|null>} Raw booking data or null
+   */
+  async findById(codigo_reserva) {
+    try {
+      // Validate and convert the booking ID
+      const bookingId = Number(codigo_reserva);
+      if (isNaN(bookingId)) {
+        console.error('Invalid booking ID:', codigo_reserva);
+        throw new Error('Invalid booking ID format');
+      }
+
+      console.log('Looking for booking with ID:', bookingId);
+      
+      const booking = await this.db(this.tableName)
+        .select(
+          'codigo_reserva',
+          'rut_cliente',
+          'id_oferta',
+          'origen_reserva',
+          'destino_reserva',
+          'fecha_reserva',
+          'fecha_realizado',
+          'tipo_reserva',
+          'observacion_reserva',
+          'estado_reserva',
+          'rut_conductor',
+          'patente_taxi'
+        )
+        .where('codigo_reserva', bookingId)
+        .whereNull('deleted_at_reserva')
+        .first();
+
+      if (!booking) {
+        console.log('No booking found with ID:', bookingId);
+        return null;
+      }
+
+      console.log('Found booking:', booking);
+      return booking;
+    } catch (error) {
+      console.error('Error in findById:', error);
+      throw new Error(`Error finding booking by ID: ${error.message}`);
+    }
+  }
+
+  /**
+   * Find booking by trip
+   * @param {number} codigo_viaje - Trip ID
+   * @returns {Promise&lt;Object|null>} Raw booking data or null
+   */
+  async findByTrip(codigo_viaje) {
+    try {
+      return await this.db(this.tableName)
+        .where("codigo_viaje", codigo_viaje)
+        .first();
+    } catch (error) {
+      throw new Error(`Error finding booking by trip: ${error.message}`);
+    }
+  }
+
+  /**
+   * Find bookings with filters
+   * @param {Object} filters - Filter criteria
+   * @returns {Promise&lt;Array>} Raw booking data array
+   */
+  async findWithFilters(filters) {
+    try {
+      const query = this.db(this.tableName)
+        .distinct("reserva.*")
+        .leftJoin("oferta", "reserva.id_oferta", "oferta.id_oferta")
+        .leftJoin("servicio", "oferta.codigo_servicio", "servicio.codigo_servicio")
+        .whereNull("reserva.deleted_at_reserva");
+
+      if (filters.rut_cliente) {
+        query.where("reserva.rut_cliente", filters.rut_cliente);
+      }
+
+      if (filters.estado_reserva) {
+        query.where("reserva.estado_reserva", filters.estado_reserva);
+      }
+
+      if (filters.fecha_reserva) {
+        query.where("reserva.fecha_reserva", filters.fecha_reserva);
+      }
+
+      const bookings = await query;
+
+      // Get rates and services for each booking
+      return await Promise.all(
+        bookings.map(async (booking) => {
+          const [serviceData, rateData] = await Promise.all([
+            this.db("servicio")
+              .select("tipo_servicio", "descripcion_servicio")
+              .join("oferta", "servicio.codigo_servicio", "oferta.codigo_servicio")
+              .where("oferta.id_oferta", booking.id_oferta)
+              .first(),
+            this.db("tarifa")
+              .select("precio", "descripcion_tarifa", "tipo_tarifa")
+              .join("oferta", "tarifa.id_tarifa", "oferta.id_tarifa")
+              .where("oferta.id_oferta", booking.id_oferta)
+              .first()
+          ]);
+
+          return {
+            ...booking,
+            servicio: serviceData ? {
+              tipo: serviceData.tipo_servicio,
+              descripcion: serviceData.descripcion_servicio
+            } : null,
+            tarifa: rateData ? {
+              precio: rateData.precio,
+              descripcion: rateData.descripcion_tarifa,
+              tipo: rateData.tipo_tarifa
+            } : null
+          };
+        })
+      );
+    } catch (error) {
+      throw new Error(`Error finding bookings with filters: ${error.message}`);
+    }
+  }
+
+  /**
+   * Find bookings by status
+   * @param {string} status - Status to filter by
+   * @returns {Promise&lt;Array>} Raw booking data array
+   */
+  async findByStatus(status) {
+    return this.findWithFilters({ estado_reserva: status });
+  }
+
+  /**
+   * Find pending bookings
+   * @returns {Promise&lt;Array>} Raw booking data array
+   */
+  async findPendingBookings() {
+    return this.findByStatus("PENDIENTE");
+  }
+
+  /**
+   * Find active bookings for a driver
+   * @param {number} rut_conductor - Driver's RUT
+   * @returns {Promise&lt;Array>} Raw booking data array
+   */
+  async findActiveByDriver(rut_conductor) {
+    return await this.db(this.tableName)
+      .select("*")
+      .where("rut_conductor", rut_conductor)
+      .whereIn("estado_reserva", ["PENDIENTE", "EN_CAMINO"])
+      .whereNull("deleted_at_reserva");
+  }
+
+  /**
+   * Find booking by ID with related data
+   * @param {number} codigo_reserva - Booking ID
+   * @returns {Promise&lt;Object|null>} Raw booking data with relations or null
+   */
+  async findWithDetails(codigo_reserva) {
+    try {
+      return await this.db(this.tableName)
+        .select(
+          "reserva.*",
+          "viaje.duracion",
+          "viaje.fecha_viaje",
+          "viaje.origen_viaje",
+          "viaje.destino_viaje",
+          "boleta.total",
+          "boleta.metodo_pago",
+          "persona.nombre as conductor_nombre",
+          "persona.apellido as conductor_apellido",
+          "taxi.modelo as taxi_modelo",
+          "taxi.ano as taxi_ano"
+        )
+        .leftJoin("viaje", "reserva.codigo_viaje", "viaje.codigo_viaje")
+        .leftJoin("boleta", "reserva.codigo_boleta", "boleta.codigo_boleta")
+        .leftJoin("persona", "reserva.rut_conductor", "persona.rut")
+        .leftJoin("taxi", "reserva.patente_taxi", "taxi.patente")
+        .where("reserva.codigo_reserva", codigo_reserva)
+        .first();
+    } catch (error) {
+      throw new Error(`Error finding booking with details: ${error.message}`);
+    }
+  }
+
+  /**
+   * Find all bookings
+   * @returns {Promise&lt;Array>} Raw booking data array
+   */
+  async findAll() {
+    try {
+      return await this.db(this.tableName)
+        .select("*")
+        .whereNull("deleted_at_reserva");
+    } catch (error) {
+      throw new Error(`Error getting all bookings: ${error.message}`);
+    }
+  }
+
+  /**
+ * Find booking by its code
+ * @param {number} codigo_reserva - Booking code
+ * @returns {Promise&lt;Object|null>} Raw booking data or null
+ */
+  async findByCodigoReserva(codigo_reserva) {
+    try {
+      const booking = await this.db(this.tableName)
+        .select(
+          'codigo_reserva',
+          'rut_cliente',
+          'id_oferta',
+          'origen_reserva',
+              'destino_reserva',
+              'fecha_reserva',
+              'fecha_realizado',
+              'tipo_reserva',
+              'observacion_reserva',
+              'estado_reserva',
+              'rut_conductor',
+              'patente_taxi',
+              'created_at',
+              'updated_at',
+              'deleted_at_reserva'
+          )
+          .where('codigo_reserva', codigo_reserva)
+          .whereNull('deleted_at_reserva')
+          .first();
+
+      console.log('BookingRepository - Found booking:', booking);
+      return booking || null;
+  } catch (error) {
+      console.error('BookingRepository - Error:', error);
+      throw new Error(`Error finding booking by code: ${error.message}`);
+  }
+  }
+
+  /**
+   * Finds bookings by driver ID.
+   * @param {number} driverId - The ID of the driver
+   * @returns {Promise&lt;Array>} - List of bookings
+   */
+  async findBookingsByDriver(driverId) {
+    try {
+        const bookings = await this.db(this.tableName)
+            .select(
+                'reserva.*',
+                'oferta.codigo_servicio',
+                'oferta.id_tarifa',
+                'servicio.tipo_servicio',
+                'servicio.descripcion_servicio',
+                'tarifa.precio',
+                'tarifa.descripcion_tarifa',
+                'tarifa.tipo_tarifa'
+            )
+            .leftJoin('oferta', 'reserva.id_oferta', 'oferta.id_oferta')
+            .leftJoin('servicio', 'oferta.codigo_servicio', 'servicio.codigo_servicio')
+            .leftJoin('tarifa', 'oferta.id_tarifa', 'tarifa.id_tarifa')
+            .where('reserva.rut_conductor', driverId)
+            .whereIn('reserva.estado_reserva', ['PENDIENTE', 'CONFIRMADO', 'RECOGIDO'])
+            .whereNull('reserva.deleted_at_reserva')
+            .orderBy('reserva.fecha_reserva', 'desc');
+
+        return bookings.map(booking => ({
+            ...booking,
+            servicio: {
+                tipo: booking.tipo_servicio,
+                descripcion: booking.descripcion_servicio
+            },
+            tarifa: {
+                precio: booking.precio,
+                descripcion: booking.descripcion_tarifa,
+                tipo: booking.tipo_tarifa
+            }
+        }));
+    } catch (error) {
+        throw new Error(`Error finding bookings for driver: ${error.message}`);
+    }
+  }
+
+  /**
+   * Validates if a booking state transition is allowed
+   * @param {string} currentState - Current booking state
+   * @param {string} newState - New booking state
+   * @returns {boolean} True if transition is allowed
+   */
+  validateStateTransition(currentState, newState) {
+    const allowedTransitions = {
+      'PENDIENTE': ['CONFIRMADO', 'CANCELADO'],
+      'CONFIRMADO': ['RECOGIDO', 'CANCELADO'],
+      'RECOGIDO': ['COMPLETADO', 'CANCELADO'],
+      'COMPLETADO': [],
+      'CANCELADO': []
+    };
+
+    return allowedTransitions[currentState]?.includes(newState) || false;
+  }
+}
+
+export default BookingRepository;
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="AuthProvider.html">AuthProvider</a></li><li><a href="AuthRouter.html">AuthRouter</a></li><li><a href="AuthRouter_AuthRouter.html">AuthRouter</a></li><li><a href="AuthRouter_BaseRouter.html">BaseRouter</a></li><li><a href="BaseModel.html">BaseModel</a></li><li><a href="BaseRepository_BaseRepository.html">BaseRepository</a></li><li><a href="BaseRouter.html">BaseRouter</a></li><li><a href="BaseRouter_BaseRouter.html">BaseRouter</a></li><li><a href="BaseService.html">BaseService</a></li><li><a href="BaseService_BaseService.html">BaseService</a></li><li><a href="BookingModel.html">BookingModel</a></li><li><a href="BookingRouter.html">BookingRouter</a></li><li><a href="BookingRouter_BaseRouter.html">BaseRouter</a></li><li><a href="BookingRouter_BookingRouter.html">BookingRouter</a></li><li><a href="ExampleRouter.html">ExampleRouter</a></li><li><a href="ExampleRouter_BaseRouter.html">BaseRouter</a></li><li><a href="ExampleRouter_ExampleRouter.html">ExampleRouter</a></li><li><a href="HistoryModel.html">HistoryModel</a></li><li><a href="HistoryRepository.html">HistoryRepository</a></li><li><a href="HistoryRepository_BaseRepository.html">BaseRepository</a></li><li><a href="HistoryService.html">HistoryService</a></li><li><a href="HistoryService_BaseService.html">BaseService</a></li><li><a href="MapRouter.html">MapRouter</a></li><li><a href="MapRouter_BaseRouter.html">BaseRouter</a></li><li><a href="MapRouter_MapRouter.html">MapRouter</a></li><li><a href="PermissionModel.html">PermissionModel</a></li><li><a href="PermissionRouter.html">PermissionRouter</a></li><li><a href="PermissionRouter_BaseRouter.html">BaseRouter</a></li><li><a href="PermissionRouter_PermissionRouter.html">PermissionRouter</a></li><li><a href="RatingRouter.html">RatingRouter</a></li><li><a href="RatingRouter_BaseRouter.html">BaseRouter</a></li><li><a href="ReceiptModel_ReceiptModel.html">ReceiptModel</a></li><li><a href="ReportController.html">ReportController</a></li><li><a href="ReportModel.html">ReportModel</a></li><li><a href="ReportRepository.html">ReportRepository</a></li><li><a href="ReportRepository_BaseRepository.html">BaseRepository</a></li><li><a href="ReportRouter.html">ReportRouter</a></li><li><a href="ReportRouter_BaseRouter.html">BaseRouter</a></li><li><a href="ReportService.html">ReportService</a></li><li><a href="RoleModel.html">RoleModel</a></li><li><a href="RoleRouter.html">RoleRouter</a></li><li><a href="RoleRouter_BaseRouter.html">BaseRouter</a></li><li><a href="RoleRouter_RoleRouter.html">RoleRouter</a></li><li><a href="ServiceModel.html">ServiceModel</a></li><li><a href="SessionModel.html">SessionModel</a></li><li><a href="TaxiController.html">TaxiController</a></li><li><a href="TaxiController_TaxiController.html">TaxiController</a></li><li><a href="TaxiModel.html">TaxiModel</a></li><li><a href="TaxiRepository.html">TaxiRepository</a></li><li><a href="TaxiRepository_BaseRepository.html">BaseRepository</a></li><li><a href="TaxiRepository_TaxiRepository.html">TaxiRepository</a></li><li><a href="TaxiRouter.html">TaxiRouter</a></li><li><a href="TaxiRouter_BaseRouter.html">BaseRouter</a></li><li><a href="TaxiRouter_TaxiRouter.html">TaxiRouter</a></li><li><a href="TripModel_TripModel.html">TripModel</a></li><li><a href="TripRouter.html">TripRouter</a></li><li><a href="TripRouter_BaseRouter.html">BaseRouter</a></li><li><a href="TripRouter_TripRouter.html">TripRouter</a></li><li><a href="UserModel.html">UserModel</a></li><li><a href="UserRouter.html">UserRouter</a></li><li><a href="UserRouter_BaseRouter.html">BaseRouter</a></li><li><a href="UserRouter_UserRouter.html">UserRouter</a></li></ul><h3>Global</h3><ul><li><a href="global.html#WS_EVENTS">WS_EVENTS</a></li><li><a href="global.html#clearCookie">clearCookie</a></li><li><a href="global.html#createSession">createSession</a></li><li><a href="global.html#createSessionCookie">createSessionCookie</a></li><li><a href="global.html#generateSessionId">generateSessionId</a></li><li><a href="global.html#getSessionCookieName">getSessionCookieName</a></li><li><a href="global.html#invalidateSession">invalidateSession</a></li><li><a href="global.html#invalidateUserSessions">invalidateUserSessions</a></li><li><a href="global.html#readSessionCookie">readSessionCookie</a></li><li><a href="global.html#serializeOptions">serializeOptions</a></li><li><a href="global.html#setCookie">setCookie</a></li><li><a href="global.html#validateSession">validateSession</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.4</a> on Tue Dec 17 2024 23:00:08 GMT-0300 (hora de verano de Chile)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

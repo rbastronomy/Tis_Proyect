@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: services/AuthService.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: services/AuthService.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>import { AuthError } from '../auth/auth.js';
+import authInstance from '../auth/auth.js';
+import * as argon2 from 'argon2';
+
+/**
+ * @typedef {Object} SessionValidationResult
+ * @property {Object} session - The validated session object
+ * @property {UserModel} user - The authenticated user model
+ */
+
+export class AuthService {
+  constructor(userService) {
+    this.userService = userService;
+    this.auth = authInstance;
+  }
+
+  /**
+   * Hashes a password using argon2
+   * @param {string} password - Plain text password
+   * @returns {Promise&lt;string>} Hashed password
+   * @private
+   */
+  async _hashPassword(password) {
+    return await argon2.hash(password);
+  }
+
+  /**
+   * Validates a password against its hash
+   * @param {string} hashedPassword - Stored hashed password
+   * @param {string} password - Plain text password to validate
+   * @returns {Promise&lt;boolean>} Whether password is valid
+   * @private
+   */
+  async _validatePassword(hashedPassword, password) {
+    try {
+      if (!hashedPassword || !password) {
+        console.error('Missing password or hash for validation');
+        return false;
+      }
+      return await argon2.verify(hashedPassword, password);
+    } catch (error) {
+      console.error('Password validation error:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Registers a new user with authentication
+   * @param {Object} userData - User registration data
+   * @param {string} userData.rut - User's RUT
+   * @param {string} userData.nombre - User's name
+   * @param {string} userData.correo - User's email
+   * @param {string} userData.telefono - User's phone
+   * @param {string} userData.nacionalidad - User's nationality
+   * @param {string} userData.genero - User's gender
+   * @param {string} userData.contrasena - User's password
+   * @param {Date} [userData.fecha_contratacion] - Driver's hire date
+   * @param {Date} [userData.licencia_conducir] - Driver's license expiry
+   * @param {number} userData.id_roles - User's role ID
+   * @param {boolean} [createSession=true] - Whether to create a session
+   * @returns {Promise&lt;{user: UserModel, session?: Session}>}
+   * @throws {AuthError} When user already exists or registration fails
+   */
+  async register(userData, createSession = true) {
+    try {
+      console.log('Registration data received:', userData);
+      
+      // Check if user exists by email or RUT
+      const [existingEmail, existingRut] = await Promise.all([
+        this.userService.getByEmail(userData.correo),
+        this.userService.getByRut(userData.rut)
+      ]);
+
+      if (existingEmail) {
+        throw AuthError.UserExists('Email already registered');
+      }
+
+      if (existingRut) {
+        throw AuthError.UserExists('RUT already registered');
+      }
+
+      // Hash password before user creation
+      const hashedPassword = await this._hashPassword(userData.contrasena);
+      
+      // Create user with hashed password and default role if not specified
+      const user = await this.userService.create({
+        ...userData,
+        id_roles: userData.id_roles || 2, // Default to CLIENTE role if not specified
+        contrasena: hashedPassword,
+        estado_persona: 'ACTIVO'
+      });
+
+      console.log('User created:', user);
+      
+      let session = null;
+      if (createSession) {
+        session = await this.auth.createSession(user.rut.toString());
+        console.log('Session created:', session);
+      }
+
+      return { user, session };
+    } catch (error) {
+      console.error('Registration error:', error);
+      if (error instanceof AuthError) throw error;
+      throw AuthError.DatabaseError('Registration failed');
+    }
+  }
+
+  /**
+   * Authenticates a user and creates a session
+   * @param {string} correo - User email
+   * @param {string} contrasena - User password
+   * @returns {Promise&lt;{user: UserModel, session: Session}>}
+   * @throws {AuthError} When credentials are invalid
+   */
+  async login(correo, contrasena) {
+    try {
+      if (!correo || !contrasena) {
+        throw AuthError.InvalidCredentials('Email and password are required');
+      }
+
+      // Use userService to get user data
+      const user = await this.userService.getUserWithAuth(correo);
+      if (!user) {
+        throw AuthError.UserNotFound();
+      }
+
+      // Check if user is deleted
+      if (user._data.deleted_at_persona) {
+        throw AuthError.UserNotFound('Account has been deleted');
+      }
+
+      // Get password using the getter from UserModel
+      const hashedPassword = user._data.contrasena;
+
+      // Validate password
+      const isValidPassword = await this._validatePassword(
+        hashedPassword,
+        contrasena
+      );
+
+      if (!isValidPassword) {
+        throw AuthError.InvalidCredentials();
+      }
+
+      // Create new session
+      const session = await this.auth.createSession(user.rut.toString());
+
+      //log successful login
+      console.log('Login successful for user:', correo);
+      return { user, session };
+    } catch (error) {
+      console.error('Login error:', error);
+      if (error instanceof AuthError) throw error;
+      throw AuthError.DatabaseError('Login failed');
+    }
+  }
+
+  /**
+   * Invalidates a user session
+   * @param {string} sessionId - Session ID to invalidate
+   * @returns {Promise&lt;void>}
+   * @throws {AuthError} When session invalidation fails
+   */
+  async logout(sessionId) {
+    try {
+      if (!sessionId) {
+        throw AuthError.InvalidSession();
+      }
+
+      await this.auth.invalidateSession(sessionId);
+    } catch (error) {
+      console.error('Logout error:', error);
+      if (error instanceof AuthError) throw error;
+      throw AuthError.DatabaseError('Logout failed');
+    }
+  }
+
+  /**
+   * Validates a session and returns the associated user
+   * @param {string} sessionId - The session ID to validate
+   * @returns {Promise&lt;SessionValidationResult>} The validated session and user
+   * @throws {AuthError} If session is invalid or user not found
+   */
+  async validateSession(sessionId) {
+    try {
+      if (!sessionId) {
+        throw AuthError.InvalidSession();
+      }
+
+      // First verify the session
+      const { session, user: sessionUser } = await this.auth.verifySession(sessionId);
+
+      if (!sessionUser || !sessionUser.correo) {
+        throw AuthError.InvalidSession('Invalid user data in session');
+      }
+
+      // Check if userService is available
+      if (!this.userService) {
+        console.error('UserService not initialized in AuthService');
+        throw AuthError.DatabaseError('Service configuration error');
+      }
+
+      try {
+        // Get full user details including roles and permissions
+        console.log('Validating session for user:', sessionUser.correo);
+        /** @type {UserModel} */
+        const fullUser = await this.userService.getUserWithAuth(sessionUser.correo);
+
+        if (!fullUser) {
+          throw AuthError.UserNotFound();
+        }
+
+        return { session, user: fullUser };
+      } catch (error) {
+        console.error('Error fetching user details:', error);
+        throw AuthError.DatabaseError('Failed to fetch user details');
+      }
+    } catch (error) {
+      console.error('Session validation error:', error);
+      if (error instanceof AuthError) {
+        throw error;
+      }
+      throw AuthError.InvalidSession('Session validation failed');
+    }
+  }
+
+  /**
+   * Invalidates all sessions for a user
+   * @param {string} userId - User ID whose sessions should be invalidated
+   * @returns {Promise&lt;void>}
+   * @throws {AuthError} When session invalidation fails
+   */
+  async invalidateAllSessions(userId) {
+    try {
+      await this.auth.invalidateAllSessions(userId);
+    } catch {
+      throw AuthError.DatabaseError('Failed to invalidate all sessions');
+    }
+  }
+
+  async createSession(user) {
+    try {
+      if (!user || !user.rut) {
+        throw new AuthError("Invalid user data", "INVALID_USER_DATA");
+      }
+      const session = await this.auth.createSession(user.rut.toString());
+      return session;
+    } catch (error) {
+      console.error('Session creation error:', error);
+      throw new AuthError(
+        error.message || "Failed to create session",
+        "SESSION_CREATION_FAILED"
+      );
+    }
+  }
+} </code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="AuthProvider.html">AuthProvider</a></li><li><a href="AuthRouter.html">AuthRouter</a></li><li><a href="AuthRouter_AuthRouter.html">AuthRouter</a></li><li><a href="AuthRouter_BaseRouter.html">BaseRouter</a></li><li><a href="BaseModel.html">BaseModel</a></li><li><a href="BaseRepository_BaseRepository.html">BaseRepository</a></li><li><a href="BaseRouter.html">BaseRouter</a></li><li><a href="BaseRouter_BaseRouter.html">BaseRouter</a></li><li><a href="BaseService.html">BaseService</a></li><li><a href="BaseService_BaseService.html">BaseService</a></li><li><a href="BookingModel.html">BookingModel</a></li><li><a href="BookingRouter.html">BookingRouter</a></li><li><a href="BookingRouter_BaseRouter.html">BaseRouter</a></li><li><a href="BookingRouter_BookingRouter.html">BookingRouter</a></li><li><a href="ExampleRouter.html">ExampleRouter</a></li><li><a href="ExampleRouter_BaseRouter.html">BaseRouter</a></li><li><a href="ExampleRouter_ExampleRouter.html">ExampleRouter</a></li><li><a href="HistoryModel.html">HistoryModel</a></li><li><a href="HistoryRepository.html">HistoryRepository</a></li><li><a href="HistoryRepository_BaseRepository.html">BaseRepository</a></li><li><a href="HistoryService.html">HistoryService</a></li><li><a href="HistoryService_BaseService.html">BaseService</a></li><li><a href="MapRouter.html">MapRouter</a></li><li><a href="MapRouter_BaseRouter.html">BaseRouter</a></li><li><a href="MapRouter_MapRouter.html">MapRouter</a></li><li><a href="PermissionModel.html">PermissionModel</a></li><li><a href="PermissionRouter.html">PermissionRouter</a></li><li><a href="PermissionRouter_BaseRouter.html">BaseRouter</a></li><li><a href="PermissionRouter_PermissionRouter.html">PermissionRouter</a></li><li><a href="RatingRouter.html">RatingRouter</a></li><li><a href="RatingRouter_BaseRouter.html">BaseRouter</a></li><li><a href="ReceiptModel_ReceiptModel.html">ReceiptModel</a></li><li><a href="ReportController.html">ReportController</a></li><li><a href="ReportModel.html">ReportModel</a></li><li><a href="ReportRepository.html">ReportRepository</a></li><li><a href="ReportRepository_BaseRepository.html">BaseRepository</a></li><li><a href="ReportRouter.html">ReportRouter</a></li><li><a href="ReportRouter_BaseRouter.html">BaseRouter</a></li><li><a href="ReportService.html">ReportService</a></li><li><a href="RoleModel.html">RoleModel</a></li><li><a href="RoleRouter.html">RoleRouter</a></li><li><a href="RoleRouter_BaseRouter.html">BaseRouter</a></li><li><a href="RoleRouter_RoleRouter.html">RoleRouter</a></li><li><a href="ServiceModel.html">ServiceModel</a></li><li><a href="SessionModel.html">SessionModel</a></li><li><a href="TaxiController.html">TaxiController</a></li><li><a href="TaxiController_TaxiController.html">TaxiController</a></li><li><a href="TaxiModel.html">TaxiModel</a></li><li><a href="TaxiRepository.html">TaxiRepository</a></li><li><a href="TaxiRepository_BaseRepository.html">BaseRepository</a></li><li><a href="TaxiRepository_TaxiRepository.html">TaxiRepository</a></li><li><a href="TaxiRouter.html">TaxiRouter</a></li><li><a href="TaxiRouter_BaseRouter.html">BaseRouter</a></li><li><a href="TaxiRouter_TaxiRouter.html">TaxiRouter</a></li><li><a href="TripModel_TripModel.html">TripModel</a></li><li><a href="TripRouter.html">TripRouter</a></li><li><a href="TripRouter_BaseRouter.html">BaseRouter</a></li><li><a href="TripRouter_TripRouter.html">TripRouter</a></li><li><a href="UserModel.html">UserModel</a></li><li><a href="UserRouter.html">UserRouter</a></li><li><a href="UserRouter_BaseRouter.html">BaseRouter</a></li><li><a href="UserRouter_UserRouter.html">UserRouter</a></li></ul><h3>Global</h3><ul><li><a href="global.html#WS_EVENTS">WS_EVENTS</a></li><li><a href="global.html#clearCookie">clearCookie</a></li><li><a href="global.html#createSession">createSession</a></li><li><a href="global.html#createSessionCookie">createSessionCookie</a></li><li><a href="global.html#generateSessionId">generateSessionId</a></li><li><a href="global.html#getSessionCookieName">getSessionCookieName</a></li><li><a href="global.html#invalidateSession">invalidateSession</a></li><li><a href="global.html#invalidateUserSessions">invalidateUserSessions</a></li><li><a href="global.html#readSessionCookie">readSessionCookie</a></li><li><a href="global.html#serializeOptions">serializeOptions</a></li><li><a href="global.html#setCookie">setCookie</a></li><li><a href="global.html#validateSession">validateSession</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.4</a> on Tue Dec 17 2024 23:00:08 GMT-0300 (hora de verano de Chile)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

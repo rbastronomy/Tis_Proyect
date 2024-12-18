@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: repository/TripRepository.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: repository/TripRepository.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>import { BaseRepository } from '../core/BaseRepository.js';
+
+export class TripRepository extends BaseRepository {
+  constructor() {
+    super('viaje', 'codigo_viaje');
+  }
+
+  /**
+   * Find trip by ID
+   * @param {number} codigo_viaje - Trip ID
+   * @returns {Promise&lt;Object|null>} Raw trip data or null
+   */
+  async findById(codigo_viaje) {
+    try {
+      return await this.db(this.tableName)
+        .where('codigo_viaje', codigo_viaje)
+        .whereNull('deleted_at_viaje')
+        .first();
+    } catch (error) {
+      throw new Error(`Error finding trip by ID: ${error.message}`);
+    }
+  }
+
+  /**
+   * Create new trip
+   * @param {Object} tripData - Trip data
+   * @param {Object} [trx] - Optional transaction object
+   * @returns {Promise&lt;Object>} Created trip raw data
+   */
+  async create(tripData, trx = null) {
+    try {
+      console.log('Creating trip with data:', tripData);
+
+      const query = (trx || this.db)(this.tableName)
+        .insert({
+          ...tripData,
+          created_at: new Date(),
+          updated_at: new Date()
+        })
+        .returning('*');
+
+      const [created] = await query;
+      console.log('Created trip:', created);
+      return created;
+    } catch (error) {
+      console.error('Error creating trip:', error);
+      throw new Error(`Error creating trip: ${error.message}`);
+    }
+  }
+
+  /**
+   * Update trip
+   * @param {number} codigo_viaje - Trip ID
+   * @param {Object} tripData - Updated trip data
+   * @param {Object} [trx] - Optional transaction object
+   * @returns {Promise&lt;Object|null>} Updated trip raw data or null
+   */
+  async update(codigo_viaje, tripData, trx = null) {
+    try {
+      const query = (trx || this.db)(this.tableName)
+        .where('codigo_viaje', codigo_viaje)
+        .whereNull('deleted_at_viaje')
+        .update({
+          ...tripData,
+          updated_at: new Date()
+        })
+        .returning('*');
+
+      const [updated] = await query;
+      return updated || null;
+    } catch (error) {
+      throw new Error(`Error updating trip: ${error.message}`);
+    }
+  }
+
+  /**
+   * Soft delete trip
+   * @param {number} codigo_viaje - Trip ID
+   * @param {Object} [trx] - Optional transaction object
+   * @returns {Promise&lt;Object|null>} Deleted trip raw data or null
+   */
+  async softDelete(codigo_viaje, trx = null) {
+    try {
+      const query = (trx || this.db)(this.tableName)
+        .where('codigo_viaje', codigo_viaje)
+        .whereNull('deleted_at_viaje')
+        .update({
+          deleted_at_viaje: new Date(),
+          updated_at: new Date()
+        })
+        .returning('*');
+
+      const [deleted] = await query;
+      return deleted || null;
+    } catch (error) {
+      throw new Error(`Error soft deleting trip: ${error.message}`);
+    }
+  }
+
+  /**
+   * Find trips by date range
+   * @param {Date} startDate - Start date
+   * @param {Date} endDate - End date
+   * @returns {Promise&lt;Array>} Raw trip data array
+   */
+  async findByDateRange(startDate, endDate) {
+    try {
+      return await this.db(this.tableName)
+        .whereNull('deleted_at_viaje')
+        .whereBetween('fecha_viaje', [startDate, endDate])
+        .orderBy('fecha_viaje', 'desc');
+    } catch (error) {
+      throw new Error(`Error finding trips by date range: ${error.message}`);
+    }
+  }
+
+  /**
+   * Find all trips for a booking
+   * @param {number} codigo_reserva - Booking ID
+   * @returns {Promise&lt;Array>} Raw trip data array
+   */
+  async findByBooking(codigo_reserva) {
+    try {
+      return await this.db(this.tableName)
+        .select('viaje.*')
+        .join('genera', 'viaje.codigo_viaje', 'genera.codigo_viaje')
+        .where('genera.codigo_reserva', codigo_reserva)
+        .whereNull('viaje.deleted_at_viaje')
+        .orderBy('viaje.fecha_viaje', 'desc');
+    } catch (error) {
+      throw new Error(`Error finding trips by booking: ${error.message}`);
+    }
+  }
+
+  /**
+   * Find trips by driver RUT through booking relationship
+   * @param {number} rut_conductor - Driver's RUT
+   * @returns {Promise&lt;Array>} Raw trip data array
+   */
+  async findByDriver(rut_conductor) {
+    try {
+      return await this.db(this.tableName)
+        .select('viaje.*')
+        .join('genera', 'viaje.codigo_viaje', 'genera.codigo_viaje')
+        .join('reserva', 'genera.codigo_reserva', 'reserva.codigo_reserva')
+        .where('reserva.rut_conductor', rut_conductor)
+        .whereNull('viaje.deleted_at_viaje')
+        .orderBy('viaje.fecha_viaje', 'desc');
+    } catch (error) {
+      throw new Error(`Error finding trips by driver: ${error.message}`);
+    }
+  }
+
+  /**
+   * Find trips by user (client) RUT through booking relationship
+   * @param {string} rut - User's RUT
+   * @returns {Promise&lt;Array>} Raw trip data array
+   */
+  async findByUser(rut) {
+    try {
+      return await this.db(this.tableName)
+        .select('viaje.*')
+        .join('genera', 'viaje.codigo_viaje', 'genera.codigo_viaje')
+        .join('reserva', 'genera.codigo_reserva', 'reserva.codigo_reserva')
+        .where('reserva.rut_cliente', rut)
+        .whereNull('viaje.deleted_at_viaje')
+        .orderBy('viaje.fecha_viaje', 'desc');
+    } catch (error) {
+      throw new Error(`Error finding trips by user: ${error.message}`);
+    }
+  }
+
+  /**
+   * Find trip with its booking reference and receipt
+   * @param {number} codigo_reserva - Booking ID
+   * @returns {Promise&lt;Object|null>} Raw trip data or null
+   */
+  async findWithBookingRef(codigo_reserva) {
+    try {
+      return await this.db(this.tableName)
+        .select(
+          'viaje.*',
+          'reserva.codigo_reserva',
+          'reserva.origen_reserva',
+          'reserva.destino_reserva',
+          'boleta.codigo_boleta',
+          'boleta.total',
+          'boleta.metodo_pago',
+          'boleta.fecha_emision'
+        )
+        .join('genera', 'viaje.codigo_viaje', 'genera.codigo_viaje')
+        .join('reserva', 'genera.codigo_reserva', 'reserva.codigo_reserva')
+        .leftJoin('boleta', 'genera.codigo_boleta', 'boleta.codigo_boleta')
+        .where('reserva.codigo_reserva', codigo_reserva)
+        .whereNull('viaje.deleted_at_viaje')
+        .first();
+    } catch (error) {
+      console.error('Error in findWithBookingRef:', {
+        error,
+        codigo_reserva,
+        query: this.db(this.tableName).toString()
+      });
+      throw new Error(`Error finding trip with booking ref: ${error.message}`);
+    }
+  }
+}
+
+export default TripRepository;</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="AuthProvider.html">AuthProvider</a></li><li><a href="AuthRouter.html">AuthRouter</a></li><li><a href="AuthRouter_AuthRouter.html">AuthRouter</a></li><li><a href="AuthRouter_BaseRouter.html">BaseRouter</a></li><li><a href="BaseModel.html">BaseModel</a></li><li><a href="BaseRepository_BaseRepository.html">BaseRepository</a></li><li><a href="BaseRouter.html">BaseRouter</a></li><li><a href="BaseRouter_BaseRouter.html">BaseRouter</a></li><li><a href="BaseService.html">BaseService</a></li><li><a href="BaseService_BaseService.html">BaseService</a></li><li><a href="BookingModel.html">BookingModel</a></li><li><a href="BookingRouter.html">BookingRouter</a></li><li><a href="BookingRouter_BaseRouter.html">BaseRouter</a></li><li><a href="BookingRouter_BookingRouter.html">BookingRouter</a></li><li><a href="ExampleRouter.html">ExampleRouter</a></li><li><a href="ExampleRouter_BaseRouter.html">BaseRouter</a></li><li><a href="ExampleRouter_ExampleRouter.html">ExampleRouter</a></li><li><a href="HistoryModel.html">HistoryModel</a></li><li><a href="HistoryRepository.html">HistoryRepository</a></li><li><a href="HistoryRepository_BaseRepository.html">BaseRepository</a></li><li><a href="HistoryService.html">HistoryService</a></li><li><a href="HistoryService_BaseService.html">BaseService</a></li><li><a href="MapRouter.html">MapRouter</a></li><li><a href="MapRouter_BaseRouter.html">BaseRouter</a></li><li><a href="MapRouter_MapRouter.html">MapRouter</a></li><li><a href="PermissionModel.html">PermissionModel</a></li><li><a href="PermissionRouter.html">PermissionRouter</a></li><li><a href="PermissionRouter_BaseRouter.html">BaseRouter</a></li><li><a href="PermissionRouter_PermissionRouter.html">PermissionRouter</a></li><li><a href="RatingRouter.html">RatingRouter</a></li><li><a href="RatingRouter_BaseRouter.html">BaseRouter</a></li><li><a href="ReceiptModel_ReceiptModel.html">ReceiptModel</a></li><li><a href="ReportController.html">ReportController</a></li><li><a href="ReportModel.html">ReportModel</a></li><li><a href="ReportRepository.html">ReportRepository</a></li><li><a href="ReportRepository_BaseRepository.html">BaseRepository</a></li><li><a href="ReportRouter.html">ReportRouter</a></li><li><a href="ReportRouter_BaseRouter.html">BaseRouter</a></li><li><a href="ReportService.html">ReportService</a></li><li><a href="RoleModel.html">RoleModel</a></li><li><a href="RoleRouter.html">RoleRouter</a></li><li><a href="RoleRouter_BaseRouter.html">BaseRouter</a></li><li><a href="RoleRouter_RoleRouter.html">RoleRouter</a></li><li><a href="ServiceModel.html">ServiceModel</a></li><li><a href="SessionModel.html">SessionModel</a></li><li><a href="TaxiController.html">TaxiController</a></li><li><a href="TaxiController_TaxiController.html">TaxiController</a></li><li><a href="TaxiModel.html">TaxiModel</a></li><li><a href="TaxiRepository.html">TaxiRepository</a></li><li><a href="TaxiRepository_BaseRepository.html">BaseRepository</a></li><li><a href="TaxiRepository_TaxiRepository.html">TaxiRepository</a></li><li><a href="TaxiRouter.html">TaxiRouter</a></li><li><a href="TaxiRouter_BaseRouter.html">BaseRouter</a></li><li><a href="TaxiRouter_TaxiRouter.html">TaxiRouter</a></li><li><a href="TripModel_TripModel.html">TripModel</a></li><li><a href="TripRouter.html">TripRouter</a></li><li><a href="TripRouter_BaseRouter.html">BaseRouter</a></li><li><a href="TripRouter_TripRouter.html">TripRouter</a></li><li><a href="UserModel.html">UserModel</a></li><li><a href="UserRouter.html">UserRouter</a></li><li><a href="UserRouter_BaseRouter.html">BaseRouter</a></li><li><a href="UserRouter_UserRouter.html">UserRouter</a></li></ul><h3>Global</h3><ul><li><a href="global.html#WS_EVENTS">WS_EVENTS</a></li><li><a href="global.html#clearCookie">clearCookie</a></li><li><a href="global.html#createSession">createSession</a></li><li><a href="global.html#createSessionCookie">createSessionCookie</a></li><li><a href="global.html#generateSessionId">generateSessionId</a></li><li><a href="global.html#getSessionCookieName">getSessionCookieName</a></li><li><a href="global.html#invalidateSession">invalidateSession</a></li><li><a href="global.html#invalidateUserSessions">invalidateUserSessions</a></li><li><a href="global.html#readSessionCookie">readSessionCookie</a></li><li><a href="global.html#serializeOptions">serializeOptions</a></li><li><a href="global.html#setCookie">setCookie</a></li><li><a href="global.html#validateSession">validateSession</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.4</a> on Tue Dec 17 2024 23:00:08 GMT-0300 (hora de verano de Chile)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

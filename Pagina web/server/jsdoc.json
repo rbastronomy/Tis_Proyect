@@ -1,0 +1,18 @@
+{
+    "source": {
+        "include": ["./src"],
+        "includePattern": ".+\\.js$",
+        "excludePattern": "(node_modules/|docs)",
+        "exclude": ["node_modules", "dist"]
+    },
+    "opts": {
+        "destination": "documentacion_tecnica",
+        "recurse": true,
+        "template": "templates/default"
+    },
+    "plugins": [],
+    "templates": {
+        "cleverLinks": false,
+        "monospaceLinks": false
+    }
+}

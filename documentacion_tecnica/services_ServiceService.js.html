@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: services/ServiceService.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: services/ServiceService.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>import { BaseService } from '../core/BaseService.js';
+import { ServiceModel } from '../models/ServiceModel.js';
+import { ServiceRepository } from '../repository/ServiceRepository.js';
+import { RateService } from './RateService.js';
+import { OfferingService } from './OfferingService.js';
+
+export class ServiceService extends BaseService {
+    constructor() {
+        const serviceModel = new ServiceModel();
+        super(serviceModel);
+        this.repository = new ServiceRepository();
+        this.rateService = new RateService();
+        this.offeringService = new OfferingService();
+    }
+
+    /**
+     * Gets services filtered by ride type (CITY or AIRPORT)
+     * @param {string} rideType - Type of ride (CITY or AIRPORT)
+     * @returns {Promise&lt;ServiceModel[]>} List of service models for the specified ride type
+     * @throws {Error} If there's an error retrieving the services
+     */
+    async findByRideType(rideType) {
+        try {
+            // Get all active services first and convert to models
+            const servicesDB = await this.repository.findActive();
+            const serviceModels = ServiceModel.toModels(servicesDB);
+            
+            // Get offerings for the ride type
+            const offeringsDB = await this.offeringService.findByRideType(rideType);
+            console.log(`Offerings for rideType "${rideType}":`, offeringsDB);
+            // Create a Set of service IDs that have offerings for this ride type
+            const serviceIds = new Set(offeringsDB.map(offering => offering.codigo_servicio));
+
+            
+            // Create a Set of unique tariff IDs from offerings
+            const tariffIds = [...new Set(offeringsDB.map(offering => offering.id_tarifa))];
+            
+            // Get all tariffs data in one batch (already as models from RateService)
+            const tariffs = await Promise.all(
+                tariffIds.map(id => this.rateService.findById(id))
+            );
+            
+            // Create a Map for quick tariff lookups
+            const tariffsMap = new Map(
+                tariffs.map(tariff => [tariff.id_tarifa, tariff])
+            );
+            console.log(`Tariffs map:`, tariffsMap);
+            // Filter services and attach their tariffs
+            return serviceModels
+                .filter(service => serviceIds.has(service.codigo_servicio))
+                .map(service => {
+                    // Get offerings for this service
+                    const serviceOfferings = offeringsDB.filter(
+                        offering => offering.codigo_servicio === service.codigo_servicio
+                    );
+                    
+                    // Get tariffs for these offerings and filter active ones
+                    const serviceTariffs = serviceOfferings
+                        .map(offering => tariffsMap.get(offering.id_tarifa))
+                        .filter(tariff => tariff &amp;&amp; tariff.isActive());
+
+                    // Attach tariffs to the service model
+                    service.tarifas = serviceTariffs;
+                    return service;
+                });
+
+        } catch (error) {
+            throw new Error(`Error retrieving services by ride type: ${error.message}`);
+        }
+    }
+
+    /**
+     * Gets tariffs for a specific service filtered by ride type
+     * @param {number} codigo_servicio - Service ID
+     * @param {string} rideType - Type of ride (CITY or AIRPORT)
+     * @returns {Promise&lt;Array>} List of filtered tariffs
+     * @throws {Error} If there's an error retrieving the tariffs
+     */
+    async getTariffsByType(codigo_servicio, rideType) {
+        try {
+            // Get offerings for this service
+            const offerings = await this.offeringService.findByServiceAndType(codigo_servicio, rideType);
+            
+            // Extract unique tariff IDs from offerings
+            const tariffIds = [...new Set(offerings.map(offering => offering.id_tarifa))];
+            
+            // Get tariff details for each ID
+            const tariffs = await Promise.all(
+                tariffIds.map(id => this.RateService.findById(id))
+            );
+            
+            // Filter out any null values and inactive tariffs
+            return tariffs
+                .filter(tariff => tariff &amp;&amp; tariff.estadot === 'ACTIVO')
+                .map(tariff => ({
+                    id_tarifa: tariff.id_tarifa,
+                    tipo: tariff.tipo,
+                    descripciont: tariff.descripciont,
+                    precio: tariff.precio,
+                    estadot: tariff.estadot
+                }));
+        } catch (error) {
+            throw new Error(`Error retrieving service tariffs: ${error.message}`);
+        }
+    }
+
+    /**
+     * Gets all active services with their associated tariffs
+     * @returns {Promise&lt;Array>} List of active services with tariff information
+     * @throws {Error} If there's an error retrieving the services
+     */
+    async findActiveWithTariffs() {
+        try {
+            const activeServices = await this.repository.findActive();
+            
+            // Get offerings and tariffs for each service
+            const servicesWithTariffs = await Promise.all(
+                activeServices.map(async (service) => {
+                    const offerings = await this.offeringService.findByService(service.codigo_servicio);
+                    const tariffIds = [...new Set(offerings.map(o => o.id_tarifa))];
+                    const tariffs = await Promise.all(
+                        tariffIds.map(id => this.rateService.findById(id))
+                    );
+                    
+                    return {
+                        ...service,
+                        tarifas: tariffs.filter(t => t &amp;&amp; t.estadot === 'ACTIVO')
+                    };
+                })
+            );
+
+            return servicesWithTariffs;
+        } catch (error) {
+            throw new Error(`Error retrieving active services: ${error.message}`);
+        }
+    }
+
+    /**
+     * Find service by its code
+     * @param {number} codigo_servicio - Service code
+     * @returns {Promise&lt;Object>} Service data
+     * @throws {Error} If service is not found
+     */
+    async findByCodigos(codigo_servicio) {
+        try {
+            const service = await this.repository.findById(codigo_servicio);
+            if (!service) {
+                throw new Error('Servicio no encontrado');
+            }
+            return ServiceModel.toModel(service);
+        } catch (error) {
+            throw new Error(`Error retrieving service: ${error.message}`);
+        }
+    }
+}
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="AuthProvider.html">AuthProvider</a></li><li><a href="AuthRouter.html">AuthRouter</a></li><li><a href="AuthRouter_AuthRouter.html">AuthRouter</a></li><li><a href="AuthRouter_BaseRouter.html">BaseRouter</a></li><li><a href="BaseModel.html">BaseModel</a></li><li><a href="BaseRepository_BaseRepository.html">BaseRepository</a></li><li><a href="BaseRouter.html">BaseRouter</a></li><li><a href="BaseRouter_BaseRouter.html">BaseRouter</a></li><li><a href="BaseService.html">BaseService</a></li><li><a href="BaseService_BaseService.html">BaseService</a></li><li><a href="BookingModel.html">BookingModel</a></li><li><a href="BookingRouter.html">BookingRouter</a></li><li><a href="BookingRouter_BaseRouter.html">BaseRouter</a></li><li><a href="BookingRouter_BookingRouter.html">BookingRouter</a></li><li><a href="ExampleRouter.html">ExampleRouter</a></li><li><a href="ExampleRouter_BaseRouter.html">BaseRouter</a></li><li><a href="ExampleRouter_ExampleRouter.html">ExampleRouter</a></li><li><a href="HistoryModel.html">HistoryModel</a></li><li><a href="HistoryRepository.html">HistoryRepository</a></li><li><a href="HistoryRepository_BaseRepository.html">BaseRepository</a></li><li><a href="HistoryService.html">HistoryService</a></li><li><a href="HistoryService_BaseService.html">BaseService</a></li><li><a href="MapRouter.html">MapRouter</a></li><li><a href="MapRouter_BaseRouter.html">BaseRouter</a></li><li><a href="MapRouter_MapRouter.html">MapRouter</a></li><li><a href="PermissionModel.html">PermissionModel</a></li><li><a href="PermissionRouter.html">PermissionRouter</a></li><li><a href="PermissionRouter_BaseRouter.html">BaseRouter</a></li><li><a href="PermissionRouter_PermissionRouter.html">PermissionRouter</a></li><li><a href="RatingRouter.html">RatingRouter</a></li><li><a href="RatingRouter_BaseRouter.html">BaseRouter</a></li><li><a href="ReceiptModel_ReceiptModel.html">ReceiptModel</a></li><li><a href="ReportController.html">ReportController</a></li><li><a href="ReportModel.html">ReportModel</a></li><li><a href="ReportRepository.html">ReportRepository</a></li><li><a href="ReportRepository_BaseRepository.html">BaseRepository</a></li><li><a href="ReportRouter.html">ReportRouter</a></li><li><a href="ReportRouter_BaseRouter.html">BaseRouter</a></li><li><a href="ReportService.html">ReportService</a></li><li><a href="RoleModel.html">RoleModel</a></li><li><a href="RoleRouter.html">RoleRouter</a></li><li><a href="RoleRouter_BaseRouter.html">BaseRouter</a></li><li><a href="RoleRouter_RoleRouter.html">RoleRouter</a></li><li><a href="ServiceModel.html">ServiceModel</a></li><li><a href="SessionModel.html">SessionModel</a></li><li><a href="TaxiController.html">TaxiController</a></li><li><a href="TaxiController_TaxiController.html">TaxiController</a></li><li><a href="TaxiModel.html">TaxiModel</a></li><li><a href="TaxiRepository.html">TaxiRepository</a></li><li><a href="TaxiRepository_BaseRepository.html">BaseRepository</a></li><li><a href="TaxiRepository_TaxiRepository.html">TaxiRepository</a></li><li><a href="TaxiRouter.html">TaxiRouter</a></li><li><a href="TaxiRouter_BaseRouter.html">BaseRouter</a></li><li><a href="TaxiRouter_TaxiRouter.html">TaxiRouter</a></li><li><a href="TripModel_TripModel.html">TripModel</a></li><li><a href="TripRouter.html">TripRouter</a></li><li><a href="TripRouter_BaseRouter.html">BaseRouter</a></li><li><a href="TripRouter_TripRouter.html">TripRouter</a></li><li><a href="UserModel.html">UserModel</a></li><li><a href="UserRouter.html">UserRouter</a></li><li><a href="UserRouter_BaseRouter.html">BaseRouter</a></li><li><a href="UserRouter_UserRouter.html">UserRouter</a></li></ul><h3>Global</h3><ul><li><a href="global.html#WS_EVENTS">WS_EVENTS</a></li><li><a href="global.html#clearCookie">clearCookie</a></li><li><a href="global.html#createSession">createSession</a></li><li><a href="global.html#createSessionCookie">createSessionCookie</a></li><li><a href="global.html#generateSessionId">generateSessionId</a></li><li><a href="global.html#getSessionCookieName">getSessionCookieName</a></li><li><a href="global.html#invalidateSession">invalidateSession</a></li><li><a href="global.html#invalidateUserSessions">invalidateUserSessions</a></li><li><a href="global.html#readSessionCookie">readSessionCookie</a></li><li><a href="global.html#serializeOptions">serializeOptions</a></li><li><a href="global.html#setCookie">setCookie</a></li><li><a href="global.html#validateSession">validateSession</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.4</a> on Tue Dec 17 2024 23:00:08 GMT-0300 (hora de verano de Chile)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

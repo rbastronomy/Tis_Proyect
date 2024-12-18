@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: controllers/TaxiController.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: controllers/TaxiController.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>import { BaseController } from "../core/BaseController.js";
+import { TaxiService } from "../services/TaxiService.js";
+
+/**
+ * Controller for taxi-related operations
+ * @class TaxiController
+ * @extends BaseController
+ */
+export class TaxiController extends BaseController {
+    /**
+     * Creates an instance of TaxiController
+     */
+    constructor() {
+      const taxiService = new TaxiService();
+      super(taxiService);
+      this.service = taxiService;
+    }
+    
+    /**
+     * Creates a new taxi
+     * @param {Object} request - HTTP request object
+     * @param {Object} reply - HTTP response object
+     */
+    async createTaxi(request, reply) {
+      try {
+        const taxiData = request.body;
+        const newTaxi = await this.service.createTaxi(taxiData);
+        
+        reply.code(201).send({
+          message: 'Taxi creado exitosamente',
+          taxi: newTaxi.toJSON()
+        });
+      } catch (error) {
+        request.log.error(error);
+        reply.code(400).send({ 
+          message: 'Error al crear el taxi', 
+          error: error.message 
+        });
+      }
+    }
+    
+    /**
+     * Updates an existing taxi
+     * @param {Object} request - HTTP request object
+     * @param {Object} reply - HTTP response object
+     */
+    async updateTaxi(request, reply) {
+      try {
+        const { patente } = request.params;
+        const updateData = request.body;
+        const updatedTaxi = await this.service.updateTaxi(patente, updateData);
+        
+        reply.code(200).send({
+          message: 'Taxi actualizado exitosamente',
+          taxi: updatedTaxi.toJSON()
+        });
+      } catch (error) {
+        request.log.error(error);
+        if (error.message.includes('not found')) {
+          reply.code(404).send({ message: 'Taxi no encontrado' });
+        } else {
+          reply.code(400).send({ 
+            message: 'Error al actualizar el taxi', 
+            error: error.message 
+          });
+        }
+      }
+    }
+  
+    /**
+     * Gets a taxi by its license plate
+     * @param {Object} request - HTTP request object
+     * @param {Object} reply - HTTP response object
+     */
+    async getTaxiByLicensePlate(request, reply) {
+      try {
+        const { patente } = request.params;
+        const taxi = await this.service.getTaxiByLicensePlate(patente);
+        
+        reply.code(200).send({
+          message: 'Taxi encontrado',
+          taxi: taxi.toJSON()
+        });
+      } catch (error) {
+        request.log.error(error);
+        if (error.message.includes('not found')) {
+          reply.code(404).send({ message: 'Taxi no encontrado' });
+        } else {
+          reply.code(400).send({ 
+            message: 'Error al obtener el taxi', 
+            error: error.message 
+          });
+        }
+      }
+    }
+  
+    /**
+     * Deletes a taxi
+     * @param {Object} request - HTTP request object
+     * @param {Object} reply - HTTP response object
+     */
+    async deletedTaxi(request, reply) {
+      try {
+        const { patente } = request.params;
+        const deletedTaxi = await this.service.deleteTaxi(patente);
+        
+        reply.code(200).send({
+          message: 'Taxi eliminado exitosamente',
+          taxi: deletedTaxi.toJSON()
+        });
+      } catch (error) {
+        request.log.error(error);
+        if (error.message.includes('not found')) {
+          reply.code(404).send({ message: 'Taxi no encontrado' });
+        } else {
+          reply.code(400).send({ 
+            message: 'Error al eliminar el taxi', 
+            error: error.message 
+          });
+        }
+      }
+    }
+  
+    /**
+     * Checks technical review status of a taxi
+     * @param {Object} request - HTTP request object
+     * @param {Object} reply - HTTP response object
+     */
+    async checkTechnicalReview(request, reply) {
+      try {
+        const { patente } = request.params;
+        const isCurrentReview = await this.service.checkTechnicalReview(patente);
+        
+        reply.code(200).send({ 
+          patente, 
+          technicalReviewCurrent: isCurrentReview,
+          message: isCurrentReview ? 
+            'La revisión técnica está vigente' : 
+            'La revisión técnica está vencida'
+        });
+      } catch (error) {
+        request.log.error(error);
+        if (error.message.includes('not found')) {
+          reply.code(404).send({ message: 'Taxi no encontrado' });
+        } else {
+          reply.code(400).send({ 
+            message: 'Error al verificar la revisión técnica', 
+            error: error.message 
+          });
+        }
+      }
+    }
+
+    /**
+     * Gets all taxis
+     * @param {Object} request - HTTP request object
+     * @param {Object} reply - HTTP response object
+     */
+    async getAll(request, reply) {
+      try {
+        const taxis = await this.service.getAll(request.query);
+        
+        reply.code(200).send({
+          message: 'Taxis obtenidos exitosamente',
+          taxis: taxis.map(taxi => taxi.toJSON())
+        });
+      } catch (error) {
+        request.log.error(error);
+        reply.code(400).send({ 
+          message: 'Error al obtener los taxis', 
+          error: error.message 
+        });
+      }
+    }
+
+    /**
+     * Get all taxis assigned to a specific driver
+     * @param {Object} request - HTTP request object
+     * @param {Object} reply - HTTP response object
+     */
+    async getTaxisByDriver(request, reply) {
+      try {
+        const { rut } = request.params;
+        const taxis = await this.service.getTaxisByDriver(rut);
+        
+        // Ensure we're sending an array
+        const taxisArray = Array.isArray(taxis) ? taxis : [taxis].filter(Boolean);
+        
+        reply.code(200).send(
+          taxisArray.map(taxi => taxi.toJSON())
+        );
+      } catch (error) {
+        request.log.error(error);
+        reply.code(500).send({ 
+          message: 'Error al obtener los taxis del conductor', 
+          error: error.message 
+        });
+      }
+    }
+
+    /**
+     * Assign a taxi to a driver
+     * @param {Object} request - HTTP request object
+     * @param {Object} reply - HTTP response object
+     */
+    async assignTaxiToDriver(request, reply) {
+        try {
+            const { rut } = request.params;
+            const { patente } = request.body;
+            const updatedTaxi = await this.service.assignTaxiToDriver(patente, rut);
+            
+            reply.code(200).send({
+                message: 'Taxi asignado exitosamente',
+                taxi: updatedTaxi.toJSON()
+            });
+        } catch (error) {
+            request.log.error(error);
+            reply.code(500).send({ 
+                message: 'Error al asignar el taxi', 
+                error: error.message 
+            });
+        }
+    }
+
+    /**
+     * Unassign a taxi from a driver
+     * @param {Object} request - HTTP request object
+     * @param {Object} reply - HTTP response object
+     */
+    async unassignTaxiFromDriver(request, reply) {
+        try {
+            const { rut, patente } = request.params;
+            const updatedTaxi = await this.service.unassignTaxiFromDriver(patente, rut);
+            
+            reply.code(200).send({
+                message: 'Taxi desasignado exitosamente',
+                taxi: updatedTaxi.toJSON()
+            });
+        } catch (error) {
+            request.log.error(error);
+            reply.code(500).send({ 
+                message: 'Error al desasignar el taxi', 
+                error: error.message 
+            });
+        }
+    }
+
+    /**
+     * Get available taxis with their assigned drivers
+     * @param {Object} req - Request object
+     * @param {Object} res - Response object
+     * @returns {Promise&lt;void>}
+     */
+    async getAvailableTaxisWithDrivers(req, res) {
+      try {
+        // Get booking time from query or use current time
+        const bookingTime = req.query.fecha_reserva ? 
+          new Date(req.query.fecha_reserva) : 
+          new Date();
+
+        console.log('Controller - Booking Time:', {
+          fromQuery: !!req.query.fecha_reserva,
+          bookingTime: bookingTime.toISOString(),
+          rawQuery: req.query.fecha_reserva
+        });
+
+        const taxis = await this.service.getAvailableTaxisWithDrivers(bookingTime);
+        res.send({ taxis });
+      } catch (error) {
+        console.error('Error getting available taxis:', error);
+        res.status(500).send({ 
+          error: 'Error getting available taxis',
+          details: error.message 
+        });
+      }
+    }
+
+    /**
+     * Gets driver information by RUT
+     * @param {Object} request - HTTP request object
+     * @param {Object} reply - HTTP response object
+     */
+    async getDriverInfo(request, reply) {
+      try {
+        const { rut } = request.params;
+        const driver = await this.service.getDriverInfo(rut);
+        
+        reply.code(200).send({
+          message: 'Driver info retrieved successfully',
+          driver: driver.toJSON()
+        });
+      } catch (error) {
+        request.log.error(error);
+        reply.code(500).send({ 
+          message: 'Error getting driver info', 
+          error: error.message 
+        });
+      }
+    }
+}</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="AuthProvider.html">AuthProvider</a></li><li><a href="AuthRouter.html">AuthRouter</a></li><li><a href="AuthRouter_AuthRouter.html">AuthRouter</a></li><li><a href="AuthRouter_BaseRouter.html">BaseRouter</a></li><li><a href="BaseModel.html">BaseModel</a></li><li><a href="BaseRepository_BaseRepository.html">BaseRepository</a></li><li><a href="BaseRouter.html">BaseRouter</a></li><li><a href="BaseRouter_BaseRouter.html">BaseRouter</a></li><li><a href="BaseService.html">BaseService</a></li><li><a href="BaseService_BaseService.html">BaseService</a></li><li><a href="BookingModel.html">BookingModel</a></li><li><a href="BookingRouter.html">BookingRouter</a></li><li><a href="BookingRouter_BaseRouter.html">BaseRouter</a></li><li><a href="BookingRouter_BookingRouter.html">BookingRouter</a></li><li><a href="ExampleRouter.html">ExampleRouter</a></li><li><a href="ExampleRouter_BaseRouter.html">BaseRouter</a></li><li><a href="ExampleRouter_ExampleRouter.html">ExampleRouter</a></li><li><a href="HistoryModel.html">HistoryModel</a></li><li><a href="HistoryRepository.html">HistoryRepository</a></li><li><a href="HistoryRepository_BaseRepository.html">BaseRepository</a></li><li><a href="HistoryService.html">HistoryService</a></li><li><a href="HistoryService_BaseService.html">BaseService</a></li><li><a href="MapRouter.html">MapRouter</a></li><li><a href="MapRouter_BaseRouter.html">BaseRouter</a></li><li><a href="MapRouter_MapRouter.html">MapRouter</a></li><li><a href="PermissionModel.html">PermissionModel</a></li><li><a href="PermissionRouter.html">PermissionRouter</a></li><li><a href="PermissionRouter_BaseRouter.html">BaseRouter</a></li><li><a href="PermissionRouter_PermissionRouter.html">PermissionRouter</a></li><li><a href="RatingRouter.html">RatingRouter</a></li><li><a href="RatingRouter_BaseRouter.html">BaseRouter</a></li><li><a href="ReceiptModel_ReceiptModel.html">ReceiptModel</a></li><li><a href="ReportController.html">ReportController</a></li><li><a href="ReportModel.html">ReportModel</a></li><li><a href="ReportRepository.html">ReportRepository</a></li><li><a href="ReportRepository_BaseRepository.html">BaseRepository</a></li><li><a href="ReportRouter.html">ReportRouter</a></li><li><a href="ReportRouter_BaseRouter.html">BaseRouter</a></li><li><a href="ReportService.html">ReportService</a></li><li><a href="RoleModel.html">RoleModel</a></li><li><a href="RoleRouter.html">RoleRouter</a></li><li><a href="RoleRouter_BaseRouter.html">BaseRouter</a></li><li><a href="RoleRouter_RoleRouter.html">RoleRouter</a></li><li><a href="ServiceModel.html">ServiceModel</a></li><li><a href="SessionModel.html">SessionModel</a></li><li><a href="TaxiController.html">TaxiController</a></li><li><a href="TaxiController_TaxiController.html">TaxiController</a></li><li><a href="TaxiModel.html">TaxiModel</a></li><li><a href="TaxiRepository.html">TaxiRepository</a></li><li><a href="TaxiRepository_BaseRepository.html">BaseRepository</a></li><li><a href="TaxiRepository_TaxiRepository.html">TaxiRepository</a></li><li><a href="TaxiRouter.html">TaxiRouter</a></li><li><a href="TaxiRouter_BaseRouter.html">BaseRouter</a></li><li><a href="TaxiRouter_TaxiRouter.html">TaxiRouter</a></li><li><a href="TripModel_TripModel.html">TripModel</a></li><li><a href="TripRouter.html">TripRouter</a></li><li><a href="TripRouter_BaseRouter.html">BaseRouter</a></li><li><a href="TripRouter_TripRouter.html">TripRouter</a></li><li><a href="UserModel.html">UserModel</a></li><li><a href="UserRouter.html">UserRouter</a></li><li><a href="UserRouter_BaseRouter.html">BaseRouter</a></li><li><a href="UserRouter_UserRouter.html">UserRouter</a></li></ul><h3>Global</h3><ul><li><a href="global.html#WS_EVENTS">WS_EVENTS</a></li><li><a href="global.html#clearCookie">clearCookie</a></li><li><a href="global.html#createSession">createSession</a></li><li><a href="global.html#createSessionCookie">createSessionCookie</a></li><li><a href="global.html#generateSessionId">generateSessionId</a></li><li><a href="global.html#getSessionCookieName">getSessionCookieName</a></li><li><a href="global.html#invalidateSession">invalidateSession</a></li><li><a href="global.html#invalidateUserSessions">invalidateUserSessions</a></li><li><a href="global.html#readSessionCookie">readSessionCookie</a></li><li><a href="global.html#serializeOptions">serializeOptions</a></li><li><a href="global.html#setCookie">setCookie</a></li><li><a href="global.html#validateSession">validateSession</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.4</a> on Tue Dec 17 2024 23:00:08 GMT-0300 (hora de verano de Chile)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

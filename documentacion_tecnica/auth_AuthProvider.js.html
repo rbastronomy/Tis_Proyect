@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: auth/AuthProvider.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: auth/AuthProvider.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>import { db } from '../db/database.js';
+import { encodeHexLowerCase } from "@oslojs/encoding";
+import { sha256 } from "@oslojs/crypto/sha2";
+import { AuthError } from './auth.js';
+import cookie from 'cookie';
+import process from 'process';
+import { SessionModel } from '../models/SessionModel.js';
+import { UserModel } from '../models/UserModel.js';
+
+/**
+ * @class AuthProvider
+ * @description Custom authentication provider to replace Lucia
+ */
+export class AuthProvider {
+    /**
+     * @property {string} sessionCookieName
+     * @description The name of the session cookie
+     */
+    sessionCookieName = 'session';
+
+    /**
+     * @method generateSessionId
+     * @description Generates a unique session ID
+     * @returns {string} - The generated session ID
+     */
+    generateSessionId() {
+        const bytes = new Uint8Array(20);
+        crypto.getRandomValues(bytes);
+        const sessionId = encodeHexLowerCase(sha256(bytes));
+        return sessionId;
+    }
+
+    /**
+     * @method createSession
+     * @description Creates a new session for a user
+     * @param {string} userId - The ID of the user
+     * @returns {Promise&lt;object>} - The created session object
+     * @throws {AuthError} - If there is an error creating the session
+     */
+    async createSession(userId) {
+        try {
+            const sessionId = this.generateSessionId();
+            const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30); // 30 days from now
+
+            await db.insert({
+                id: sessionId,
+                user_id: userId,
+                expires_at: expiresAt
+            }).into('user_session');
+
+            return new SessionModel({
+                id: sessionId,
+                user_id: userId,
+                expires_at: expiresAt
+            });
+        } catch (error) {
+            console.error('Error creating session:', error);
+            throw AuthError.DatabaseError(`Failed to create session: ${error.message}`);
+        }
+    }
+
+    /**
+     * @method validateSession
+     * @description Validates a session ID
+     * @param {string} sessionId - The session ID to validate
+     * @returns {Promise&lt;object>} - An object containing the session and user if valid
+     * @throws {AuthError} - If the session is invalid or expired
+     */
+    async validateSession(sessionId) {
+        try {
+            const sessionData = await db.select(
+                'user_session.id',
+                'user_session.user_id',
+                'user_session.expires_at',
+                'persona.rut as user_rut',
+                'persona.nombre as user_nombre',
+                'persona.apellido_paterno as user_apellido_paterno',
+                'persona.apellido_materno as user_apellido_materno',
+                'persona.correo as user_correo',
+                'roles.nombre_rol as user_role'
+            )
+                .from('user_session')
+                .innerJoin('persona', 'user_session.user_id', 'persona.rut')
+                .innerJoin('roles', 'persona.id_roles', 'roles.id_roles')
+                .where('user_session.id', sessionId)
+                .first();
+
+            if (!sessionData) {
+                throw AuthError.InvalidSession();
+            }
+
+            const session = new SessionModel({
+                id: sessionData.id,
+                user_id: sessionData.user_id,
+                expires_at: sessionData.expires_at
+            });
+
+            if (session.isExpired()) {
+                await this.invalidateSession(sessionId);
+                throw AuthError.InvalidSession();
+            }
+
+            // Extend session if needed
+            if (session.needsExtension()) {
+                session.expires_at = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30);
+                await db('user_session')
+                    .where('id', sessionId)
+                    .update({ expires_at: session.expires_at });
+            }
+
+            const user = new UserModel({
+                rut: sessionData.user_rut,
+                nombre: sessionData.user_nombre,
+                apellido_paterno: sessionData.user_apellido_paterno,
+                apellido_materno: sessionData.user_apellido_materno,
+                correo: sessionData.user_correo,
+                role: sessionData.user_role
+            });
+
+            session.user = user;
+
+            return { session, user };
+        } catch (error) {
+            console.error('Error validating session:', error);
+            if (error instanceof AuthError) {
+                throw error;
+            }
+            throw AuthError.InvalidSession();
+        }
+    }
+
+    /**
+     * @method invalidateSession
+     * @description Invalidates a session
+     * @param {string} sessionId - The session ID to invalidate
+     * @returns {Promise&lt;void>}
+     * @throws {AuthError} - If there is an error invalidating the session
+     */
+    async invalidateSession(sessionId) {
+        try {
+            await db('user_session').where('id', sessionId).del();
+        } catch (error) {
+            console.error('Error invalidating session:', error);
+            throw AuthError.DatabaseError(`Failed to invalidate session: ${error.message}`);
+        }
+    }
+
+    /**
+     * @method invalidateUserSessions
+     * @description Invalidates all sessions for a user
+     * @param {string} userId - The ID of the user
+     * @returns {Promise&lt;void>}
+     * @throws {AuthError} - If there is an error invalidating the sessions
+     */
+    async invalidateUserSessions(userId) {
+        try {
+            await db('user_session').where('user_id', userId).del();
+        } catch (error) {
+            console.error('Error invalidating user sessions:', error);
+            throw AuthError.DatabaseError(`Failed to invalidate user sessions: ${error.message}`);
+        }
+    }
+
+    /**
+     * @method createSessionCookie
+     * @description Creates a session cookie string
+     * @param {string} sessionId - The session ID
+     * @returns {string} - The session cookie string
+     */
+    createSessionCookie(sessionId) {
+        const isProduction = process.env.NODE_ENV === 'production';
+        const cookieAttributes = {
+            httpOnly: true,
+            secure: isProduction,
+            sameSite: 'lax',
+            domain: process.env.COOKIE_DOMAIN || undefined,
+            path: '/',
+            maxAge: 60 * 60 * 24 * 30 // 30 days
+        };
+
+        return cookie.serialize('session', sessionId, cookieAttributes);
+    }
+
+    /**
+     * @method readSessionCookie
+     * @description Reads the session ID from the cookie header
+     * @param {string} cookieHeader - The cookie header string
+     * @returns {string|null} - The session ID or null if not found
+     */
+    readSessionCookie(cookieHeader) {
+        const cookies = cookie.parse(cookieHeader);
+        return cookies.session || null;
+    }
+
+    /**
+     * @method getSessionCookieName
+     * @description Returns the name of the session cookie
+     * @returns {string} - The name of the session cookie
+     */
+    getSessionCookieName() {
+        return this.sessionCookieName;
+    }
+}
+
+export default AuthProvider;
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="AuthProvider.html">AuthProvider</a></li><li><a href="AuthRouter.html">AuthRouter</a></li><li><a href="AuthRouter_AuthRouter.html">AuthRouter</a></li><li><a href="AuthRouter_BaseRouter.html">BaseRouter</a></li><li><a href="BaseModel.html">BaseModel</a></li><li><a href="BaseRepository_BaseRepository.html">BaseRepository</a></li><li><a href="BaseRouter.html">BaseRouter</a></li><li><a href="BaseRouter_BaseRouter.html">BaseRouter</a></li><li><a href="BaseService.html">BaseService</a></li><li><a href="BaseService_BaseService.html">BaseService</a></li><li><a href="BookingModel.html">BookingModel</a></li><li><a href="BookingRouter.html">BookingRouter</a></li><li><a href="BookingRouter_BaseRouter.html">BaseRouter</a></li><li><a href="BookingRouter_BookingRouter.html">BookingRouter</a></li><li><a href="ExampleRouter.html">ExampleRouter</a></li><li><a href="ExampleRouter_BaseRouter.html">BaseRouter</a></li><li><a href="ExampleRouter_ExampleRouter.html">ExampleRouter</a></li><li><a href="HistoryModel.html">HistoryModel</a></li><li><a href="HistoryRepository.html">HistoryRepository</a></li><li><a href="HistoryRepository_BaseRepository.html">BaseRepository</a></li><li><a href="HistoryService.html">HistoryService</a></li><li><a href="HistoryService_BaseService.html">BaseService</a></li><li><a href="MapRouter.html">MapRouter</a></li><li><a href="MapRouter_BaseRouter.html">BaseRouter</a></li><li><a href="MapRouter_MapRouter.html">MapRouter</a></li><li><a href="PermissionModel.html">PermissionModel</a></li><li><a href="PermissionRouter.html">PermissionRouter</a></li><li><a href="PermissionRouter_BaseRouter.html">BaseRouter</a></li><li><a href="PermissionRouter_PermissionRouter.html">PermissionRouter</a></li><li><a href="RatingRouter.html">RatingRouter</a></li><li><a href="RatingRouter_BaseRouter.html">BaseRouter</a></li><li><a href="ReceiptModel_ReceiptModel.html">ReceiptModel</a></li><li><a href="ReportController.html">ReportController</a></li><li><a href="ReportModel.html">ReportModel</a></li><li><a href="ReportRepository.html">ReportRepository</a></li><li><a href="ReportRepository_BaseRepository.html">BaseRepository</a></li><li><a href="ReportRouter.html">ReportRouter</a></li><li><a href="ReportRouter_BaseRouter.html">BaseRouter</a></li><li><a href="ReportService.html">ReportService</a></li><li><a href="RoleModel.html">RoleModel</a></li><li><a href="RoleRouter.html">RoleRouter</a></li><li><a href="RoleRouter_BaseRouter.html">BaseRouter</a></li><li><a href="RoleRouter_RoleRouter.html">RoleRouter</a></li><li><a href="ServiceModel.html">ServiceModel</a></li><li><a href="SessionModel.html">SessionModel</a></li><li><a href="TaxiController.html">TaxiController</a></li><li><a href="TaxiController_TaxiController.html">TaxiController</a></li><li><a href="TaxiModel.html">TaxiModel</a></li><li><a href="TaxiRepository.html">TaxiRepository</a></li><li><a href="TaxiRepository_BaseRepository.html">BaseRepository</a></li><li><a href="TaxiRepository_TaxiRepository.html">TaxiRepository</a></li><li><a href="TaxiRouter.html">TaxiRouter</a></li><li><a href="TaxiRouter_BaseRouter.html">BaseRouter</a></li><li><a href="TaxiRouter_TaxiRouter.html">TaxiRouter</a></li><li><a href="TripModel_TripModel.html">TripModel</a></li><li><a href="TripRouter.html">TripRouter</a></li><li><a href="TripRouter_BaseRouter.html">BaseRouter</a></li><li><a href="TripRouter_TripRouter.html">TripRouter</a></li><li><a href="UserModel.html">UserModel</a></li><li><a href="UserRouter.html">UserRouter</a></li><li><a href="UserRouter_BaseRouter.html">BaseRouter</a></li><li><a href="UserRouter_UserRouter.html">UserRouter</a></li></ul><h3>Global</h3><ul><li><a href="global.html#WS_EVENTS">WS_EVENTS</a></li><li><a href="global.html#clearCookie">clearCookie</a></li><li><a href="global.html#createSession">createSession</a></li><li><a href="global.html#createSessionCookie">createSessionCookie</a></li><li><a href="global.html#generateSessionId">generateSessionId</a></li><li><a href="global.html#getSessionCookieName">getSessionCookieName</a></li><li><a href="global.html#invalidateSession">invalidateSession</a></li><li><a href="global.html#invalidateUserSessions">invalidateUserSessions</a></li><li><a href="global.html#readSessionCookie">readSessionCookie</a></li><li><a href="global.html#serializeOptions">serializeOptions</a></li><li><a href="global.html#setCookie">setCookie</a></li><li><a href="global.html#validateSession">validateSession</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.4</a> on Tue Dec 17 2024 23:00:08 GMT-0300 (hora de verano de Chile)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

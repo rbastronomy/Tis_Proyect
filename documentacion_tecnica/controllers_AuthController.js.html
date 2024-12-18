@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: controllers/AuthController.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: controllers/AuthController.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>import { UserService } from '../services/UserService.js';
+import { AuthService } from '../services/AuthService.js';
+import { AuthError } from '../auth/auth.js';
+import dotenv from 'dotenv';
+import { clearCookie } from '../utils/cookieUtils.js';
+
+
+dotenv.config();
+
+export class AuthController {
+  constructor() {
+    this.userService = new UserService();
+    this.authService = new AuthService(this.userService);
+  }
+
+  /**
+   * Handles user registration
+   * @param {Object} request - Fastify request object
+   * @param {Object} request.body - Registration data including:
+   * @param {string} request.body.rut - User's RUT
+   * @param {string} request.body.nombre - User's name
+   * @param {string} request.body.correo - User's email
+   * @param {string} request.body.telefono - User's phone
+   * @param {string} request.body.nacionalidad - User's nationality
+   * @param {string} request.body.genero - User's gender
+   * @param {string} request.body.contrasena - User's password
+   * @param {Date} request.body.fecha_contratacion - Driver's hire date (optional)
+   * @param {Date} request.body.licencia_conducir - Driver's license expiry (optional)
+   * @param {number} request.body.id_roles - User's role ID
+   * @param {boolean} [request.body.createSession=true] - Whether to create a session
+   * @param {Object} reply - Fastify reply object
+   * @returns {Promise&lt;Object>} Response object containing new user data
+   * @throws {AuthError} When registration fails
+   */
+  async register(request, reply) {
+    try {
+      // Validate required fields based on role
+      const isDriver = request.body.id_roles === 3; // Assuming 3 is the driver role ID
+      if (isDriver) {
+        const requiredFields = [
+          'rut', 
+          'nombre', 
+          'correo', 
+          'telefono', 
+          'nacionalidad', 
+          'genero',
+          'contrasena',
+          'fecha_contratacion',
+          'licencia_conducir'
+        ];
+
+        const missingFields = requiredFields.filter(field => !request.body[field]);
+        if (missingFields.length > 0) {
+          return reply.status(400).send({ 
+            error: `Missing required fields: ${missingFields.join(', ')}` 
+          });
+        }
+      }
+
+      // Only create session if explicitly requested (default true for backward compatibility)
+      const createSession = request.body.createSession !== false;
+      const { user, session } = await this.authService.register(request.body, createSession);
+      
+      // Always set cookie if session was created
+      if (session) {
+        const sessionCookie = this.authService.auth.createSessionCookie(session);
+        reply.header('Set-Cookie', sessionCookie);
+      }
+
+      return reply.code(201).send({ 
+        message: 'Registration successful', 
+        user: user.toJSON() 
+      });
+    } catch (error) {
+      if (error.message === 'User already exists') {
+        return reply.status(400).send({ error: error.message });
+      }
+      if (error instanceof AuthError) {
+        return reply.status(400).send({ error: error.message });
+      }
+      request.log.error(error);
+      return reply.status(500).send({ error: 'An error occurred during registration' });
+    }
+  }
+
+  /**
+   * Handles user login
+   * @param {Object} request - Fastify request object
+   * @param {Object} reply - Fastify reply object
+   * @returns {Promise&lt;Object>} Response object containing user data and session
+   * @throws {AuthError} When login fails
+   */
+  async login(request, reply) {
+    try {
+      const { correo, contrasena } = request.body;
+      console.log('Login attempt with correo:', correo);
+      
+      const { user, session } = await this.authService.login(correo, contrasena);
+      
+      const sessionCookie = this.authService.auth.createSessionCookie(session);
+      reply.header('Set-Cookie', sessionCookie);
+      
+      return reply.send({ 
+        success: true,
+        message: 'Login successful', 
+        user: user.toJSON(),
+        role: user.role,
+        permissions: user.permissions
+      });
+    } catch (error) {
+      console.error('Login error:', error);
+      request.log.error(error);
+      
+      if (error instanceof AuthError) {
+        return reply.status(401).send({ 
+          success: false,
+          error: error.message,
+          code: error.code 
+        });
+      }
+      
+      return reply.status(500).send({ 
+        success: false,
+        error: 'An error occurred during login' 
+      });
+    }
+  }
+
+  /**
+   * Handles user logout
+   * @param {Object} request - Fastify request object
+   * @param {Object} reply - Fastify reply object
+   * @returns {Promise&lt;Object>} Response confirming successful logout
+   */
+  async logout(request, reply) {
+    try {
+      const cookieHeader = request.headers.cookie || '';
+      console.log('Cookie header:', cookieHeader);
+
+      const sessionId = this.authService.auth.provider.readSessionCookie(cookieHeader);
+
+      if (!sessionId) {
+        return reply.status(401).send({ error: 'No session found' });
+      }
+
+      await this.authService.logout(sessionId);
+
+      // Clear the session cookie using the cookie name from the provider
+      const cookieName = this.authService.auth.provider.getSessionCookieName();
+      clearCookie(reply, cookieName);
+
+      return reply.send({ message: 'Logout successful' });
+    } catch (error) {
+      request.log.error(error);
+      return reply.status(500).send({ error: 'An error occurred during logout' });
+    }
+  }
+
+  /**
+   * Validates user session
+   * @param {Object} request - Fastify request object
+   * @param {Object} reply - Fastify reply object
+   * @returns {Promise&lt;Object>} Response containing session validation status and user data
+   */
+  async validateSession(request, reply) {
+    try {
+      // Get the raw cookie header string
+      const cookieHeader = request.headers.cookie || '';
+      console.log('Cookie header:', cookieHeader);
+      
+      // Extract just the session cookie value, not the entire cookie object
+      const sessionId = this.authService.auth.provider.readSessionCookie(cookieHeader);
+      
+      if (!sessionId) {
+        console.log('No valid session cookie found');
+        return reply.status(401).send({ error: 'No session found' });
+      }
+
+      // Log the actual session ID string
+      console.log('Session ID from cookie:', sessionId);
+
+      const { session, user } = await this.authService.validateSession(sessionId);
+      if (!session) {
+        return reply.status(401).send({ error: 'Invalid session' });
+      }
+      
+      return reply.send({ 
+        message: 'Session is valid', 
+        user: user.toJSON() 
+      });
+    } catch (error) {
+      console.error('Session validation error:', {
+        message: error.message,
+        code: error.code,
+        stack: error.stack
+      });
+      
+      if (error.code === 'INVALID_SESSION') {
+        return reply.status(401).send({ error: 'Invalid session' });
+      }
+      
+      return reply.status(500).send({ error: 'An error occurred during session validation' });
+    }
+  }
+}</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="AuthProvider.html">AuthProvider</a></li><li><a href="AuthRouter.html">AuthRouter</a></li><li><a href="AuthRouter_AuthRouter.html">AuthRouter</a></li><li><a href="AuthRouter_BaseRouter.html">BaseRouter</a></li><li><a href="BaseModel.html">BaseModel</a></li><li><a href="BaseRepository_BaseRepository.html">BaseRepository</a></li><li><a href="BaseRouter.html">BaseRouter</a></li><li><a href="BaseRouter_BaseRouter.html">BaseRouter</a></li><li><a href="BaseService.html">BaseService</a></li><li><a href="BaseService_BaseService.html">BaseService</a></li><li><a href="BookingModel.html">BookingModel</a></li><li><a href="BookingRouter.html">BookingRouter</a></li><li><a href="BookingRouter_BaseRouter.html">BaseRouter</a></li><li><a href="BookingRouter_BookingRouter.html">BookingRouter</a></li><li><a href="ExampleRouter.html">ExampleRouter</a></li><li><a href="ExampleRouter_BaseRouter.html">BaseRouter</a></li><li><a href="ExampleRouter_ExampleRouter.html">ExampleRouter</a></li><li><a href="HistoryModel.html">HistoryModel</a></li><li><a href="HistoryRepository.html">HistoryRepository</a></li><li><a href="HistoryRepository_BaseRepository.html">BaseRepository</a></li><li><a href="HistoryService.html">HistoryService</a></li><li><a href="HistoryService_BaseService.html">BaseService</a></li><li><a href="MapRouter.html">MapRouter</a></li><li><a href="MapRouter_BaseRouter.html">BaseRouter</a></li><li><a href="MapRouter_MapRouter.html">MapRouter</a></li><li><a href="PermissionModel.html">PermissionModel</a></li><li><a href="PermissionRouter.html">PermissionRouter</a></li><li><a href="PermissionRouter_BaseRouter.html">BaseRouter</a></li><li><a href="PermissionRouter_PermissionRouter.html">PermissionRouter</a></li><li><a href="RatingRouter.html">RatingRouter</a></li><li><a href="RatingRouter_BaseRouter.html">BaseRouter</a></li><li><a href="ReceiptModel_ReceiptModel.html">ReceiptModel</a></li><li><a href="ReportController.html">ReportController</a></li><li><a href="ReportModel.html">ReportModel</a></li><li><a href="ReportRepository.html">ReportRepository</a></li><li><a href="ReportRepository_BaseRepository.html">BaseRepository</a></li><li><a href="ReportRouter.html">ReportRouter</a></li><li><a href="ReportRouter_BaseRouter.html">BaseRouter</a></li><li><a href="ReportService.html">ReportService</a></li><li><a href="RoleModel.html">RoleModel</a></li><li><a href="RoleRouter.html">RoleRouter</a></li><li><a href="RoleRouter_BaseRouter.html">BaseRouter</a></li><li><a href="RoleRouter_RoleRouter.html">RoleRouter</a></li><li><a href="ServiceModel.html">ServiceModel</a></li><li><a href="SessionModel.html">SessionModel</a></li><li><a href="TaxiController.html">TaxiController</a></li><li><a href="TaxiController_TaxiController.html">TaxiController</a></li><li><a href="TaxiModel.html">TaxiModel</a></li><li><a href="TaxiRepository.html">TaxiRepository</a></li><li><a href="TaxiRepository_BaseRepository.html">BaseRepository</a></li><li><a href="TaxiRepository_TaxiRepository.html">TaxiRepository</a></li><li><a href="TaxiRouter.html">TaxiRouter</a></li><li><a href="TaxiRouter_BaseRouter.html">BaseRouter</a></li><li><a href="TaxiRouter_TaxiRouter.html">TaxiRouter</a></li><li><a href="TripModel_TripModel.html">TripModel</a></li><li><a href="TripRouter.html">TripRouter</a></li><li><a href="TripRouter_BaseRouter.html">BaseRouter</a></li><li><a href="TripRouter_TripRouter.html">TripRouter</a></li><li><a href="UserModel.html">UserModel</a></li><li><a href="UserRouter.html">UserRouter</a></li><li><a href="UserRouter_BaseRouter.html">BaseRouter</a></li><li><a href="UserRouter_UserRouter.html">UserRouter</a></li></ul><h3>Global</h3><ul><li><a href="global.html#WS_EVENTS">WS_EVENTS</a></li><li><a href="global.html#clearCookie">clearCookie</a></li><li><a href="global.html#createSession">createSession</a></li><li><a href="global.html#createSessionCookie">createSessionCookie</a></li><li><a href="global.html#generateSessionId">generateSessionId</a></li><li><a href="global.html#getSessionCookieName">getSessionCookieName</a></li><li><a href="global.html#invalidateSession">invalidateSession</a></li><li><a href="global.html#invalidateUserSessions">invalidateUserSessions</a></li><li><a href="global.html#readSessionCookie">readSessionCookie</a></li><li><a href="global.html#serializeOptions">serializeOptions</a></li><li><a href="global.html#setCookie">setCookie</a></li><li><a href="global.html#validateSession">validateSession</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.4</a> on Tue Dec 17 2024 23:00:08 GMT-0300 (hora de verano de Chile)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

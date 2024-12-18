@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: models/HistoryModel.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: models/HistoryModel.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>import { BaseModel } from '../core/BaseModel.js';
+
+/**
+ * Represents history data from the database
+ * @typedef {Object} HistoryData
+ * @property {number} id_historial - History entry unique identifier
+ * @property {string} estado_historial - Status of the history entry
+ * @property {string} observacion_historial - Observations or notes
+ * @property {Date} fecha_cambio - Date of the change
+ * @property {string} accion - Action performed
+ * @property {number} codigo_reserva - Associated booking code
+ * @property {Date} created_at - Record creation timestamp
+ * @property {Date} updated_at - Record update timestamp
+ */
+
+/**
+ * Class representing a History entry in the system
+ * @extends {BaseModel}
+ */
+export class HistoryModel extends BaseModel {
+    static VALID_ESTADOS = [
+        'RESERVA_EN_REVISION', 
+        'RESERVA_CONFIRMADA', 
+        'RESERVA_CANCELADA', 
+        'RESERVA_COMPLETADA', 
+        'RESERVA_RECHAZADA', 
+        'RESERVA_EN_PROGRESO',
+        'ENTRADA_VACIA'
+    ];
+    static VALID_ACCIONES = ['CREACION', 'MODIFICACION', 'CANCELACION', 'CONFIRMACION', 'COMPLETADO'];
+
+    /**
+     * Default values for a new history instance
+     * @type {HistoryData}
+     */
+    static defaultData = {
+        id_historial: null,
+        estado_historial: 'ENTRADA_VACIA',
+        observacion_historial: '',
+        fecha_cambio: null,
+        accion: 'CREACION',
+        codigo_reserva: null,
+        created_at: null,
+        updated_at: null
+    };
+
+    /**
+     * Creates a new HistoryModel instance
+     * @param {Partial&lt;HistoryData>} data - Initial history data
+     * @throws {Error} If validation fails
+     */
+    constructor(data = {}) {
+        super(data, HistoryModel.defaultData);
+        this.validate();
+    }
+
+    /**
+     * Validates the history data
+     * @private
+     * @throws {Error} If validation fails
+     */
+    validate() {
+        this.clearErrors();
+
+        this.validateEnum('estado_historial', this._data.estado_historial, HistoryModel.VALID_ESTADOS);
+        this.validateEnum('accion', this._data.accion, HistoryModel.VALID_ACCIONES);
+        
+        this.validateString('observacion_historial', this._data.observacion_historial, { required: false });
+        
+        this.validateDate('fecha_cambio', this._data.fecha_cambio);
+        
+        if (!this._data.codigo_reserva) {
+            this.addError('codigo_reserva', 'Código de reserva es requerido');
+        }
+
+        this.throwIfErrors();
+    }
+
+    // Setters with validation
+    /** @param {string} value */
+    set estado_historial(value) {
+        if (!HistoryModel.VALID_ESTADOS.includes(value)) {
+            throw new Error(`Estado de historial debe ser uno de: ${HistoryModel.VALID_ESTADOS.join(', ')}`);
+        }
+        this._data.estado_historial = value;
+    }
+
+    /** @param {string} value */
+    set accion(value) {
+        if (!HistoryModel.VALID_ACCIONES.includes(value)) {
+            throw new Error(`Acción debe ser una de: ${HistoryModel.VALID_ACCIONES.join(', ')}`);
+        }
+        this._data.accion = value;
+    }
+
+    /** @param {string} value */
+    set observacion_historial(value) {
+        if (typeof value !== 'string') {
+            throw new Error('Observación debe ser un texto válido');
+        }
+        this._data.observacion_historial = value.trim();
+    }
+
+    /** @param {Date|string} value */
+    set fecha_cambio(value) {
+        const date = value instanceof Date ? value : new Date(value);
+        if (isNaN(date.getTime())) {
+            throw new Error('Fecha de cambio debe ser una fecha válida');
+        }
+        this._data.fecha_cambio = date;
+    }
+
+    // Getters
+    /** @returns {number} History entry ID */
+    get id_historial() { return this._data.id_historial; }
+    /** @returns {string} History status */
+    get estado_historial() { return this._data.estado_historial; }
+    /** @returns {string} Observations */
+    get observacion_historial() { return this._data.observacion_historial; }
+    /** @returns {Date} Change date */
+    get fecha_cambio() { return this._data.fecha_cambio; }
+    /** @returns {string} Action performed */
+    get accion() { return this._data.accion; }
+    /** @returns {number} Associated booking code */
+    get codigo_reserva() { return this._data.codigo_reserva; }
+
+    /**
+     * Gets the time elapsed since the change in days
+     * @returns {number} Days since change
+     */
+    getTimeSinceChange() {
+        const changeDate = new Date(this._data.fecha_cambio);
+        const now = new Date();
+        return (now - changeDate) / (1000 * 60 * 60 * 24);
+    }
+
+    /**
+     * Checks if the change was made recently (less than 24 hours ago)
+     * @returns {boolean} True if change is recent
+     */
+    isRecentChange() {
+        return this.getTimeSinceChange() &lt; 1;
+    }
+
+    /**
+     * Converts the history model to a JSON object
+     * @returns {Object} History data as JSON
+     */
+    toJSON() {
+        return {
+            id_historial: this._data.id_historial,
+            estado_historial: this._data.estado_historial,
+            observacion_historial: this._data.observacion_historial,
+            fecha_cambio: this._data.fecha_cambio,
+            accion: this._data.accion,
+            codigo_reserva: this._data.codigo_reserva,
+            created_at: this._data.created_at,
+            updated_at: this._data.updated_at
+        };
+    }
+}</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="AuthProvider.html">AuthProvider</a></li><li><a href="AuthRouter.html">AuthRouter</a></li><li><a href="AuthRouter_AuthRouter.html">AuthRouter</a></li><li><a href="AuthRouter_BaseRouter.html">BaseRouter</a></li><li><a href="BaseModel.html">BaseModel</a></li><li><a href="BaseRepository_BaseRepository.html">BaseRepository</a></li><li><a href="BaseRouter.html">BaseRouter</a></li><li><a href="BaseRouter_BaseRouter.html">BaseRouter</a></li><li><a href="BaseService.html">BaseService</a></li><li><a href="BaseService_BaseService.html">BaseService</a></li><li><a href="BookingModel.html">BookingModel</a></li><li><a href="BookingRouter.html">BookingRouter</a></li><li><a href="BookingRouter_BaseRouter.html">BaseRouter</a></li><li><a href="BookingRouter_BookingRouter.html">BookingRouter</a></li><li><a href="ExampleRouter.html">ExampleRouter</a></li><li><a href="ExampleRouter_BaseRouter.html">BaseRouter</a></li><li><a href="ExampleRouter_ExampleRouter.html">ExampleRouter</a></li><li><a href="HistoryModel.html">HistoryModel</a></li><li><a href="HistoryRepository.html">HistoryRepository</a></li><li><a href="HistoryRepository_BaseRepository.html">BaseRepository</a></li><li><a href="HistoryService.html">HistoryService</a></li><li><a href="HistoryService_BaseService.html">BaseService</a></li><li><a href="MapRouter.html">MapRouter</a></li><li><a href="MapRouter_BaseRouter.html">BaseRouter</a></li><li><a href="MapRouter_MapRouter.html">MapRouter</a></li><li><a href="PermissionModel.html">PermissionModel</a></li><li><a href="PermissionRouter.html">PermissionRouter</a></li><li><a href="PermissionRouter_BaseRouter.html">BaseRouter</a></li><li><a href="PermissionRouter_PermissionRouter.html">PermissionRouter</a></li><li><a href="RatingRouter.html">RatingRouter</a></li><li><a href="RatingRouter_BaseRouter.html">BaseRouter</a></li><li><a href="ReceiptModel_ReceiptModel.html">ReceiptModel</a></li><li><a href="ReportController.html">ReportController</a></li><li><a href="ReportModel.html">ReportModel</a></li><li><a href="ReportRepository.html">ReportRepository</a></li><li><a href="ReportRepository_BaseRepository.html">BaseRepository</a></li><li><a href="ReportRouter.html">ReportRouter</a></li><li><a href="ReportRouter_BaseRouter.html">BaseRouter</a></li><li><a href="ReportService.html">ReportService</a></li><li><a href="RoleModel.html">RoleModel</a></li><li><a href="RoleRouter.html">RoleRouter</a></li><li><a href="RoleRouter_BaseRouter.html">BaseRouter</a></li><li><a href="RoleRouter_RoleRouter.html">RoleRouter</a></li><li><a href="ServiceModel.html">ServiceModel</a></li><li><a href="SessionModel.html">SessionModel</a></li><li><a href="TaxiController.html">TaxiController</a></li><li><a href="TaxiController_TaxiController.html">TaxiController</a></li><li><a href="TaxiModel.html">TaxiModel</a></li><li><a href="TaxiRepository.html">TaxiRepository</a></li><li><a href="TaxiRepository_BaseRepository.html">BaseRepository</a></li><li><a href="TaxiRepository_TaxiRepository.html">TaxiRepository</a></li><li><a href="TaxiRouter.html">TaxiRouter</a></li><li><a href="TaxiRouter_BaseRouter.html">BaseRouter</a></li><li><a href="TaxiRouter_TaxiRouter.html">TaxiRouter</a></li><li><a href="TripModel_TripModel.html">TripModel</a></li><li><a href="TripRouter.html">TripRouter</a></li><li><a href="TripRouter_BaseRouter.html">BaseRouter</a></li><li><a href="TripRouter_TripRouter.html">TripRouter</a></li><li><a href="UserModel.html">UserModel</a></li><li><a href="UserRouter.html">UserRouter</a></li><li><a href="UserRouter_BaseRouter.html">BaseRouter</a></li><li><a href="UserRouter_UserRouter.html">UserRouter</a></li></ul><h3>Global</h3><ul><li><a href="global.html#WS_EVENTS">WS_EVENTS</a></li><li><a href="global.html#clearCookie">clearCookie</a></li><li><a href="global.html#createSession">createSession</a></li><li><a href="global.html#createSessionCookie">createSessionCookie</a></li><li><a href="global.html#generateSessionId">generateSessionId</a></li><li><a href="global.html#getSessionCookieName">getSessionCookieName</a></li><li><a href="global.html#invalidateSession">invalidateSession</a></li><li><a href="global.html#invalidateUserSessions">invalidateUserSessions</a></li><li><a href="global.html#readSessionCookie">readSessionCookie</a></li><li><a href="global.html#serializeOptions">serializeOptions</a></li><li><a href="global.html#setCookie">setCookie</a></li><li><a href="global.html#validateSession">validateSession</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.4</a> on Tue Dec 17 2024 23:00:08 GMT-0300 (hora de verano de Chile)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

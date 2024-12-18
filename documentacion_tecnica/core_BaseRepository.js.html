@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: core/BaseRepository.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: core/BaseRepository.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>import { db } from '../db/database.js';
+
+export class BaseRepository {
+  /**
+   * @param {string} tableName - Nombre de la tabla en la base de datos
+   * @param {string} primaryKey - Nombre de la columna ID
+   */
+  constructor(tableName, primaryKey = 'id') {
+    this.tableName = tableName;
+    this.primaryKey = primaryKey;
+    this.db = db;
+  }
+
+  /**
+   * Encuentra un registro por ID
+   * @param {string|number} id - Identificador del registro
+   * @returns {Promise&lt;Object|null>} - Instancia del modelo o null
+   */
+  async findById(id) {
+    try {
+      const result = await this.db(this.tableName)
+        .where(this.primaryKey, id)
+        .first();
+      return result;
+    } catch (error) {
+      throw new Error(`Error al buscar por ID en ${this.tableName}: ${error.message}`);
+    }
+  }
+
+  /**
+   * Encuentra todos los registros que coincidan con los filtros
+   * @param {Object} filters - Filtros a aplicar
+   * @returns {Promise&lt;Array>} - Array de instancias del modelo
+   */
+  async findAll(filters = {}) {
+    try {
+      const results = await this.db(this.tableName)
+        .where(filters)
+        .select('*');
+      return results;
+    } catch (error) {
+      throw new Error(`Error al buscar todos en ${this.tableName}: ${error.message}`);
+    }
+  }
+
+  /**
+   * Crea un nuevo registro
+   * @param {Object} data - Datos a insertar
+   * @param {Object} [trx] - Optional transaction object
+   * @returns {Promise&lt;Object>} - Instancia del modelo creado
+   */
+  async create(data, trx = null) {
+    try {
+      const query = (trx || this.db)(this.tableName)
+        .insert(data)
+        .returning('*');  // Return all columns instead of just the ID
+      
+      const [result] = await query;
+      return result;
+    } catch (error) {
+      throw new Error(`Error al crear en ${this.tableName}: ${error.message}`);
+    }
+  }
+
+  /**
+   * Actualiza un registro existente
+   * @param {string|number} id - Identificador del registro
+   * @param {Object} data - Datos a actualizar
+   * @returns {Promise&lt;Object>} - Instancia del modelo actualizado
+   */
+  async update(id, data) {
+    try {
+      const [updated] = await this.db(this.tableName)
+        .where(this.primaryKey, id)
+        .update(data)
+        .returning('*');
+      return updated;
+    } catch (error) {
+      throw new Error(`Error al actualizar en ${this.tableName}: ${error.message}`);
+    }
+  }
+
+  // Método genérico para eliminar un registro
+  async delete(id) {
+    try {
+      await this.db(this.tableName)
+        .where(this.primaryKey, id)
+        .delete();
+    } catch (error) {
+      throw new Error(`Error al eliminar en ${this.tableName}: ${error.message}`);
+    }
+  }
+
+  // Método genérico para realizar una operación de soft delete
+  async softDelete(id, idColumn = 'deleted_at') {
+    try {
+      return await this.db(this.tableName)
+        .where(this.primaryKey, id)
+        .update({
+          [idColumn]: new Date(),
+          active: false
+        });
+    } catch (error) {
+      throw new Error(`Error al realizar soft delete en ${this.tableName}: ${error.message}`);
+    }
+  }
+
+  // Método para transacciones
+  async transaction(callback) {
+    return await this.db.transaction(async (trx) => {
+      return await callback(trx);
+    });
+  }
+
+  // Método para búsqueda con condiciones complejas
+  async findWhere(conditions, options = {}) {
+    try {
+      let query = this.db(this.tableName);
+
+      // Agregar condiciones
+      Object.entries(conditions).forEach(([key, value]) => {
+        if (Array.isArray(value)) {
+          query = query.whereIn(key, value);
+        } else if (value === null) {
+          query = query.whereNull(key);
+        } else {
+          query = query.where(key, value);
+        }
+      });
+
+      const totalQuery = query.clone();
+      const [{ count: total }] = await totalQuery.count('* as count');
+  
+      // Opcional: Paginación
+      if (options.page &amp;&amp; options.pageSize) {
+        const page = options.page > 0 ? options.page : 1;
+        const pageSize = options.pageSize;
+        query = query
+          .limit(pageSize)
+          .offset((page - 1) * pageSize);
+      }
+
+      // Opcional: Ordenamiento
+      if (options.orderBy) {
+        query = query.orderBy(options.orderBy, options.order || 'asc');
+      }
+
+      const data = await query;
+
+      return {
+        data,
+        pagination: {
+          total: parseInt(total),
+          page: options.page || 1,
+          pageSize: options.pageSize || 10,
+          totalPages: Math.ceil(total / (options.pageSize || 10))
+        }
+      };
+    } catch (error) {
+      throw new Error(`Error en búsqueda compleja en ${this.tableName}: ${error.message}`);
+    }
+  }
+
+  // Método para contar registros
+  async count(filters = {}) {
+    try {
+      const [result] = await this.db(this.tableName)
+        .where(filters)
+        .count('* as total');
+
+      return parseInt(result.total, 10);
+    } catch (error) {
+      throw new Error(`Error al contar registros en ${this.tableName}: ${error.message}`);
+    }
+  }
+}
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="AuthProvider.html">AuthProvider</a></li><li><a href="AuthRouter.html">AuthRouter</a></li><li><a href="AuthRouter_AuthRouter.html">AuthRouter</a></li><li><a href="AuthRouter_BaseRouter.html">BaseRouter</a></li><li><a href="BaseModel.html">BaseModel</a></li><li><a href="BaseRepository_BaseRepository.html">BaseRepository</a></li><li><a href="BaseRouter.html">BaseRouter</a></li><li><a href="BaseRouter_BaseRouter.html">BaseRouter</a></li><li><a href="BaseService.html">BaseService</a></li><li><a href="BaseService_BaseService.html">BaseService</a></li><li><a href="BookingModel.html">BookingModel</a></li><li><a href="BookingRouter.html">BookingRouter</a></li><li><a href="BookingRouter_BaseRouter.html">BaseRouter</a></li><li><a href="BookingRouter_BookingRouter.html">BookingRouter</a></li><li><a href="ExampleRouter.html">ExampleRouter</a></li><li><a href="ExampleRouter_BaseRouter.html">BaseRouter</a></li><li><a href="ExampleRouter_ExampleRouter.html">ExampleRouter</a></li><li><a href="HistoryModel.html">HistoryModel</a></li><li><a href="HistoryRepository.html">HistoryRepository</a></li><li><a href="HistoryRepository_BaseRepository.html">BaseRepository</a></li><li><a href="HistoryService.html">HistoryService</a></li><li><a href="HistoryService_BaseService.html">BaseService</a></li><li><a href="MapRouter.html">MapRouter</a></li><li><a href="MapRouter_BaseRouter.html">BaseRouter</a></li><li><a href="MapRouter_MapRouter.html">MapRouter</a></li><li><a href="PermissionModel.html">PermissionModel</a></li><li><a href="PermissionRouter.html">PermissionRouter</a></li><li><a href="PermissionRouter_BaseRouter.html">BaseRouter</a></li><li><a href="PermissionRouter_PermissionRouter.html">PermissionRouter</a></li><li><a href="RatingRouter.html">RatingRouter</a></li><li><a href="RatingRouter_BaseRouter.html">BaseRouter</a></li><li><a href="ReceiptModel_ReceiptModel.html">ReceiptModel</a></li><li><a href="ReportController.html">ReportController</a></li><li><a href="ReportModel.html">ReportModel</a></li><li><a href="ReportRepository.html">ReportRepository</a></li><li><a href="ReportRepository_BaseRepository.html">BaseRepository</a></li><li><a href="ReportRouter.html">ReportRouter</a></li><li><a href="ReportRouter_BaseRouter.html">BaseRouter</a></li><li><a href="ReportService.html">ReportService</a></li><li><a href="RoleModel.html">RoleModel</a></li><li><a href="RoleRouter.html">RoleRouter</a></li><li><a href="RoleRouter_BaseRouter.html">BaseRouter</a></li><li><a href="RoleRouter_RoleRouter.html">RoleRouter</a></li><li><a href="ServiceModel.html">ServiceModel</a></li><li><a href="SessionModel.html">SessionModel</a></li><li><a href="TaxiController.html">TaxiController</a></li><li><a href="TaxiController_TaxiController.html">TaxiController</a></li><li><a href="TaxiModel.html">TaxiModel</a></li><li><a href="TaxiRepository.html">TaxiRepository</a></li><li><a href="TaxiRepository_BaseRepository.html">BaseRepository</a></li><li><a href="TaxiRepository_TaxiRepository.html">TaxiRepository</a></li><li><a href="TaxiRouter.html">TaxiRouter</a></li><li><a href="TaxiRouter_BaseRouter.html">BaseRouter</a></li><li><a href="TaxiRouter_TaxiRouter.html">TaxiRouter</a></li><li><a href="TripModel_TripModel.html">TripModel</a></li><li><a href="TripRouter.html">TripRouter</a></li><li><a href="TripRouter_BaseRouter.html">BaseRouter</a></li><li><a href="TripRouter_TripRouter.html">TripRouter</a></li><li><a href="UserModel.html">UserModel</a></li><li><a href="UserRouter.html">UserRouter</a></li><li><a href="UserRouter_BaseRouter.html">BaseRouter</a></li><li><a href="UserRouter_UserRouter.html">UserRouter</a></li></ul><h3>Global</h3><ul><li><a href="global.html#WS_EVENTS">WS_EVENTS</a></li><li><a href="global.html#clearCookie">clearCookie</a></li><li><a href="global.html#createSession">createSession</a></li><li><a href="global.html#createSessionCookie">createSessionCookie</a></li><li><a href="global.html#generateSessionId">generateSessionId</a></li><li><a href="global.html#getSessionCookieName">getSessionCookieName</a></li><li><a href="global.html#invalidateSession">invalidateSession</a></li><li><a href="global.html#invalidateUserSessions">invalidateUserSessions</a></li><li><a href="global.html#readSessionCookie">readSessionCookie</a></li><li><a href="global.html#serializeOptions">serializeOptions</a></li><li><a href="global.html#setCookie">setCookie</a></li><li><a href="global.html#validateSession">validateSession</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.4</a> on Tue Dec 17 2024 23:00:08 GMT-0300 (hora de verano de Chile)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

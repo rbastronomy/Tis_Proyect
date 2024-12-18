@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: models/TripModel.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: models/TripModel.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>import { BaseModel } from '../core/BaseModel.js';
+import { BookingModel } from './BookingModel.js';
+import { UserModel } from './UserModel.js';
+import { TaxiModel } from './TaxiModel.js';
+import { ReceiptModel } from './ReceiptModel.js';
+
+/**
+ * @typedef {Object} TripModelData
+ * @property {number|null} codigo_viaje - Trip ID
+ * @property {string} origen_viaje - Trip origin location
+ * @property {string} destino_viaje - Trip destination location
+ * @property {number} duracion - Trip duration in minutes
+ * @property {number} pasajeros - Number of passengers
+ * @property {string} observacion_viaje - Trip observations
+ * @property {Date|null} fecha_viaje - Trip completion date
+ * @property {string} estado_viaje - Trip status (always COMPLETADO for valid trips)
+ * @property {Date|null} deleted_at_viaje - Soft delete timestamp
+ * @property {Date|null} created_at - Creation timestamp
+ * @property {Date|null} updated_at - Last update timestamp
+ */
+
+export class TripModel extends BaseModel {
+    static VALID_ESTADOS = [
+        'COMPLETADO',    // Trip record is valid and complete
+        'ANULADO'       // Trip record was voided/cancelled after creation
+    ];
+
+    /**
+     * Default values for a new trip instance
+     * @type {TripModelData}
+     */
+    static defaultData = {
+        codigo_viaje: null,
+        origen_viaje: '',
+        destino_viaje: '',
+        duracion: 0,
+        pasajeros: 1,
+        observacion_viaje: '',
+        fecha_viaje: null,
+        estado_viaje: 'COMPLETADO',
+        deleted_at_viaje: null,
+        created_at: null,
+        updated_at: null,
+        booking: null,
+        driver: null,
+        taxi: null,
+        receipt: null
+    };
+
+    /**
+     * Creates a new TripModel instance representing a completed trip
+     * @param {Partial&lt;TripModelData>} data - Initial trip data
+     * @throws {Error} If validation fails
+     */
+    constructor(data = {}) {
+        // Ensure fecha_viaje is set to completion time if not provided
+        if (!data.fecha_viaje) {
+            data.fecha_viaje = new Date();
+        }
+        
+        super(data, TripModel.defaultData);
+
+        // Initialize related models if raw data is provided
+        if (data.booking) {
+            this.booking = data.booking;
+        }
+        if (data.receipt) {
+            this.receipt = data.receipt;
+        }
+
+        this.validate();
+    }
+
+    /**
+     * Validates the trip record data
+     * @private
+     * @throws {Error} If validation fails
+     */
+    validate() {
+        this.clearErrors();
+
+        this.validateString('origen_viaje', this._data.origen_viaje);
+        this.validateString('destino_viaje', this._data.destino_viaje);
+        this.validateNumber('duracion', this._data.duracion, { min: 1 });
+        this.validateNumber('pasajeros', this._data.pasajeros, { min: 1 });
+        this.validateString('observacion_viaje', this._data.observacion_viaje, { required: false });
+        this.validateDate('fecha_viaje', this._data.fecha_viaje);
+        this.validateEnum('estado_viaje', this._data.estado_viaje, TripModel.VALID_ESTADOS);
+
+        // Modified validation to check booking instead of driver/taxi directly
+        if (!this._data.booking) {
+            this.addError('booking', 'El viaje debe estar asociado a una reserva');
+        } else {
+            // Access booking data through _data property since it's a BookingModel instance
+            const bookingData = this._data.booking._data;
+            
+            // Validate that booking has driver and taxi info
+            if (!bookingData.rut_conductor) {
+                this.addError('driver', 'La reserva debe tener un conductor asignado');
+            }
+            if (!bookingData.patente_taxi) {
+                this.addError('taxi', 'La reserva debe tener un taxi asignado');
+            }
+        }
+
+        this.throwIfErrors();
+    }
+
+    // Setters with validation
+    /** @param {string} value */
+    set origen_viaje(value) {
+        if (typeof value !== 'string' || value.trim().length === 0) {
+            throw new Error('Origen debe ser una dirección válida');
+        }
+        this._data.origen_viaje = value.trim();
+    }
+
+    /** @param {string} value */
+    set destino_viaje(value) {
+        if (typeof value !== 'string' || value.trim().length === 0) {
+            throw new Error('Destino debe ser una dirección válida');
+        }
+        this._data.destino_viaje = value.trim();
+    }
+
+    /** @param {number} value */
+    set duracion(value) {
+        const duration = Number(value);
+        if (isNaN(duration) || duration &lt; 1) {
+            throw new Error('Duración debe ser al menos 1 minuto');
+        }
+        this._data.duracion = duration;
+    }
+
+    /** @param {number} value */
+    set pasajeros(value) {
+        const passengers = Number(value);
+        if (isNaN(passengers) || passengers &lt; 1) {
+            throw new Error('Debe haber al menos un pasajero');
+        }
+        this._data.pasajeros = passengers;
+    }
+
+    /** @param {Date|string} value */
+    set fecha_viaje(value) {
+        const date = value instanceof Date ? value : new Date(value);
+        if (isNaN(date.getTime())) {
+            throw new Error('Fecha de viaje debe ser una fecha válida');
+        }
+        this._data.fecha_viaje = date;
+    }
+
+    /** @param {BookingModel|Object} value */
+    set booking(value) {
+        if (value instanceof BookingModel) {
+            this._data.booking = value;
+        } else {
+            this._data.booking = new BookingModel(value);
+        }
+    }
+
+    /** @param {ReceiptModel|Object} value */
+    set receipt(value) {
+        if (value instanceof ReceiptModel) {
+            this._data.receipt = value;
+        } else {
+            this._data.receipt = new ReceiptModel(value);
+        }
+    }
+
+    // Getters
+    get codigo_viaje() { return this._data.codigo_viaje; }
+    get origen_viaje() { return this._data.origen_viaje; }
+    get destino_viaje() { return this._data.destino_viaje; }
+    get duracion() { return this._data.duracion; }
+    get pasajeros() { return this._data.pasajeros; }
+    get observacion_viaje() { return this._data.observacion_viaje; }
+    get fecha_viaje() { return this._data.fecha_viaje; }
+    get estado_viaje() { return this._data.estado_viaje; }
+    get booking() { return this._data.booking; }
+    get driver() { return this._data.driver; }
+    get taxi() { return this._data.taxi; }
+    get receipt() { return this._data.receipt; }
+
+    /**
+     * Converts the trip record to a JSON object
+     * @returns {Object} Trip data as JSON
+     */
+    toJSON() {
+        const json = {
+            codigo_viaje: this._data.codigo_viaje,
+            origen_viaje: this._data.origen_viaje,
+            destino_viaje: this._data.destino_viaje,
+            duracion: this._data.duracion,
+            pasajeros: this._data.pasajeros,
+            observacion_viaje: this._data.observacion_viaje,
+            fecha_viaje: this._data.fecha_viaje,
+            estado_viaje: this._data.estado_viaje,
+            deleted_at_viaje: this._data.deleted_at_viaje,
+            created_at: this._data.created_at,
+            updated_at: this._data.updated_at
+        };
+
+        if (this._data.booking) json.booking = this._data.booking.toJSON();
+        if (this._data.driver) json.driver = this._data.driver.toJSON();
+        if (this._data.taxi) json.taxi = this._data.taxi.toJSON();
+        if (this._data.receipt) json.receipt = this._data.receipt.toJSON();
+
+        return json;
+    }
+}</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="AuthProvider.html">AuthProvider</a></li><li><a href="AuthRouter.html">AuthRouter</a></li><li><a href="AuthRouter_AuthRouter.html">AuthRouter</a></li><li><a href="AuthRouter_BaseRouter.html">BaseRouter</a></li><li><a href="BaseModel.html">BaseModel</a></li><li><a href="BaseRepository_BaseRepository.html">BaseRepository</a></li><li><a href="BaseRouter.html">BaseRouter</a></li><li><a href="BaseRouter_BaseRouter.html">BaseRouter</a></li><li><a href="BaseService.html">BaseService</a></li><li><a href="BaseService_BaseService.html">BaseService</a></li><li><a href="BookingModel.html">BookingModel</a></li><li><a href="BookingRouter.html">BookingRouter</a></li><li><a href="BookingRouter_BaseRouter.html">BaseRouter</a></li><li><a href="BookingRouter_BookingRouter.html">BookingRouter</a></li><li><a href="ExampleRouter.html">ExampleRouter</a></li><li><a href="ExampleRouter_BaseRouter.html">BaseRouter</a></li><li><a href="ExampleRouter_ExampleRouter.html">ExampleRouter</a></li><li><a href="HistoryModel.html">HistoryModel</a></li><li><a href="HistoryRepository.html">HistoryRepository</a></li><li><a href="HistoryRepository_BaseRepository.html">BaseRepository</a></li><li><a href="HistoryService.html">HistoryService</a></li><li><a href="HistoryService_BaseService.html">BaseService</a></li><li><a href="MapRouter.html">MapRouter</a></li><li><a href="MapRouter_BaseRouter.html">BaseRouter</a></li><li><a href="MapRouter_MapRouter.html">MapRouter</a></li><li><a href="PermissionModel.html">PermissionModel</a></li><li><a href="PermissionRouter.html">PermissionRouter</a></li><li><a href="PermissionRouter_BaseRouter.html">BaseRouter</a></li><li><a href="PermissionRouter_PermissionRouter.html">PermissionRouter</a></li><li><a href="RatingRouter.html">RatingRouter</a></li><li><a href="RatingRouter_BaseRouter.html">BaseRouter</a></li><li><a href="ReceiptModel_ReceiptModel.html">ReceiptModel</a></li><li><a href="ReportController.html">ReportController</a></li><li><a href="ReportModel.html">ReportModel</a></li><li><a href="ReportRepository.html">ReportRepository</a></li><li><a href="ReportRepository_BaseRepository.html">BaseRepository</a></li><li><a href="ReportRouter.html">ReportRouter</a></li><li><a href="ReportRouter_BaseRouter.html">BaseRouter</a></li><li><a href="ReportService.html">ReportService</a></li><li><a href="RoleModel.html">RoleModel</a></li><li><a href="RoleRouter.html">RoleRouter</a></li><li><a href="RoleRouter_BaseRouter.html">BaseRouter</a></li><li><a href="RoleRouter_RoleRouter.html">RoleRouter</a></li><li><a href="ServiceModel.html">ServiceModel</a></li><li><a href="SessionModel.html">SessionModel</a></li><li><a href="TaxiController.html">TaxiController</a></li><li><a href="TaxiController_TaxiController.html">TaxiController</a></li><li><a href="TaxiModel.html">TaxiModel</a></li><li><a href="TaxiRepository.html">TaxiRepository</a></li><li><a href="TaxiRepository_BaseRepository.html">BaseRepository</a></li><li><a href="TaxiRepository_TaxiRepository.html">TaxiRepository</a></li><li><a href="TaxiRouter.html">TaxiRouter</a></li><li><a href="TaxiRouter_BaseRouter.html">BaseRouter</a></li><li><a href="TaxiRouter_TaxiRouter.html">TaxiRouter</a></li><li><a href="TripModel_TripModel.html">TripModel</a></li><li><a href="TripRouter.html">TripRouter</a></li><li><a href="TripRouter_BaseRouter.html">BaseRouter</a></li><li><a href="TripRouter_TripRouter.html">TripRouter</a></li><li><a href="UserModel.html">UserModel</a></li><li><a href="UserRouter.html">UserRouter</a></li><li><a href="UserRouter_BaseRouter.html">BaseRouter</a></li><li><a href="UserRouter_UserRouter.html">UserRouter</a></li></ul><h3>Global</h3><ul><li><a href="global.html#WS_EVENTS">WS_EVENTS</a></li><li><a href="global.html#clearCookie">clearCookie</a></li><li><a href="global.html#createSession">createSession</a></li><li><a href="global.html#createSessionCookie">createSessionCookie</a></li><li><a href="global.html#generateSessionId">generateSessionId</a></li><li><a href="global.html#getSessionCookieName">getSessionCookieName</a></li><li><a href="global.html#invalidateSession">invalidateSession</a></li><li><a href="global.html#invalidateUserSessions">invalidateUserSessions</a></li><li><a href="global.html#readSessionCookie">readSessionCookie</a></li><li><a href="global.html#serializeOptions">serializeOptions</a></li><li><a href="global.html#setCookie">setCookie</a></li><li><a href="global.html#validateSession">validateSession</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.4</a> on Tue Dec 17 2024 23:00:08 GMT-0300 (hora de verano de Chile)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

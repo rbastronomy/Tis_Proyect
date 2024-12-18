@@ -10,7 +10,11 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "migrate": "knex migrate:latest",
     "migrate:rollback": "knex migrate:rollback",
-    "migrate:make": "knex migrate:make"
+    "migrate:make": "knex migrate:make",
+    "jsdoc": "jsdoc -c jsdoc.json",
+    "docs:md": "jsdoc2md src/**/*.js > docs/documentation.md",
+    "docs:pdf": "npm run docs:md && md-to-pdf docs/documentation.md",
+    "docs": "npm run docs:pdf"
   },
   "keywords": [],
   "author": "",
@@ -21,6 +25,9 @@
     "eslint": "^9.11.1",
     "eslint-plugin-react": "^7.37.0",
     "globals": "^15.9.0",
+    "jsdoc": "^4.0.4",
+    "jsdoc-to-markdown": "^9.1.1",
+    "md-to-pdf": "^5.2.4",
     "nodemon": "^3.1.7",
     "prettier": "^3.3.3"
   },

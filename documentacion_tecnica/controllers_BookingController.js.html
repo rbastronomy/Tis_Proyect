@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: controllers/BookingController.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: controllers/BookingController.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>import { BaseController } from "../core/BaseController.js";
+import { BookingService } from "../services/BookingService.js";
+
+/** @typedef {import('../core/BaseRouter.js').AuthenticatedRequest} AuthenticatedRequest */
+
+class BookingController extends BaseController {
+    constructor() {
+        const bookingService = new BookingService();
+        super(bookingService);
+    }
+
+    /**
+     * Creates a new booking
+     * @param {AuthenticatedRequest} request - Fastify request object with authenticated user
+     * @param {import('fastify').FastifyReply} reply - Fastify reply object
+     * @returns {Promise&lt;Object>} Response object containing new booking data
+     */
+    async createBooking(request, reply) {
+        try {
+            const bookingData = {
+                rut_cliente: request.user.rut,
+                origen_reserva: request.body.origen_reserva,
+                destino_reserva: request.body.destino_reserva,
+                fecha_reserva: request.body.fecha_reserva,
+                tipo_reserva: request.body.tipo_reserva,
+                observacion_reserva: request.body.observacion_reserva || '',
+                codigo_servicio: request.body.codigo_servicio,
+                id_tarifa: request.body.id_tarifa
+            };
+
+            console.log('Creating booking with data:', bookingData);
+            
+            const booking = await this.service.createBooking(bookingData);
+            
+            return reply.code(201).send({
+                message: 'Reserva creada exitosamente',
+                booking: booking.toJSON()
+            });
+        } catch (error) {
+            request.log.error(error);
+            return reply.code(500).send({ 
+                error: 'Error al crear la reserva',
+                details: error.message 
+            });
+        }
+    }
+
+    /**
+     * Gets all bookings with optional filters
+     * @param {Object} request - Fastify request object
+     * @param {Object} reply - Fastify reply object
+     * @returns {Promise&lt;Object>} Response object containing bookings list
+     */
+    async getBookings(request, reply) {
+        try {
+            const filters = {
+                estados: request.query.status,
+                fecha: request.query.date,
+                userId: request.query.userId
+            };
+
+            const bookings = await this.service.getBookings(filters);
+            console.log(bookings);
+            
+            return reply.send({
+                message: 'Reservas recuperadas exitosamente',
+                reservas: bookings
+            });
+        } catch (error) {
+            request.log.error(error);
+            return reply.code(500).send({ 
+                error: 'Error al recuperar las reservas',
+                details: error.message 
+            });
+        }
+    }
+
+    /**
+     * Gets a specific booking by code
+     * @param {Object} request - Fastify request object
+     * @param {Object} reply - Fastify reply object
+     * @returns {Promise&lt;Object>} Response object containing booking data
+     */
+    async getBookingByCode(request, reply) {
+        try {
+            const codigoReserva = request.params.codigoreserva;
+            console.log('BookingController - Getting booking:', codigoReserva);
+            
+            const booking = await this.service.getBookingByCode(codigoReserva);
+            if (!booking) {
+                return reply.code(404).send({ 
+                    error: 'Reserva no encontrada' 
+                });
+            }
+
+            const bookingData = booking.toJSON();
+            console.log('BookingController - Sending booking data:', bookingData);
+
+            return reply.send({
+                message: 'Reserva recuperada exitosamente',
+                reserva: bookingData
+            });
+        } catch (error) {
+            console.error('BookingController - Error:', error);
+            return reply.code(500).send({ 
+                error: 'Error al recuperar la reserva',
+                details: error.message 
+            });
+        }
+    }
+
+    /**
+     * Updates booking status
+     * @param {Object} request - Fastify request object
+     * @param {Object} reply - Fastify reply object
+     * @returns {Promise&lt;Object>} Response object containing updated booking
+     */
+    async updateBookingStatus(request, reply) {
+        try {
+            const bookingId = request.params.bookingId;
+            const { status } = request.body;
+            
+            const booking = await this.service.updateBookingStatus(
+                bookingId, 
+                status,
+                request.user.rut
+            );
+
+            return reply.send({
+                message: 'Estado de reserva actualizado exitosamente',
+                booking: booking.toJSON()
+            });
+        } catch (error) {
+            request.log.error(error);
+            if (error.message.includes('Estado de reserva inválido')) {
+                return reply.code(400).send({ error: error.message });
+            }
+            return reply.code(500).send({ 
+                error: 'Error al actualizar el estado de la reserva',
+                details: error.message 
+            });
+        }
+    }
+
+    /**
+     * Cancels a booking
+     * @param {Object} request - Fastify request object
+     * @param {Object} reply - Fastify reply object
+     * @returns {Promise&lt;Object>} Response object confirming cancellation
+     */
+    async cancelBooking(request, reply) {
+        try {
+            const bookingId = request.params.bookingId;
+            const userId = request.user.rut;
+            
+            await this.service.cancelBooking(bookingId, userId);
+
+            return reply.send({
+                message: 'Reserva cancelada exitosamente'
+            });
+        } catch (error) {
+            request.log.error(error);
+            if (error.message.includes('No autorizado')) {
+                return reply.code(403).send({ error: error.message });
+            }
+            if (error.message.includes('no encontrada')) {
+                return reply.code(404).send({ error: error.message });
+            }
+            return reply.code(500).send({ 
+                error: 'Error al cancelar la reserva',
+                details: error.message 
+            });
+        }
+    }
+
+    /**
+     * Validates booking and assigns driver
+     * @param {Object} request - Fastify request object
+     * @param {Object} reply - Fastify reply object
+     * @returns {Promise&lt;void>}
+     */
+    async validateAndAssignDriver(request, reply) {
+        try {
+            const bookingId = request.params.codigoreserva;
+            const { estados, rut_conductor, patente_taxi, observacion } = request.body;
+
+            console.log('Validating booking request:', {
+                bookingId,
+                estados,
+                rut_conductor,
+                patente_taxi,
+                observacion
+            });
+
+            const bookingModel = await this.service.validateAndAssignDriver(
+                bookingId,
+                estados,
+                rut_conductor,
+                patente_taxi,
+                observacion
+            );
+
+            return reply.send({
+                message: `Reserva ${estados === 'APROBAR' ? 'aprobada' : 'actualizada'} exitosamente`,
+                booking: bookingModel.toJSON()
+            });
+        } catch (error) {
+            request.log.error(error);
+            if (error.message.includes('no encontrada')) {
+                return reply.code(404).send({ error: error.message });
+            }
+            return reply.code(500).send({
+                error: 'Error al procesar la reserva',
+                details: error.message
+            });
+        }
+    }
+
+    /**
+     * Starts a trip
+     * @param {Object} request - Fastify request object
+     * @param {Object} request.params - Request parameters
+     * @param {Object} reply - Fastify reply object
+     * @returns {Promise&lt;Object>} Response object confirming trip start
+     */
+    async startTrip(request, reply) {
+        try {
+            const { bookingId } = request.params;
+            const driverId = request.user.rut;
+
+            const booking = await this.service.startTrip(bookingId, driverId);
+
+            return reply.send({
+                message: 'Viaje iniciado exitosamente',
+                booking: booking.toJSON()
+            });
+        } catch (error) {
+            request.log.error(error);
+            if (error.message.includes('no encontrada')) {
+                return reply.code(404).send({ error: error.message });
+            }
+            if (error.message.includes('No autorizado')) {
+                return reply.code(403).send({ error: error.message });
+            }
+            return reply.code(500).send({
+                error: 'Error al iniciar el viaje',
+                details: error.message
+            });
+        }
+    }
+
+    /**
+     * Complete a trip
+     * @param {FastifyRequest} request - Fastify request object
+     * @param {FastifyReply} reply - Fastify reply object
+     */
+    async completeTrip(request, reply) {
+        try {
+            const bookingId = parseInt(request.params.codigoreserva);
+            const driverId = request.user.rut;
+
+            const bookingModel = await this.service.completeTrip(
+                bookingId,
+                driverId
+            );
+
+            return reply.send({
+                message: 'Viaje completado exitosamente',
+                booking: bookingModel.toJSON()
+            });
+        } catch (error) {
+            request.log.error(error);
+            
+            if (error.message.includes('no encontrada')) {
+                return reply.code(404).send({ 
+                    error: 'Not Found',
+                    message: 'Reserva no encontrada' 
+                });
+            }
+            
+            if (error.message.includes('No autorizado')) {
+                return reply.code(403).send({ 
+                    error: 'Forbidden',
+                    message: 'No autorizado para completar este viaje' 
+                });
+            }
+            
+            if (error.message.includes('no está en estado RECOGIDO')) {
+                return reply.code(400).send({ 
+                    error: 'Bad Request',
+                    message: 'La reserva debe estar en estado RECOGIDO para completar el viaje' 
+                });
+            }
+
+            return reply.code(500).send({
+                error: 'Internal Server Error',
+                message: error.message
+            });
+        }
+    }
+
+    /**
+     * Gets pending bookings
+     * @param {Object} request - Fastify request object
+     * @param {Object} reply - Fastify reply object
+     * @returns {Promise&lt;Object>} Response object with pending bookings
+     */
+    async getReservasPendientes(request, reply) {
+        try {
+            const bookings = await this.service.getPendingBookings();
+
+            return reply.send({
+                message: 'Reservas pendientes recuperadas exitosamente',
+                bookings: bookings.map(booking => booking.toJSON())
+            });
+        } catch (error) {
+            request.log.error(error);
+            return reply.code(500).send({
+                error: 'Error al recuperar las reservas pendientes',
+                details: error.message
+            });
+        }
+    }
+
+    /**
+     * Gets estimated cost for a booking
+     * @param {Object} request - Fastify request object
+     * @param {Object} request.query - Query parameters containing servicioId and tarifaId
+     * @param {Object} reply - Fastify reply object
+     * @returns {Promise&lt;Object>} Response object with estimated cost
+     */
+    async getCostoEstimado(request, reply) {
+        try {
+            const { servicioId, tarifaId } = request.query;
+            
+            const costoEstimado = await this.service.getCostoEstimado(
+                servicioId, 
+                tarifaId
+            );
+            
+            return reply.code(200).send({ 
+                costo_estimado: costoEstimado 
+            });
+        } catch (error) {
+            request.log.error(error);
+            return reply.code(400).send({
+                statusCode: 400,
+                error: 'Bad Request',
+                message: error.message
+            });
+        }
+    }
+
+    /**
+     * Gets a specific booking by code with limited data for clients
+     * @param {Object} request - Fastify request object
+     * @param {Object} reply - Fastify reply object
+     * @returns {Promise&lt;Object>} Response object containing booking data
+     */
+    async getClientBookingByCode(request, reply) {
+        try {
+            const codigoReserva = request.params.codigoreserva;
+            const clientRut = request.user.rut;
+            
+            console.log('BookingController - Getting client booking:', codigoReserva);
+            
+            const booking = await this.service.getClientBookingByCode(codigoReserva, clientRut);
+            
+            if (!booking) {
+                return reply.code(404).send({ 
+                    error: 'Reserva no encontrada' 
+                });
+            }
+
+            return reply.send({
+                message: 'Reserva recuperada exitosamente',
+                reserva: booking.toJSON()
+            });
+        } catch (error) {
+            console.error('BookingController - Error:', error);
+            
+            if (error.message.includes('No autorizado')) {
+                return reply.code(403).send({ 
+                    error: error.message 
+                });
+            }
+            
+            return reply.code(500).send({ 
+                error: 'Error al recuperar la reserva',
+                details: error.message 
+            });
+        }
+    }
+
+    /**
+     * Gets bookings for the authenticated client
+     * @param {AuthenticatedRequest} request - Fastify request object with authenticated user
+     * @param {Object} reply - Fastify reply object
+     * @returns {Promise&lt;Object>} Response object containing client's bookings
+     */
+    async getClientBookings(request, reply) {
+        try {
+            const clientRut = request.user.rut;
+            console.log('Getting bookings for client:', clientRut);
+
+            const bookings = await this.service.getClientBookings(clientRut);
+            return reply.send({
+                message: 'Reservas recuperadas exitosamente',
+                reservas: bookings
+            });
+        } catch (error) {
+            request.log.error(error);
+            return reply.code(500).send({ 
+                error: 'Error al recuperar las reservas',
+                details: error.message 
+            });
+        }
+    }
+
+    /**
+     * Handles errors in a standardized way
+     * @private
+     * @param {import('fastify').FastifyReply} reply - Fastify reply object
+     * @param {Error} error - Error to handle
+     */
+    handleError(reply, error) {
+        console.error('Controller Error:', error);
+        
+        if (error.message.includes('no encontrada') || error.message.includes('not found')) {
+            return reply.code(404).send({ 
+                error: 'Not Found',
+                message: error.message 
+            });
+        }
+        
+        if (error.message.includes('No autorizado') || error.message.includes('unauthorized')) {
+            return reply.code(403).send({ 
+                error: 'Forbidden',
+                message: error.message 
+            });
+        }
+        
+        return reply.code(500).send({ 
+            error: 'Internal Server Error',
+            message: error.message 
+        });
+    }
+
+    /**
+     * Retrieves bookings for a specific driver.
+     * @param {Object} request - The HTTP request object
+     * @param {Object} reply - The HTTP reply object
+     * @returns {Promise&lt;void>}
+     */
+    async getDriverBookings(request, reply) {
+        try {
+            const driverId = request.params.driverId;
+            
+            // Validate that the requesting driver can only see their own bookings
+            if (request.user.rut !== Number(driverId)) {
+                throw new Error('No autorizado para ver estas reservas');
+            }
+
+            const bookings = await this.service.getDriverBookings(driverId);
+            
+            reply.send({
+                message: 'Reservas recuperadas exitosamente',
+                reservas: bookings
+            });
+        } catch (error) {
+            this.handleError(reply, error);
+        }
+    }
+
+    /**
+     * Starts a trip and creates history entry
+     * @param {AuthenticatedRequest} request - Fastify request object with authenticated user
+     * @param {Object} reply - Fastify reply object
+     * @returns {Promise&lt;Object>} Response object confirming trip start with history
+     */
+    async startTripWithHistory(request, reply) {
+        try {
+            const bookingId = parseInt(request.params.codigoreserva);
+            const driverId = request.user.rut;
+
+            console.log('Starting trip with history:', { bookingId, driverId });
+
+            const bookingModel = await this.service.startTripWithHistory(
+                bookingId,
+                driverId
+            );
+
+            return reply.send({
+                message: 'Viaje iniciado exitosamente',
+                booking: bookingModel.toJSON()
+            });
+        } catch (error) {
+            request.log.error(error);
+            
+            if (error.message.includes('no encontrada')) {
+                return reply.code(404).send({ error: error.message });
+            }
+            
+            if (error.message.includes('No autorizado')) {
+                return reply.code(403).send({ error: error.message });
+            }
+            
+            if (error.message.includes('no está en estado pendiente')) {
+                return reply.code(400).send({ error: error.message });
+            }
+
+            return reply.code(500).send({
+                error: 'Error al iniciar el viaje',
+                details: error.message
+            });
+        }
+    }
+
+    /**
+     * Marks a booking as picked up
+     * @param {AuthenticatedRequest} request - Fastify request object
+     * @param {Object} reply - Fastify reply object
+     */
+    async markPickup(request, reply) {
+        try {
+            const bookingId = parseInt(request.params.codigoreserva);
+            const driverId = request.user.rut;
+
+            const bookingModel = await this.service.markPickup(
+                bookingId,
+                driverId
+            );
+
+            return reply.send({
+                message: 'Pasajero recogido exitosamente',
+                booking: bookingModel.toJSON()
+            });
+        } catch (error) {
+            request.log.error(error);
+            return this.handleError(reply, error);
+        }
+    }
+}
+
+export default BookingController;
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="AuthProvider.html">AuthProvider</a></li><li><a href="AuthRouter.html">AuthRouter</a></li><li><a href="AuthRouter_AuthRouter.html">AuthRouter</a></li><li><a href="AuthRouter_BaseRouter.html">BaseRouter</a></li><li><a href="BaseModel.html">BaseModel</a></li><li><a href="BaseRepository_BaseRepository.html">BaseRepository</a></li><li><a href="BaseRouter.html">BaseRouter</a></li><li><a href="BaseRouter_BaseRouter.html">BaseRouter</a></li><li><a href="BaseService.html">BaseService</a></li><li><a href="BaseService_BaseService.html">BaseService</a></li><li><a href="BookingModel.html">BookingModel</a></li><li><a href="BookingRouter.html">BookingRouter</a></li><li><a href="BookingRouter_BaseRouter.html">BaseRouter</a></li><li><a href="BookingRouter_BookingRouter.html">BookingRouter</a></li><li><a href="ExampleRouter.html">ExampleRouter</a></li><li><a href="ExampleRouter_BaseRouter.html">BaseRouter</a></li><li><a href="ExampleRouter_ExampleRouter.html">ExampleRouter</a></li><li><a href="HistoryModel.html">HistoryModel</a></li><li><a href="HistoryRepository.html">HistoryRepository</a></li><li><a href="HistoryRepository_BaseRepository.html">BaseRepository</a></li><li><a href="HistoryService.html">HistoryService</a></li><li><a href="HistoryService_BaseService.html">BaseService</a></li><li><a href="MapRouter.html">MapRouter</a></li><li><a href="MapRouter_BaseRouter.html">BaseRouter</a></li><li><a href="MapRouter_MapRouter.html">MapRouter</a></li><li><a href="PermissionModel.html">PermissionModel</a></li><li><a href="PermissionRouter.html">PermissionRouter</a></li><li><a href="PermissionRouter_BaseRouter.html">BaseRouter</a></li><li><a href="PermissionRouter_PermissionRouter.html">PermissionRouter</a></li><li><a href="RatingRouter.html">RatingRouter</a></li><li><a href="RatingRouter_BaseRouter.html">BaseRouter</a></li><li><a href="ReceiptModel_ReceiptModel.html">ReceiptModel</a></li><li><a href="ReportController.html">ReportController</a></li><li><a href="ReportModel.html">ReportModel</a></li><li><a href="ReportRepository.html">ReportRepository</a></li><li><a href="ReportRepository_BaseRepository.html">BaseRepository</a></li><li><a href="ReportRouter.html">ReportRouter</a></li><li><a href="ReportRouter_BaseRouter.html">BaseRouter</a></li><li><a href="ReportService.html">ReportService</a></li><li><a href="RoleModel.html">RoleModel</a></li><li><a href="RoleRouter.html">RoleRouter</a></li><li><a href="RoleRouter_BaseRouter.html">BaseRouter</a></li><li><a href="RoleRouter_RoleRouter.html">RoleRouter</a></li><li><a href="ServiceModel.html">ServiceModel</a></li><li><a href="SessionModel.html">SessionModel</a></li><li><a href="TaxiController.html">TaxiController</a></li><li><a href="TaxiController_TaxiController.html">TaxiController</a></li><li><a href="TaxiModel.html">TaxiModel</a></li><li><a href="TaxiRepository.html">TaxiRepository</a></li><li><a href="TaxiRepository_BaseRepository.html">BaseRepository</a></li><li><a href="TaxiRepository_TaxiRepository.html">TaxiRepository</a></li><li><a href="TaxiRouter.html">TaxiRouter</a></li><li><a href="TaxiRouter_BaseRouter.html">BaseRouter</a></li><li><a href="TaxiRouter_TaxiRouter.html">TaxiRouter</a></li><li><a href="TripModel_TripModel.html">TripModel</a></li><li><a href="TripRouter.html">TripRouter</a></li><li><a href="TripRouter_BaseRouter.html">BaseRouter</a></li><li><a href="TripRouter_TripRouter.html">TripRouter</a></li><li><a href="UserModel.html">UserModel</a></li><li><a href="UserRouter.html">UserRouter</a></li><li><a href="UserRouter_BaseRouter.html">BaseRouter</a></li><li><a href="UserRouter_UserRouter.html">UserRouter</a></li></ul><h3>Global</h3><ul><li><a href="global.html#WS_EVENTS">WS_EVENTS</a></li><li><a href="global.html#clearCookie">clearCookie</a></li><li><a href="global.html#createSession">createSession</a></li><li><a href="global.html#createSessionCookie">createSessionCookie</a></li><li><a href="global.html#generateSessionId">generateSessionId</a></li><li><a href="global.html#getSessionCookieName">getSessionCookieName</a></li><li><a href="global.html#invalidateSession">invalidateSession</a></li><li><a href="global.html#invalidateUserSessions">invalidateUserSessions</a></li><li><a href="global.html#readSessionCookie">readSessionCookie</a></li><li><a href="global.html#serializeOptions">serializeOptions</a></li><li><a href="global.html#setCookie">setCookie</a></li><li><a href="global.html#validateSession">validateSession</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.4</a> on Tue Dec 17 2024 23:00:08 GMT-0300 (hora de verano de Chile)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

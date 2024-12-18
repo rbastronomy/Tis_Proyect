@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: repository/UserRepository.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: repository/UserRepository.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>import { BaseRepository } from '../core/BaseRepository.js';
+import { UserModel } from '../models/UserModel.js';
+import { RoleModel } from '../models/RoleModel.js';
+
+export class UserRepository extends BaseRepository {
+  constructor() {
+    super('persona', 'rut');
+  }
+
+  /**
+   * Formats RUT by removing verification digit and dots, converts to integer
+   * @param {string|number} rut - RUT to format
+   * @returns {number} Formatted RUT as integer
+   * @throws {Error} If RUT format is invalid
+   */
+  _formatRut(rut) {
+    if (!rut) throw new Error('Invalid RUT format: RUT is empty');
+    
+    // Special case for admin ID
+    if (rut === 1 || rut === '1') {
+        return 1;
+    }
+    
+    let rutStr = rut.toString().replace(/\./g, '').replace(/-/g, '');
+    
+    // If it's already a number without verification digit, return as is
+    if (/^\d{1,8}$/.test(rutStr)) {  // Changed from {7,8} to {1,8} to allow admin ID
+        return parseInt(rutStr, 10);
+    }
+    
+    // Validate RUT format (7-8 digits + verifier)
+    if (!/^\d{7,8}[\dkK]$/.test(rutStr)) {
+        console.log('Invalid RUT format, trying as simple ID:', rut);
+        // Try to parse as simple number before failing
+        const simpleId = parseInt(rut.toString(), 10);
+        if (!isNaN(simpleId) &amp;&amp; simpleId > 0) {
+            return simpleId;
+        }
+        throw new Error(`Invalid RUT format: ${rut}`);
+    }
+    
+    // Always remove last digit (verifier)
+    const numbers = rutStr.slice(0, -1);
+    console.log('RUT before format:', rut, 'After format:', numbers);
+    return parseInt(numbers, 10);
+  }
+
+  _toModel(data) {
+    if (!data) return null;
+    return new UserModel(data);
+  }
+
+  /**
+   * Finds a user by email
+   * @param {string} email - User email
+   * @returns {Promise&lt;UserModel|null>} Found user or null
+   */
+  async findByEmail(email) {
+    console.log('findByEmail', email);
+    try {
+      const userData = await this.db.select('*')
+        .from(this.tableName)
+        .where('correo', '=', email)
+        .whereNull('deleted_at_persona')
+        .first();
+      return userData
+    } catch (error) {
+      console.error('Error finding user by email:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Finds a user by RUT
+   * @param {string|number} rut - RUT to search for
+   * @returns {Promise&lt;UserModel|null>} Found user or null
+   */
+  async findByRut(rut) {
+    try {
+        // Special case for admin ID
+        if (rut === 1 || rut === '1') {
+            const result = await this.db.select('*')
+                .from(this.tableName)
+                .where({ rut: 1 })
+                .whereNull('deleted_at_persona')
+                .first();
+            
+            console.log('Found admin by RUT:', result);
+            return this._toModel(result);
+        }
+
+        const formattedRut = this._formatRut(rut);
+        console.log('Formatted RUT for query:', formattedRut);
+        const result = await this.db.select('*')
+            .from(this.tableName)
+            .where({ rut: formattedRut })
+            .whereNull('deleted_at_persona')
+            .first();
+        
+        console.log('Found user by RUT:', result);
+        return this._toModel(result);
+    } catch (error) {
+        console.error('Error in findByRut:', error);
+        if (error.message.includes('Invalid RUT format')) {
+            // Try one last time with raw value
+            const result = await this.db.select('*')
+                .from(this.tableName)
+                .where({ rut: rut.toString() })
+                .first();
+            return this._toModel(result);
+        }
+        throw error;
+    }
+  }
+
+  /**
+   * Creates a new user
+   * @param {Object} userData - User data
+   * @returns {Promise&lt;UserModel>} Created user
+   */
+  async create(userData) {
+    try {
+      // Format RUT by removing verification digit
+      const formattedRut = this._formatRut(userData.rut);
+      console.log('Creating user with formatted RUT:', formattedRut);
+      
+      const dbData = {
+        rut: formattedRut,
+        nombre: userData.nombre,
+        apellido_paterno: userData.apellido_paterno,
+        apellido_materno: userData.apellido_materno,
+        fecha_nacimiento: userData.fecha_nacimiento,
+        correo: userData.correo,
+        telefono: userData.telefono,
+        nacionalidad: userData.nacionalidad,
+        genero: userData.genero,
+        contrasena: userData.contrasena,
+        estado_persona: userData.estado_persona || 'ACTIVO',
+        id_roles: userData.id_roles || 2,
+        fecha_contratacion: userData.fecha_contratacion,
+        licencia_conducir: userData.licencia_conducir,
+        created_at: new Date(),
+        updated_at: new Date()
+      };
+      
+      const [insertedId] = await this.db(this.tableName)
+        .insert(dbData)
+        .returning(['rut']);
+
+      console.log('Inserted RUT:', insertedId.rut);
+
+      const userDB = await this.db.select('*')
+        .from(this.tableName)
+        .where({ rut: formattedRut }) // Use the formatted RUT here too
+        .first();
+
+      console.log('Found user after insert:', userDB);
+      return userDB;
+    } catch (error) {
+      console.error('Error creating user:', error);
+      if (error.code === '42P01') {
+        throw new Error('Database table not found. Please run migrations.');
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Updates user data
+   * @param {string} rut - User RUT
+   * @param {Object} userData - Updated user data
+   * @returns {Promise&lt;UserModel>} Updated user
+   */
+  async update(rut, userData) {
+    try {
+      if (userData.rut) {
+        userData.rut = this._formatRut(userData.rut);
+      }
+
+      userData.updated_at = new Date();
+
+      const [updatedUser] = await this.db(this.tableName)
+        .where({ rut })
+        .update(userData)
+        .returning('*');
+
+      return this._toModel(updatedUser);
+    } catch (error) {
+      console.error('Error updating user:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Soft deletes a user by setting deleted_at_persona timestamp
+   * @param {string|number} rut - User RUT
+   * @returns {Promise&lt;Object|null>} Deleted user data or null
+   */
+  async softDelete(rut) {
+    try {
+      const formattedRut = this._formatRut(rut);
+      console.log('Attempting to delete user with RUT:', formattedRut); // Debug log
+      
+      // First check if user exists and is not deleted
+      const existingUser = await this.db(this.tableName)
+        .where({ rut: formattedRut })
+        .whereNull('deleted_at_persona')
+        .first();
+
+      if (!existingUser) {
+        console.log('User not found or already deleted'); // Debug log
+        return null;
+      }
+
+      const [deletedUser] = await this.db(this.tableName)
+        .where({ rut: formattedRut })
+        .whereNull('deleted_at_persona')
+        .update({
+          estado_persona: 'ELIMINADO',
+          deleted_at_persona: new Date(),
+          updated_at: new Date()
+        })
+        .returning(['rut', 'nombre', 'estado_persona', 'deleted_at_persona']); // Specify which fields to return
+
+      console.log('Delete operation result:', deletedUser); // Debug log
+      return deletedUser || null;
+    } catch (error) {
+      console.error('Error soft deleting user:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Finds all users with optional filters
+   * @param {Object} filters - Optional filters to apply
+   * @returns {Promise&lt;UserModel[]>} Array of users
+   */
+  async findAll(filters = {}) {
+    try {
+      const query = this.db.select('*')
+        .from(this.tableName)
+        .whereNull('deleted_at_persona'); // Only get non-deleted users
+
+      if (filters.estado_persona) {
+        query.where('estado_persona', filters.estado_persona);
+      }
+
+      if (filters.id_roles) {
+        query.where('id_roles', filters.id_roles);
+      }
+
+      const results = await query;
+      return results;
+    } catch (error) {
+      console.error('Error finding all users:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Finds user with full details including role
+   * @param {string} rut - User RUT
+   * @returns {Promise&lt;UserModel|null>} User with details or null
+   */
+  async findWithDetails(rut) {
+    try {
+      const result = await this.db(this.tableName)
+        .select(
+          'persona.*',
+          'roles.nombre_rol',
+          'roles.descripcion_rol'
+        )
+        .leftJoin('roles', 'persona.id_roles', 'roles.id_roles')
+        .where('persona.rut', rut)
+        .first();
+
+      return result ? this._toModel(result) : null;
+    } catch (error) {
+      console.error('Error finding user with details:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Find one user with filters
+   * @param {Object} filters - Filters to apply
+   * @returns {Promise&lt;Object|null>} User data or null
+   */
+  async findOne(filters) {
+    try {
+      const queryFilters = { ...filters };
+      
+      // Format RUT if present in filters, but don't remove verifier digit again
+      // since it was already removed during creation
+      if (queryFilters.rut) {
+        // Just convert to integer without removing any digits
+        queryFilters.rut = parseInt(queryFilters.rut.toString().replace(/\./g, '').replace(/-/g, ''));
+      }
+
+      console.log('Finding user with filters:', queryFilters);
+
+      const result = await this.db(this.tableName)
+        .where(queryFilters)
+        .whereNull('deleted_at_persona')
+        .first();
+      
+      console.log('Found user:', result);
+      return result || null;
+    } catch (error) {
+      console.error('Error finding user:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Finds available drivers by their RUTs in bulk
+   * @param {Array&lt;number>} ruts - Array of driver RUTs
+   * @param {Date} [bookingTime=new Date()] - The time of the booking
+   * @returns {Promise&lt;Object>} Map of RUT to driver data
+   */
+  async findDriversByRuts(ruts, bookingTime = new Date()) {
+    try {
+      if (!ruts || ruts.length === 0) return {};
+
+      const formattedRuts = ruts.map(rut => this._formatRut(rut));
+      const bufferTime = 60; // 60 minutes buffer
+      
+      // Ensure bookingTime is a Date object and format for PostgreSQL
+      const bookingDate = bookingTime instanceof Date ? bookingTime : new Date(bookingTime);
+      const formattedBookingTime = bookingDate.toISOString();
+
+      console.log('UserRepository - Booking Time:', {
+        originalTime: bookingTime,
+        formattedTime: formattedBookingTime,
+        isDefault: bookingTime.getTime() === new Date().getTime(),
+        bufferTime
+      });
+      
+      // Get drivers excluding those who have overlapping bookings
+      const drivers = await this.db
+        .select(
+          'persona.*',
+          'roles.id_roles',
+          'roles.nombre_rol',
+          'roles.descripcion_rol'
+        )
+        .from(this.tableName)
+        .leftJoin('roles', 'persona.id_roles', 'roles.id_roles')
+        .whereIn('persona.rut', formattedRuts)
+        .where('persona.id_roles', 3)
+        .whereNull('persona.deleted_at_persona')
+        // Exclude drivers with overlapping bookings
+        .whereNotExists(function() {
+          this.select('*')
+            .from('reserva')
+            .whereRaw('reserva.rut_conductor = persona.rut')
+            .whereIn('estado_reserva', ['PENDIENTE', 'EN_CAMINO'])
+            .whereRaw(`fecha_reserva BETWEEN (?::timestamp - INTERVAL '${bufferTime} minutes') AND (?::timestamp + INTERVAL '${bufferTime} minutes')`, 
+              [formattedBookingTime, formattedBookingTime]);
+        });
+
+      return drivers.reduce((map, driver) => {
+        const driverModel = this._toModel(driver);
+        driverModel.role = new RoleModel({
+          id_roles: driver.id_roles,
+          nombre_rol: driver.nombre_rol,
+          descripcion_rol: driver.descripcion_rol,
+          estado_rol: 'ACTIVO'
+        });
+        map[driver.rut] = driverModel;
+        return map;
+      }, {});
+    } catch (error) {
+      console.error('Error finding drivers by RUTs:', error);
+      throw error;
+    }
+  }
+}
+
+export default UserRepository;
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="AuthProvider.html">AuthProvider</a></li><li><a href="AuthRouter.html">AuthRouter</a></li><li><a href="AuthRouter_AuthRouter.html">AuthRouter</a></li><li><a href="AuthRouter_BaseRouter.html">BaseRouter</a></li><li><a href="BaseModel.html">BaseModel</a></li><li><a href="BaseRepository_BaseRepository.html">BaseRepository</a></li><li><a href="BaseRouter.html">BaseRouter</a></li><li><a href="BaseRouter_BaseRouter.html">BaseRouter</a></li><li><a href="BaseService.html">BaseService</a></li><li><a href="BaseService_BaseService.html">BaseService</a></li><li><a href="BookingModel.html">BookingModel</a></li><li><a href="BookingRouter.html">BookingRouter</a></li><li><a href="BookingRouter_BaseRouter.html">BaseRouter</a></li><li><a href="BookingRouter_BookingRouter.html">BookingRouter</a></li><li><a href="ExampleRouter.html">ExampleRouter</a></li><li><a href="ExampleRouter_BaseRouter.html">BaseRouter</a></li><li><a href="ExampleRouter_ExampleRouter.html">ExampleRouter</a></li><li><a href="HistoryModel.html">HistoryModel</a></li><li><a href="HistoryRepository.html">HistoryRepository</a></li><li><a href="HistoryRepository_BaseRepository.html">BaseRepository</a></li><li><a href="HistoryService.html">HistoryService</a></li><li><a href="HistoryService_BaseService.html">BaseService</a></li><li><a href="MapRouter.html">MapRouter</a></li><li><a href="MapRouter_BaseRouter.html">BaseRouter</a></li><li><a href="MapRouter_MapRouter.html">MapRouter</a></li><li><a href="PermissionModel.html">PermissionModel</a></li><li><a href="PermissionRouter.html">PermissionRouter</a></li><li><a href="PermissionRouter_BaseRouter.html">BaseRouter</a></li><li><a href="PermissionRouter_PermissionRouter.html">PermissionRouter</a></li><li><a href="RatingRouter.html">RatingRouter</a></li><li><a href="RatingRouter_BaseRouter.html">BaseRouter</a></li><li><a href="ReceiptModel_ReceiptModel.html">ReceiptModel</a></li><li><a href="ReportController.html">ReportController</a></li><li><a href="ReportModel.html">ReportModel</a></li><li><a href="ReportRepository.html">ReportRepository</a></li><li><a href="ReportRepository_BaseRepository.html">BaseRepository</a></li><li><a href="ReportRouter.html">ReportRouter</a></li><li><a href="ReportRouter_BaseRouter.html">BaseRouter</a></li><li><a href="ReportService.html">ReportService</a></li><li><a href="RoleModel.html">RoleModel</a></li><li><a href="RoleRouter.html">RoleRouter</a></li><li><a href="RoleRouter_BaseRouter.html">BaseRouter</a></li><li><a href="RoleRouter_RoleRouter.html">RoleRouter</a></li><li><a href="ServiceModel.html">ServiceModel</a></li><li><a href="SessionModel.html">SessionModel</a></li><li><a href="TaxiController.html">TaxiController</a></li><li><a href="TaxiController_TaxiController.html">TaxiController</a></li><li><a href="TaxiModel.html">TaxiModel</a></li><li><a href="TaxiRepository.html">TaxiRepository</a></li><li><a href="TaxiRepository_BaseRepository.html">BaseRepository</a></li><li><a href="TaxiRepository_TaxiRepository.html">TaxiRepository</a></li><li><a href="TaxiRouter.html">TaxiRouter</a></li><li><a href="TaxiRouter_BaseRouter.html">BaseRouter</a></li><li><a href="TaxiRouter_TaxiRouter.html">TaxiRouter</a></li><li><a href="TripModel_TripModel.html">TripModel</a></li><li><a href="TripRouter.html">TripRouter</a></li><li><a href="TripRouter_BaseRouter.html">BaseRouter</a></li><li><a href="TripRouter_TripRouter.html">TripRouter</a></li><li><a href="UserModel.html">UserModel</a></li><li><a href="UserRouter.html">UserRouter</a></li><li><a href="UserRouter_BaseRouter.html">BaseRouter</a></li><li><a href="UserRouter_UserRouter.html">UserRouter</a></li></ul><h3>Global</h3><ul><li><a href="global.html#WS_EVENTS">WS_EVENTS</a></li><li><a href="global.html#clearCookie">clearCookie</a></li><li><a href="global.html#createSession">createSession</a></li><li><a href="global.html#createSessionCookie">createSessionCookie</a></li><li><a href="global.html#generateSessionId">generateSessionId</a></li><li><a href="global.html#getSessionCookieName">getSessionCookieName</a></li><li><a href="global.html#invalidateSession">invalidateSession</a></li><li><a href="global.html#invalidateUserSessions">invalidateUserSessions</a></li><li><a href="global.html#readSessionCookie">readSessionCookie</a></li><li><a href="global.html#serializeOptions">serializeOptions</a></li><li><a href="global.html#setCookie">setCookie</a></li><li><a href="global.html#validateSession">validateSession</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.4</a> on Tue Dec 17 2024 23:00:08 GMT-0300 (hora de verano de Chile)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: controllers/ServiceController.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: controllers/ServiceController.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>import { BaseController } from '../core/BaseController.js';
+import { ServiceService } from '../services/ServiceService.js';
+
+export class ServiceController extends BaseController {
+    constructor() {
+        super(new ServiceService());
+    }
+
+    /**
+     * Get services filtered by ride type (CITY or AIRPORT)
+     * @param {Object} request - Fastify request object
+     * @param {Object} reply - Fastify reply object
+     * @returns {Promise&lt;Array>} Array of services for the specified ride type
+     */
+    async getServicesByRideType(request, reply) {
+        const { rideType } = request.params;
+        try {
+            // Only get ACTIVE services for the specified ride type
+            const services = await this.service.findByRideType(rideType);         
+            return reply.send(services);
+        } catch (error) {
+            request.log.error(error);
+            return reply.status(500).send({ 
+                error: 'Failed to retrieve services by ride type',
+                details: error.message 
+            });
+        }
+    }
+
+    /**
+     * Get service tariffs filtered by ride type
+     * @param {Object} request - Fastify request object
+     * @param {Object} reply - Fastify reply object
+     * @returns {Promise&lt;Array>} Array of tariffs filtered by ride type
+     */
+    async getServiceTariffsByType(request, reply) {
+        const { codigo_servicio, rideType } = request.params;
+
+        try {
+            // Get active tariffs for the service and ride type
+            const tariffs = await this.service.getTariffsByType(
+                parseInt(codigo_servicio), 
+                rideType
+            );
+            
+            // Filter out inactive tariffs
+            const activeTariffs = tariffs.filter(tariff => 
+                tariff.estadot === 'ACTIVO'
+            );
+            
+            return reply.send(activeTariffs);
+        } catch (error) {
+            request.log.error(error);
+            return reply.status(500).send({ 
+                error: 'Failed to retrieve service tariffs by type',
+                details: error.message 
+            });
+        }
+    }
+
+    /**
+     * Retrieves all active services with their associated tariffs
+     * @param {Object} request - Fastify request object
+     * @param {Object} reply - Fastify reply object
+     * @returns {Promise&lt;Object>} Response object containing active services and their tariffs
+     */
+    async getActiveServices(request, reply) {
+        try {
+            const services = await this.service.findActiveWithTariffs();
+            return reply.send({ services });
+        } catch (error) {
+            request.log.error(error);
+            return reply.status(500).send({ error: 'Failed to retrieve active services' });
+        }
+    }
+
+    /**
+     * Get all tariffs associated with a specific service
+     * @param {Object} request - Fastify request object
+     * @param {Object} reply - Fastify reply object
+     * @returns {Promise&lt;Array>} Array of tariffs for the service
+     */
+    async getServiceTariffs(request, reply) {
+        const { codigo_servicio } = request.params;
+
+        try {
+            const tariffs = await this.service.getServiceTariffs(codigo_servicio);
+            return reply.send(tariffs);
+        } catch (error) {
+            request.log.error(error);
+            return reply.status(500).send({ 
+                error: 'Failed to retrieve service tariffs',
+                details: error.message 
+            });
+        }
+    }
+
+    /**
+     * Creates a new service with associated tariffs
+     * @param {Object} request - Fastify request object
+     * @param {Object} reply - Fastify reply object
+     * @returns {Promise&lt;Object>} Response object containing new service data
+     */
+    async create(request, reply) {
+        const { tipo, descripciont, estados, tarifas } = request.body;
+
+        try {
+            const newService = await this.service.createWithTariffs({ 
+                tipo, 
+                descripciont, 
+                estados,
+                tarifas 
+            });
+            return reply.status(201).send({ 
+                message: 'Service created successfully', 
+                service: newService 
+            });
+        } catch (error) {
+            request.log.error(error);
+            return reply.status(500).send({ 
+                error: 'Failed to create service',
+                details: error.message 
+            });
+        }
+    }
+
+    /**
+     * Updates the tariffs associated with a service
+     * @param {Object} request - Fastify request object
+     * @param {Object} reply - Fastify reply object
+     * @returns {Promise&lt;Object>} Response with updated service data
+     */
+    async updateServiceTariffs(request, reply) {
+        const { codigo_servicio } = request.params;
+        const { tarifas } = request.body;
+
+        try {
+            const updatedService = await this.service.updateTariffs(codigo_servicio, tarifas);
+            return reply.send({
+                message: 'Service tariffs updated successfully',
+                service: updatedService
+            });
+        } catch (error) {
+            request.log.error(error);
+            return reply.status(500).send({
+                error: 'Failed to update service tariffs',
+                details: error.message
+            });
+        }
+    }
+
+    /**
+     * Requests a service for a specific reservation and person.
+     * @param {Object} request - Fastify request object.
+     * @param {Object} reply - Fastify reply object.
+     */
+    async requestService(request, reply) {
+        const { rut, codigoreserva, codigo_servicio } = request.body;
+
+        try {
+            const serviceRequest = await this.service.requestService({
+                rut, 
+                codigoreserva, 
+                codigo_servicio,
+                fechasolicitud: new Date()
+            });
+            return reply.status(201).send({ 
+                message: 'Service requested successfully', 
+                serviceRequest 
+            });
+        } catch (error) {
+            request.log.error(error);
+            return reply.status(500).send({ error: 'Failed to request service' });
+        }
+    }
+
+    /**
+     * Retrieves services for a specific person.
+     * @param {Object} request - Fastify request object.
+     * @param {Object} reply - Fastify reply object.
+     */
+    async getPersonServices(request, reply) {
+        const { rut } = request.params;
+
+        try {
+            const services = await this.service.getPersonServices(rut);
+            return reply.send({ services });
+        } catch (error) {
+            request.log.error(error);
+            return reply.status(500).send({ error: 'Failed to retrieve person services' });
+        }
+    }
+
+    /**
+     * Updates an existing service.
+     * @param {Object} request - Fastify request object.
+     * @param {Object} reply - Fastify reply object.
+     */
+    async update(request, reply) {
+        const { codigo_servicio } = request.params;
+        const updateData = request.body;
+
+        try {
+            const updatedService = await this.service.update(codigo_servicio, updateData);
+            return reply.send({ 
+                message: 'Service updated successfully', 
+                service: updatedService 
+            });
+        } catch (error) {
+            request.log.error(error);
+            return reply.status(500).send({ error: 'Failed to update service' });
+        }
+    }
+
+    /**
+     * Deletes (soft delete) a service.
+     * @param {Object} request - Fastify request object.
+     * @param {Object} reply - Fastify reply object.
+     */
+    async delete(request, reply) {
+        const { codigo_servicio } = request.params;
+
+        try {
+            await this.service.delete(codigo_servicio);
+            return reply.send({ message: 'Service deleted successfully' });
+        } catch (error) {
+            request.log.error(error);
+            return reply.status(500).send({ error: 'Failed to delete service' });
+        }
+    }
+
+    /**
+     * Retrieves all services.
+     * @param {Object} request - Fastify request object.
+     * @param {Object} reply - Fastify reply object.
+     */
+    async getAll(request, reply) {
+        try {
+            const services = await this.service.getAll();
+            return reply.send({ services });
+        } catch (error) {
+            request.log.error(error);
+            return reply.status(500).send({ error: 'Failed to retrieve services' });
+        }
+    }
+}
+
+export default ServiceController;</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="AuthProvider.html">AuthProvider</a></li><li><a href="AuthRouter.html">AuthRouter</a></li><li><a href="AuthRouter_AuthRouter.html">AuthRouter</a></li><li><a href="AuthRouter_BaseRouter.html">BaseRouter</a></li><li><a href="BaseModel.html">BaseModel</a></li><li><a href="BaseRepository_BaseRepository.html">BaseRepository</a></li><li><a href="BaseRouter.html">BaseRouter</a></li><li><a href="BaseRouter_BaseRouter.html">BaseRouter</a></li><li><a href="BaseService.html">BaseService</a></li><li><a href="BaseService_BaseService.html">BaseService</a></li><li><a href="BookingModel.html">BookingModel</a></li><li><a href="BookingRouter.html">BookingRouter</a></li><li><a href="BookingRouter_BaseRouter.html">BaseRouter</a></li><li><a href="BookingRouter_BookingRouter.html">BookingRouter</a></li><li><a href="ExampleRouter.html">ExampleRouter</a></li><li><a href="ExampleRouter_BaseRouter.html">BaseRouter</a></li><li><a href="ExampleRouter_ExampleRouter.html">ExampleRouter</a></li><li><a href="HistoryModel.html">HistoryModel</a></li><li><a href="HistoryRepository.html">HistoryRepository</a></li><li><a href="HistoryRepository_BaseRepository.html">BaseRepository</a></li><li><a href="HistoryService.html">HistoryService</a></li><li><a href="HistoryService_BaseService.html">BaseService</a></li><li><a href="MapRouter.html">MapRouter</a></li><li><a href="MapRouter_BaseRouter.html">BaseRouter</a></li><li><a href="MapRouter_MapRouter.html">MapRouter</a></li><li><a href="PermissionModel.html">PermissionModel</a></li><li><a href="PermissionRouter.html">PermissionRouter</a></li><li><a href="PermissionRouter_BaseRouter.html">BaseRouter</a></li><li><a href="PermissionRouter_PermissionRouter.html">PermissionRouter</a></li><li><a href="RatingRouter.html">RatingRouter</a></li><li><a href="RatingRouter_BaseRouter.html">BaseRouter</a></li><li><a href="ReceiptModel_ReceiptModel.html">ReceiptModel</a></li><li><a href="ReportController.html">ReportController</a></li><li><a href="ReportModel.html">ReportModel</a></li><li><a href="ReportRepository.html">ReportRepository</a></li><li><a href="ReportRepository_BaseRepository.html">BaseRepository</a></li><li><a href="ReportRouter.html">ReportRouter</a></li><li><a href="ReportRouter_BaseRouter.html">BaseRouter</a></li><li><a href="ReportService.html">ReportService</a></li><li><a href="RoleModel.html">RoleModel</a></li><li><a href="RoleRouter.html">RoleRouter</a></li><li><a href="RoleRouter_BaseRouter.html">BaseRouter</a></li><li><a href="RoleRouter_RoleRouter.html">RoleRouter</a></li><li><a href="ServiceModel.html">ServiceModel</a></li><li><a href="SessionModel.html">SessionModel</a></li><li><a href="TaxiController.html">TaxiController</a></li><li><a href="TaxiController_TaxiController.html">TaxiController</a></li><li><a href="TaxiModel.html">TaxiModel</a></li><li><a href="TaxiRepository.html">TaxiRepository</a></li><li><a href="TaxiRepository_BaseRepository.html">BaseRepository</a></li><li><a href="TaxiRepository_TaxiRepository.html">TaxiRepository</a></li><li><a href="TaxiRouter.html">TaxiRouter</a></li><li><a href="TaxiRouter_BaseRouter.html">BaseRouter</a></li><li><a href="TaxiRouter_TaxiRouter.html">TaxiRouter</a></li><li><a href="TripModel_TripModel.html">TripModel</a></li><li><a href="TripRouter.html">TripRouter</a></li><li><a href="TripRouter_BaseRouter.html">BaseRouter</a></li><li><a href="TripRouter_TripRouter.html">TripRouter</a></li><li><a href="UserModel.html">UserModel</a></li><li><a href="UserRouter.html">UserRouter</a></li><li><a href="UserRouter_BaseRouter.html">BaseRouter</a></li><li><a href="UserRouter_UserRouter.html">UserRouter</a></li></ul><h3>Global</h3><ul><li><a href="global.html#WS_EVENTS">WS_EVENTS</a></li><li><a href="global.html#clearCookie">clearCookie</a></li><li><a href="global.html#createSession">createSession</a></li><li><a href="global.html#createSessionCookie">createSessionCookie</a></li><li><a href="global.html#generateSessionId">generateSessionId</a></li><li><a href="global.html#getSessionCookieName">getSessionCookieName</a></li><li><a href="global.html#invalidateSession">invalidateSession</a></li><li><a href="global.html#invalidateUserSessions">invalidateUserSessions</a></li><li><a href="global.html#readSessionCookie">readSessionCookie</a></li><li><a href="global.html#serializeOptions">serializeOptions</a></li><li><a href="global.html#setCookie">setCookie</a></li><li><a href="global.html#validateSession">validateSession</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.4</a> on Tue Dec 17 2024 23:00:08 GMT-0300 (hora de verano de Chile)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

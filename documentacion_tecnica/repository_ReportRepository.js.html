@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: repository/ReportRepository.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: repository/ReportRepository.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>import { BaseRepository } from '../core/BaseRepository.js';
+
+/**
+ * Repository for generating reports from database
+ * @extends {BaseRepository}
+ */
+export class ReportRepository extends BaseRepository {
+    constructor() {
+        super(null); // No specific table as we'll be joining multiple tables
+    }
+
+    /**
+     * Get trips statistics grouped by taxi
+     * @param {Object} filters - Date filters
+     * @param {Date} [filters.startDate] - Start date
+     * @param {Date} [filters.endDate] - End date
+     * @returns {Promise&lt;Array>} Array of taxi trip statistics
+     */
+    async getTripsByTaxi(filters = {}) {
+        try {
+            let query = this.db('taxi as t')
+                .select(
+                    't.patente',
+                    't.marca',
+                    't.modelo',
+                    't.ano',
+                    this.db.raw('COUNT(DISTINCT v.codigo_viaje) as total_viajes'),
+                    this.db.raw('COALESCE(ROUND(AVG(v.duracion)::numeric, 2), 0) as duracion_promedio'),
+                    this.db.raw('COUNT(DISTINCT r.rut_conductor) as total_conductores'),
+                    this.db.raw('COALESCE(ROUND(AVG(b.total)::numeric, 2), 0) as ingreso_promedio_por_viaje')
+                )
+                .leftJoin('reserva as r', 'r.patente_taxi', 't.patente')
+                .leftJoin('genera as g', 'g.codigo_reserva', 'r.codigo_reserva')
+                .leftJoin('viaje as v', 'v.codigo_viaje', 'g.codigo_viaje')
+                .leftJoin('boleta as b', 'g.codigo_boleta', 'b.codigo_boleta')
+                .whereNull('t.deleted_at_taxi')
+                .whereNull('v.deleted_at_viaje')
+                .whereNull('b.deleted_at_boleta');
+
+            if (filters.startDate &amp;&amp; filters.endDate) {
+                query = query.whereBetween('v.fecha_viaje', [filters.startDate, filters.endDate]);
+            }
+
+            return await query
+                .groupBy('t.patente', 't.marca', 't.modelo', 't.ano')
+                .orderBy('total_viajes', 'desc');
+
+        } catch (error) {
+            console.error('Error in getTripsByTaxi:', error);
+            throw new Error(`Error getting trips by taxi: ${error.message}`);
+        }
+    }
+
+    /**
+     * Get monthly income statistics grouped by driver
+     * @param {Object} filters - Date filters
+     * @param {Date} [filters.startDate] - Start date
+     * @param {Date} [filters.endDate] - End date
+     * @returns {Promise&lt;Array>} Array of driver monthly income statistics
+     */
+    async getMonthlyIncomeByDriver(filters = {}) {
+        try {
+            let query = this.db('persona as p')
+                .select(
+                    'p.rut',
+                    'p.nombre',
+                    'p.apellido_paterno',
+                    this.db.raw("DATE_TRUNC('month', v.fecha_viaje) as mes"),
+                    this.db.raw('COUNT(DISTINCT v.codigo_viaje) as total_viajes'),
+                    this.db.raw('COALESCE(SUM(b.total), 0) as ingreso_total'),
+                    this.db.raw('COUNT(DISTINCT t.patente) as total_taxis_conducidos')
+                )
+                .join('reserva as r', 'r.rut_conductor', 'p.rut')
+                .join('genera as g', 'g.codigo_reserva', 'r.codigo_reserva')
+                .join('viaje as v', 'v.codigo_viaje', 'g.codigo_viaje')
+                .join('boleta as b', 'g.codigo_boleta', 'b.codigo_boleta')
+                .leftJoin('taxi as t', 'r.patente_taxi', 't.patente')
+                .where('p.id_roles', 3) // Assuming 3 is the driver role ID
+                .whereNull('p.deleted_at_persona')
+                .whereNull('v.deleted_at_viaje')
+                .whereNull('b.deleted_at_boleta');
+
+            if (filters.startDate &amp;&amp; filters.endDate) {
+                query = query.whereBetween('v.fecha_viaje', [filters.startDate, filters.endDate]);
+            }
+
+            return await query
+                .groupBy(
+                    'p.rut',
+                    'p.nombre',
+                    'p.apellido_paterno',
+                    this.db.raw("DATE_TRUNC('month', v.fecha_viaje)")
+                )
+                .orderBy([
+                    { column: 'p.rut' },
+                    { column: this.db.raw("DATE_TRUNC('month', v.fecha_viaje)") }
+                ]);
+
+        } catch (error) {
+            console.error('Error in getMonthlyIncomeByDriver:', error);
+            throw new Error(`Error getting monthly income by driver: ${error.message}`);
+        }
+    }
+}</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="AuthProvider.html">AuthProvider</a></li><li><a href="AuthRouter.html">AuthRouter</a></li><li><a href="AuthRouter_AuthRouter.html">AuthRouter</a></li><li><a href="AuthRouter_BaseRouter.html">BaseRouter</a></li><li><a href="BaseModel.html">BaseModel</a></li><li><a href="BaseRepository_BaseRepository.html">BaseRepository</a></li><li><a href="BaseRouter.html">BaseRouter</a></li><li><a href="BaseRouter_BaseRouter.html">BaseRouter</a></li><li><a href="BaseService.html">BaseService</a></li><li><a href="BaseService_BaseService.html">BaseService</a></li><li><a href="BookingModel.html">BookingModel</a></li><li><a href="BookingRouter.html">BookingRouter</a></li><li><a href="BookingRouter_BaseRouter.html">BaseRouter</a></li><li><a href="BookingRouter_BookingRouter.html">BookingRouter</a></li><li><a href="ExampleRouter.html">ExampleRouter</a></li><li><a href="ExampleRouter_BaseRouter.html">BaseRouter</a></li><li><a href="ExampleRouter_ExampleRouter.html">ExampleRouter</a></li><li><a href="HistoryModel.html">HistoryModel</a></li><li><a href="HistoryRepository.html">HistoryRepository</a></li><li><a href="HistoryRepository_BaseRepository.html">BaseRepository</a></li><li><a href="HistoryService.html">HistoryService</a></li><li><a href="HistoryService_BaseService.html">BaseService</a></li><li><a href="MapRouter.html">MapRouter</a></li><li><a href="MapRouter_BaseRouter.html">BaseRouter</a></li><li><a href="MapRouter_MapRouter.html">MapRouter</a></li><li><a href="PermissionModel.html">PermissionModel</a></li><li><a href="PermissionRouter.html">PermissionRouter</a></li><li><a href="PermissionRouter_BaseRouter.html">BaseRouter</a></li><li><a href="PermissionRouter_PermissionRouter.html">PermissionRouter</a></li><li><a href="RatingRouter.html">RatingRouter</a></li><li><a href="RatingRouter_BaseRouter.html">BaseRouter</a></li><li><a href="ReceiptModel_ReceiptModel.html">ReceiptModel</a></li><li><a href="ReportController.html">ReportController</a></li><li><a href="ReportModel.html">ReportModel</a></li><li><a href="ReportRepository.html">ReportRepository</a></li><li><a href="ReportRepository_BaseRepository.html">BaseRepository</a></li><li><a href="ReportRouter.html">ReportRouter</a></li><li><a href="ReportRouter_BaseRouter.html">BaseRouter</a></li><li><a href="ReportService.html">ReportService</a></li><li><a href="RoleModel.html">RoleModel</a></li><li><a href="RoleRouter.html">RoleRouter</a></li><li><a href="RoleRouter_BaseRouter.html">BaseRouter</a></li><li><a href="RoleRouter_RoleRouter.html">RoleRouter</a></li><li><a href="ServiceModel.html">ServiceModel</a></li><li><a href="SessionModel.html">SessionModel</a></li><li><a href="TaxiController.html">TaxiController</a></li><li><a href="TaxiController_TaxiController.html">TaxiController</a></li><li><a href="TaxiModel.html">TaxiModel</a></li><li><a href="TaxiRepository.html">TaxiRepository</a></li><li><a href="TaxiRepository_BaseRepository.html">BaseRepository</a></li><li><a href="TaxiRepository_TaxiRepository.html">TaxiRepository</a></li><li><a href="TaxiRouter.html">TaxiRouter</a></li><li><a href="TaxiRouter_BaseRouter.html">BaseRouter</a></li><li><a href="TaxiRouter_TaxiRouter.html">TaxiRouter</a></li><li><a href="TripModel_TripModel.html">TripModel</a></li><li><a href="TripRouter.html">TripRouter</a></li><li><a href="TripRouter_BaseRouter.html">BaseRouter</a></li><li><a href="TripRouter_TripRouter.html">TripRouter</a></li><li><a href="UserModel.html">UserModel</a></li><li><a href="UserRouter.html">UserRouter</a></li><li><a href="UserRouter_BaseRouter.html">BaseRouter</a></li><li><a href="UserRouter_UserRouter.html">UserRouter</a></li></ul><h3>Global</h3><ul><li><a href="global.html#WS_EVENTS">WS_EVENTS</a></li><li><a href="global.html#clearCookie">clearCookie</a></li><li><a href="global.html#createSession">createSession</a></li><li><a href="global.html#createSessionCookie">createSessionCookie</a></li><li><a href="global.html#generateSessionId">generateSessionId</a></li><li><a href="global.html#getSessionCookieName">getSessionCookieName</a></li><li><a href="global.html#invalidateSession">invalidateSession</a></li><li><a href="global.html#invalidateUserSessions">invalidateUserSessions</a></li><li><a href="global.html#readSessionCookie">readSessionCookie</a></li><li><a href="global.html#serializeOptions">serializeOptions</a></li><li><a href="global.html#setCookie">setCookie</a></li><li><a href="global.html#validateSession">validateSession</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.4</a> on Tue Dec 17 2024 23:00:08 GMT-0300 (hora de verano de Chile)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>
