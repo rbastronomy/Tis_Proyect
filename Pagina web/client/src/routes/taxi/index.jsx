@@ -1,4 +1,3 @@
-
 import { useState, useEffect, lazy, Suspense, useCallback, useRef } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { Card } from "@nextui-org/card"
@@ -166,7 +165,7 @@ function TaxiDashboard() {
     []
   );
 
-  // Then the useEffect that uses fetchRoute
+  // First, let's separate the bookings fetch into its own useEffect
   useEffect(() => {
     const fetchAssignedBookings = async () => {
       if (!user?.rut) return;
@@ -182,20 +181,36 @@ function TaxiDashboard() {
         }
 
         const data = await response.json();
-        // Filter bookings for current day
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
         
-        const todayBookings = (data.reservas || []).filter(booking => {
+        // Get current time
+        const now = new Date();
+        
+        // Filter bookings that are:
+        // 1. From today (starting at 00:00)
+        // 2. OR within the next 24 hours (even if they're tomorrow)
+        const relevantBookings = (data.reservas || []).filter(booking => {
           const bookingDate = new Date(booking.fecha_reserva);
-          bookingDate.setHours(0, 0, 0, 0);
-          return bookingDate.getTime() === today.getTime();
+          const today = new Date(now);
+          today.setHours(0, 0, 0, 0);
+          
+          // Calculate time difference in hours
+          const timeDiffHours = (bookingDate - now) / (1000 * 60 * 60);
+          
+          return (
+            // Booking is today
+            (bookingDate.getDate() === now.getDate() &&
+             bookingDate.getMonth() === now.getMonth() &&
+             bookingDate.getFullYear() === now.getFullYear())
+            ||
+            // OR booking is within next 24 hours
+            (timeDiffHours >= 0 && timeDiffHours <= 24)
+          );
         });
 
-        setAssignedBookings(todayBookings);
+        setAssignedBookings(relevantBookings);
 
         // Find any active booking (CONFIRMADO or RECOGIDO)
-        const activeBooking = todayBookings.find(
+        const activeBooking = relevantBookings.find(
           booking => booking.estado_reserva === 'CONFIRMADO' || booking.estado_reserva === 'RECOGIDO'
         );
 
@@ -242,27 +257,6 @@ function TaxiDashboard() {
 
           console.log('Setting active trip with data:', tripData);
           setActiveTrip(tripData);
-
-          // If trip is in RECOGIDO state, fetch route to destination
-          if (activeBooking.estado_reserva === 'RECOGIDO' && position && tripData.destino_lat) {
-            fetchRoute({
-              lat: position.lat,
-              lng: position.lng
-            }, {
-              lat: tripData.destino_lat,
-              lng: tripData.destino_lng
-            });
-          } 
-          // If trip is in CONFIRMADO state, fetch route to pickup
-          else if (activeBooking.estado_reserva === 'CONFIRMADO' && position && tripData.origen_lat) {
-            fetchRoute({
-              lat: position.lat,
-              lng: position.lng
-            }, {
-              lat: tripData.origen_lat,
-              lng: tripData.origen_lng
-            });
-          }
         }
       } catch (error) {
         console.error('Error:', error);
@@ -272,9 +266,29 @@ function TaxiDashboard() {
     };
 
     fetchAssignedBookings();
-    const interval = setInterval(fetchAssignedBookings, 60000);
+    const interval = setInterval(fetchAssignedBookings, 60000); // Fetch every minute
     return () => clearInterval(interval);
-  }, [user?.rut, position, fetchRoute]);
+  }, [user?.rut]); // Only depend on user.rut
+
+  // Separate useEffect for route updates based on position
+  useEffect(() => {
+    if (position && activeTrip) {
+      // Only fetch route if we have all required data
+      if (activeTrip.estado_reserva === 'CONFIRMADO' && activeTrip.origen_lat && activeTrip.origen_lng) {
+        console.log('Fetching route to pickup:', {
+          from: position,
+          to: { lat: activeTrip.origen_lat, lng: activeTrip.origen_lng }
+        });
+        fetchRoute(position, activeTrip);
+      } else if (activeTrip.estado_reserva === 'RECOGIDO' && activeTrip.destino_lat && activeTrip.destino_lng) {
+        console.log('Fetching route to destination:', {
+          from: position,
+          to: { lat: activeTrip.destino_lat, lng: activeTrip.destino_lng }
+        });
+        fetchRoute(position, activeTrip);
+      }
+    }
+  }, [position, activeTrip?.estado_reserva, fetchRoute]); // Only depend on position and trip state
 
   // 4. All useEffect hooks
   useEffect(() => {
@@ -1170,6 +1184,9 @@ function TripCard({ booking, onStartTrip, onPickup, onTripComplete, onArrival, c
   };
 
   const bookingTime = new Date(booking.fecha_reserva);
+  const now = new Date();
+  const isNextDay = bookingTime.getDate() !== now.getDate();
+
   const formattedTime = bookingTime.toLocaleTimeString([], { 
     hour: '2-digit', 
     minute: '2-digit' 
@@ -1214,6 +1231,11 @@ function TripCard({ booking, onStartTrip, onPickup, onTripComplete, onArrival, c
               <div className="flex items-center gap-1">
                 <Clock className="h-4 w-4" />
                 {formattedTime}
+                {isNextDay && (
+                  <span className="text-xs font-medium text-primary ml-1">
+                    (mañana)
+                  </span>
+                )}
               </div>
               {booking.cliente && (
                 <div className="flex items-center gap-1">
