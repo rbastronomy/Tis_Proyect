@@ -48,6 +48,8 @@ function ReservationDetail() {
   const [receiptDetails, setReceiptDetails] = useState(null)
   const [showRatingModal, setShowRatingModal] = useState(false)
   const [hasRated, setHasRated] = useState(false)
+  const [ratings, setRatings] = useState(null);
+  const [hasUserRated, setHasUserRated] = useState(false);
 
   // Listen for driver location updates
   useEffect(() => {
@@ -745,42 +747,71 @@ function ReservationDetail() {
   }
 
   useEffect(() => {
-    if (reservation?.estado_reserva === 'COMPLETADO' && !hasRated) {
-      // Show rating modal after a short delay
+    const conditions = {
+      isCompleted: reservation?.estado_reserva === 'COMPLETADO',
+      hasNotRated: !hasRated,
+      hasNotRatedBefore: !hasUserRated
+    };
+
+    console.log('🎯 Rating Modal Conditions:', {
+      '✅ Is Completed': conditions.isCompleted,
+      '❌ Has Not Rated': conditions.hasNotRated,
+      '🚫 Has Not Rated Before': conditions.hasNotRatedBefore,
+      '🎭 Final Decision': conditions.isCompleted && conditions.hasNotRated && conditions.hasNotRatedBefore
+    });
+
+    if (conditions.isCompleted && conditions.hasNotRated && conditions.hasNotRatedBefore) {
+      console.log('🎉 Showing Rating Modal!');
       const timeoutId = setTimeout(() => {
-        setShowRatingModal(true)
-      }, 1000)
-      return () => clearTimeout(timeoutId)
+        setShowRatingModal(true);
+      }, 1000);
+      return () => clearTimeout(timeoutId);
     }
-  }, [reservation?.estado_reserva, hasRated])
+  }, [reservation?.estado_reserva, hasRated, hasUserRated]);
+
+  // Modify the checkUserRating function to be simpler
+  useEffect(() => {
+    const checkUserRating = async () => {
+      try {
+        if (!tripDetails?.codigo_viaje) {
+          console.log('📋 Trip details not ready yet');
+          return;
+        }
+
+        const response = await fetch(`/api/ratings/trip/${tripDetails.codigo_viaje}`, {
+          credentials: 'include'
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log('📦 Raw Rating Response:', data);
+
+          // If there are any ratings at all for this trip and the user is the client,
+          // then they must be from this user
+          const userHasRated = data.length > 0;
+
+          console.log('🔍 Rating Check Result:', {
+            '👤 User RUT': user?.rut,
+            '📝 Existing Ratings': data.length,
+            '✍️ User Has Rated': userHasRated,
+          });
+          
+          setRatings(data);
+          setHasUserRated(userHasRated);
+          setHasRated(userHasRated);
+        }
+      } catch (error) {
+        console.error('❌ Error fetching ratings:', error);
+      }
+    };
+
+    if (reservation?.estado_reserva === 'COMPLETADO') {
+      console.log('🔄 Checking user ratings...');
+      checkUserRating();
+    }
+  }, [tripDetails?.codigo_viaje, user?.rut, reservation?.estado_reserva]);
 
   const RatingDetails = () => {
-    const [ratings, setRatings] = useState(null);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-      const fetchRatings = async () => {
-        try {
-          if (!tripDetails?.codigo_viaje) return;
-
-          const response = await fetch(`/api/ratings/trip/${tripDetails.codigo_viaje}`, {
-            credentials: 'include'
-          });
-
-          if (response.ok) {
-            const data = await response.json();
-            setRatings(data);
-          }
-        } catch (error) {
-          console.error('Error fetching ratings:', error);
-        } finally {
-          setLoading(false);
-        }
-      };
-
-      fetchRatings();
-    }, [tripDetails?.codigo_viaje]);
-
     if (loading) return null;
     if (!ratings?.length) return null;
 

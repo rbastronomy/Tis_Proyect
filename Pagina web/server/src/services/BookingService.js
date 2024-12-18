@@ -378,44 +378,74 @@ export class BookingService extends BaseService {
     }
 
     /**
-   * Completes a trip for a given booking
-   * @param {number} bookingId - The booking ID
-   * @param {string} driverId - The driver's RUT
-   * @returns {Promise<BookingModel>} The updated booking
-   * @throws {Error} If booking not found or validation fails
-   */
-  async completeTrip(bookingId, driverId) {
-    // 1. Get current booking data
-    const bookingData = await this.repository.findById(bookingId);
-    if (!bookingData) {
-        throw new Error('Reserva no encontrada');
+     * Completes a trip for a given booking
+     * @param {number} bookingId - The booking ID
+     * @param {string} driverId - The driver's RUT
+     * @param {Object} [trx] - Optional transaction object
+     * @returns {Promise<BookingModel>} The updated booking
+     * @throws {Error} If booking not found or validation fails
+     */
+    async completeTrip(bookingId, driverId, trx = null) {
+        try {
+            // 1. Get current booking data
+            const bookingData = await this.repository.findById(bookingId);
+            if (!bookingData) {
+                throw new Error('Reserva no encontrada');
+            }
+
+            // 2. Create booking model for validation
+            const booking = new BookingModel(bookingData);
+
+            // 3. Validate booking state
+            if (booking.estado_reserva !== 'RECOGIDO') {
+                throw new Error('La reserva debe estar en estado RECOGIDO para completar el viaje');
+            }
+
+            const doUpdate = async (transaction) => {
+                // 5. Create history entry
+                const historyEntry = await this.historyService.createHistoryEntryWithTransaction(
+                    transaction,
+                    'MODIFICACION',
+                    bookingId,
+                    {
+                        estado_historial: 'RESERVA_COMPLETADA',
+                        observacion_historial: 'Viaje completado por el conductor'
+                    }
+                );
+
+                // 6. Update booking data
+                const updateData = {
+                    estado_reserva: 'COMPLETADO',
+                    fecha_realizado: new Date(),
+                    updated_at: new Date()
+                };
+
+                // 7. Update in database
+                const updatedBooking = await this.repository.update(
+                    bookingId,
+                    updateData,
+                    transaction
+                );
+
+                // 8. Return new booking model with updated data and history
+                return new BookingModel({
+                    ...bookingData,
+                    ...updatedBooking,
+                    history: [historyEntry]
+                });
+            };
+
+            // Use provided transaction or create new one
+            if (trx) {
+                return await doUpdate(trx);
+            } else {
+                return await this.repository.transaction(doUpdate);
+            }
+        } catch (error) {
+            console.error('Error completing trip:', error);
+            throw new Error(`Error al completar viaje: ${error.message}`);
+        }
     }
-
-    // 2. Create and validate booking model
-    const booking = new BookingModel(bookingData);
-
-    // 4. Validate booking state
-    if (!booking.isPassengerPickedUp()) {
-        throw new Error('La reserva debe estar en estado RECOGIDO para completar el viaje');
-    }
-
-    // 5. Update booking data
-    const updateData = {
-        estado_reserva: 'COMPLETADO',
-        fecha_realizado: new Date(),
-        updated_at: new Date()
-    };
-
-    // 6. Update in database
-    const updatedBookingData = await this.repository.update(bookingId, updateData);
-
-
-    // 8. Return new booking model with updated data
-    return new BookingModel({
-        ...bookingData,
-        ...updatedBookingData
-    });
-}
 
     /**
      * Gets bookings with filters
