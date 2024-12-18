@@ -263,39 +263,54 @@ export class BookingService extends BaseService {
 
     /**
      * Cancels a booking
-     * @param {string} codigoreserva - Booking code
+     * @param {number} codigo_reserva - Booking code
      * @returns {Promise<Object>} Cancelled booking
      * @throws {Error} If cancellation fails
      */
     async cancelBooking(codigo_reserva) {
-        const booking = await this.repository.findByCodigoReserva(codigo_reserva);
-        
-        if (!booking) {
-            throw new Error('Reserva no encontrada');
+        try {
+            const booking = await this.repository.findById(codigo_reserva);
+            
+            if (!booking) {
+                throw new Error('Reserva no encontrada');
+            }
+
+            // Check if booking can be cancelled
+            if (!['EN_REVISION', 'PENDIENTE'].includes(booking.estado_reserva)) {
+                throw new Error('La reserva no puede ser cancelada en su estado actual');
+            }
+
+            return await this.repository.transaction(async (trx) => {
+                // Create history entry
+                const historyEntry = await this.historyService.createHistoryEntryWithTransaction(
+                    trx,
+                    'CANCELACION',
+                    codigo_reserva,
+                    {
+                        estado_historial: 'RESERVA_CANCELADA',
+                        observacion_historial: 'Reserva cancelada por el cliente'
+                    }
+                );
+
+                // Update booking status
+                const updatedBooking = await this.repository.update(
+                    codigo_reserva,
+                    {
+                        estado_reserva: 'CANCELADO',
+                        updated_at: new Date()
+                    },
+                    trx
+                );
+
+                return new BookingModel({
+                    ...updatedBooking,
+                    history: [historyEntry]
+                });
+            });
+        } catch (error) {
+            console.error('Error cancelling booking:', error);
+            throw new Error(`Error al cancelar la reserva: ${error.message}`);
         }
-
-        const bookingCanceled = await this.repository.updateReservaEstado(
-            codigo_reserva, 
-            'cancelada'
-        );
-
-        if (booking.taxi_rut){
-            await this.taxiService.updateEstado(booking.taxi_rut, 'disponible');
-        }
-    
-        const reserva = await this.repository.findByCodigoReserva(codigo_reserva);
-        await this.taxiService.updateEstado(reserva.taxiRut, 'disponible');
-
-        const receiptData = {
-            codigo_reserva: codigo_reserva,
-            total: booking.total,
-            fecha_emision: new Date(),
-            metodo_pago: 'Cancelado',
-            descripcion_boleta: 'Reserva cancelada'
-        };
-        await this.receiptService.create(receiptData);
-    
-        return bookingCanceled;
     }
 
     /**
@@ -905,6 +920,71 @@ export class BookingService extends BaseService {
         } catch (error) {
             console.error('Error marking pickup:', error);
             throw new Error(`Error al marcar recogida: ${error.message}`);
+        }
+    }
+
+    /**
+     * Updates an existing booking
+     * @param {number} bookingId - ID of the booking to update
+     * @param {number} clientRut - RUT of the client making the update
+     * @param {Object} updateData - Data to update
+     * @param {string} updateData.origen_reserva - New origin location
+     * @param {string} updateData.destino_reserva - New destination location
+     * @param {string} updateData.fecha_reserva - New date and time
+     * @param {string} [updateData.observacion_reserva] - New observations
+     * @returns {Promise<BookingModel>} Updated booking model
+     * @throws {Error} If booking not found or cannot be updated
+     */
+    async updateBooking(bookingId, clientRut, updateData) {
+        try {
+            // Get the current booking using repository
+            const booking = await this.repository.findById(bookingId);
+
+            if (!booking) {
+                throw new Error('Reserva no encontrada');
+            }
+
+            // Verify ownership
+            if (booking.rut_cliente !== clientRut) {
+                throw new Error('No autorizado para editar esta reserva');
+            }
+
+            // Check if booking can be edited
+            if (!['EN_REVISION', 'PENDIENTE'].includes(booking.estado_reserva)) {
+                throw new Error('La reserva no puede ser editada en su estado actual');
+            }
+
+            return await this.repository.transaction(async (trx) => {
+                // Create history entry
+                const historyEntry = await this.historyService.createHistoryEntryWithTransaction(
+                    trx,
+                    'MODIFICACION',
+                    bookingId,
+                    {
+                        estado_historial: 'RESERVA_EN_REVISION',
+                        observacion_historial: 'Reserva actualizada por el cliente'
+                    }
+                );
+
+                // Update booking data
+                const updatedBooking = await this.repository.update(
+                    bookingId,
+                    {
+                        ...updateData,
+                        updated_at: new Date()
+                    },
+                    trx
+                );
+
+                // Return new booking model with history
+                return new BookingModel({
+                    ...updatedBooking,
+                    history: [historyEntry]
+                });
+            });
+        } catch (error) {
+            console.error('Error updating booking:', error);
+            throw new Error(`Error al actualizar la reserva: ${error.message}`);
         }
     }
 

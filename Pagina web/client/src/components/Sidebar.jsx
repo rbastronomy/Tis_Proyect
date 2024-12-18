@@ -1,8 +1,6 @@
 import { 
   LayoutDashboard, 
   CalendarRange, 
-  Receipt, 
-  Briefcase, 
   Car, 
   HardHat, 
   Users, 
@@ -33,21 +31,6 @@ const navigation = [
         title: "Reservas",
         icon: CalendarRange,
         url: "/admin/reservas",
-      },
-    ],
-  },
-  {
-    title: "Servicios",
-    items: [
-      {
-        title: "Servicios",
-        icon: Briefcase,
-        url: "/admin/servicios",
-      },
-      {
-        title: "Tarifas",
-        icon: Receipt,
-        url: "/admin/tarifas",
       },
     ],
   },

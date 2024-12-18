@@ -150,10 +150,10 @@ class BookingController extends BaseController {
      */
     async cancelBooking(request, reply) {
         try {
-            const bookingId = request.params.bookingId;
+            const bookingId = parseInt(request.params.codigoreserva);
             const userId = request.user.rut;
             
-            await this.service.cancelBooking(bookingId, userId);
+            await this.service.cancelBooking(bookingId);
 
             return reply.send({
                 message: 'Reserva cancelada exitosamente'
@@ -538,6 +538,51 @@ class BookingController extends BaseController {
         } catch (error) {
             request.log.error(error);
             return this.handleError(reply, error);
+        }
+    }
+
+    /**
+     * Updates an existing booking
+     * @param {AuthenticatedRequest} request - Fastify request object with authenticated user
+     * @param {import('fastify').FastifyReply} reply - Fastify reply object
+     * @returns {Promise<Object>} Response object containing updated booking data
+     */
+    async updateBooking(request, reply) {
+        try {
+            const bookingId = request.params.codigoreserva;
+            const clientRut = request.user.rut;
+            const updateData = {
+                origen_reserva: request.body.origen_reserva,
+                destino_reserva: request.body.destino_reserva,
+                fecha_reserva: request.body.fecha_reserva,
+                observacion_reserva: request.body.observacion_reserva
+            };
+
+            const booking = await this.service.updateBooking(bookingId, clientRut, updateData);
+            
+            return reply.send({
+                message: 'Reserva actualizada exitosamente',
+                reserva: booking.toJSON()
+            });
+        } catch (error) {
+            request.log.error(error);
+            
+            if (error.message.includes('no encontrada')) {
+                return reply.code(404).send({ error: error.message });
+            }
+            
+            if (error.message.includes('No autorizado')) {
+                return reply.code(403).send({ error: error.message });
+            }
+            
+            if (error.message.includes('no puede ser editada')) {
+                return reply.code(400).send({ error: error.message });
+            }
+
+            return reply.code(500).send({ 
+                error: 'Error al actualizar la reserva',
+                details: error.message 
+            });
         }
     }
 }

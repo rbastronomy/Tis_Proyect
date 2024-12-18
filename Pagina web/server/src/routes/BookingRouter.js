@@ -309,7 +309,10 @@ export class BookingRouter extends BaseRouter {
           type: 'object',
           required: ['codigoreserva'],
           properties: {
-            codigoreserva: { type: 'integer' }
+            codigoreserva: { 
+              type: 'integer',
+              description: 'Código de la reserva a cancelar'
+            }
           }
         }
       },

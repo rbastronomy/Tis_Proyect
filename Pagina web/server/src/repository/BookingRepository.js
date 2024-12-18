@@ -118,9 +118,12 @@ export class BookingRepository extends BaseRepository {
           'observacion_reserva',
           'estado_reserva',
           'rut_conductor',
-          'patente_taxi'
+          'patente_taxi',
+          'created_at',
+          'updated_at',
+          'deleted_at_reserva'
         )
-        .where('codigo_reserva', bookingId)
+        .where({ codigo_reserva: bookingId })
         .whereNull('deleted_at_reserva')
         .first();
 

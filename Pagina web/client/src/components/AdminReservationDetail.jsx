@@ -23,6 +23,7 @@ import { useNavigate, useParams } from '@tanstack/react-router'
 import { useSocketContext } from '../context/SocketContext'
 import { WS_EVENTS } from '../constants/WebSocketEvents'
 import { TripTrackingMap } from './TripTrackingMap'
+import AdminEditBookingModal from './AdminEditBookingModal'
 
 export default function AdminReservationDetail() {
   const { codigoReservaAdmin } = useParams({ 
@@ -39,6 +40,7 @@ export default function AdminReservationDetail() {
   const [driverLocation, setDriverLocation] = useState(null)
   const [routeCoordinates, setRouteCoordinates] = useState(null)
   const { socket } = useSocketContext()
+  const [showEditModal, setShowEditModal] = useState(false)
 
   useEffect(() => {
     if (!isAuthenticated || user?.role?.nombre_rol !== 'ADMINISTRADOR') {
@@ -435,9 +437,7 @@ export default function AdminReservationDetail() {
                 )}
                 <Button
                   color="secondary"
-                  onClick={() =>
-                    navigate({ to: `/admin/reservas/edit/${codigoReservaAdmin}` })
-                  }
+                  onClick={() => setShowEditModal(true)}
                   className="text-white font-bold"
                 >
                   Editar Reserva
@@ -676,6 +676,16 @@ export default function AdminReservationDetail() {
           )}
         </ModalContent>
       </Modal>
+
+      <AdminEditBookingModal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        onSubmit={() => {
+          setShowEditModal(false);
+          fetchReservation(); // Refresh the reservation data
+        }}
+        reservation={reservation}
+      />
     </div>
   )
 }
